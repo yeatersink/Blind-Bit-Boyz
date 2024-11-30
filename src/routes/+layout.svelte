@@ -1,9 +1,12 @@
 <script lang="ts">
 	import '../app.css';
+	import DesktopNav from '../components/DesktopNav.svelte';
 	let { children } = $props();
 </script>
 
-<header><a href="/">Home</a></header>
+<header>
+	<DesktopNav />
+</header>
 <main>
 	{@render children()}
 </main>
