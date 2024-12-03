@@ -4,13 +4,14 @@
 	let results: Array<any> = [];
 	let blockchainList = [
 		{ name: 'Ethereum', value: 'eth' },
-		{ name: 'Pulse Chain', value: 'pls' }
+		{ name: 'Pulse Chain', value: 'pls' },
+{name:"Solana", value:"sol"}
 	];
 	let currentBlockchain: string = 'ethereum';
 
 	async function searchCryptocurrencies() {
 		const response = await fetch(
-			`https://api.dexscreener.com/latest/dex/search?${currentBlockchain}/${query}`
+			`https://api.dexscreener.com/latest/dex/search?q=${currentBlockchain}/${query}`
 		);
 		console.log(response);
 		const data = await response.json();
