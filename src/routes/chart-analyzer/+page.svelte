@@ -1,21 +1,29 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	let query = '';
 	let results: Array<any> = [];
 	let blockchainList = [
-		{ name: 'Ethereum', value: 'eth' },
 		{ name: 'Pulse Chain', value: 'pls' },
-{name:"Solana", value:"sol"}
 	];
-	let currentBlockchain: string = 'ethereum';
+	let currentBlockchain: string = blockchainList[0].value;
 
 	async function searchCryptocurrencies() {
+if(currentBlockchain === 'pls'){
+getPulseChainData()
+} else {
 		const response = await fetch(
 			`https://api.dexscreener.com/latest/dex/search?q=${currentBlockchain}/${query}`
 		);
-		console.log(response);
 		const data = await response.json();
-		results = data.pairs;
+}
+	}
+
+	async function getPulseChainData() {
+		const response = await fetch(
+			`https://api.scan.pulsechain.com/api/v2/search?q=${query}`
+		);
+		const data = await response.json();
+		results = data.items;
 	}
 </script>
 
@@ -24,7 +32,10 @@
 </svelte:head>
 
 <h1>Chart Analyzer</h1>
-<form on:submit|preventDefault={searchCryptocurrencies}>
+<form onsubmit={(event) => {
+event.preventDefault()
+searchCryptocurrencies()
+}}>
 	<label for="provider">Choose Your Data Provider</label>
 	<select id="provider">
 		<option value="dexscreener">Dex Screener</option>
@@ -42,6 +53,7 @@
 	<br />
 	<label for="search">Search Cryptocurrencies</label>
 	<input id="search" type="text" bind:value={query} placeholder="Enter cryptocurrency name" />
+	<br />
 	<button type="submit">Search</button>
 </form>
 
@@ -50,8 +62,10 @@
 	<ul>
 		{#each results as result}
 			<li>
-				{result.baseToken.name} ({result.baseToken.symbol}) {result.baseToken.address} / {result
-					.quoteToken.name} ({result.quoteToken.symbol}) / {result.pairAddress} ${result.priceUsd}
+<button onclick={() => goto(`/coins/${result.address}`)}>
+				<h3>{result.name}</h3>
+				<p>{result.address}</p>
+</button>
 			</li>
 		{/each}
 	</ul>
