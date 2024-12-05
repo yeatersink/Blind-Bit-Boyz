@@ -52,7 +52,7 @@ searchCryptocurrencies()
 	</select>
 	<br />
 	<label for="search">Search Cryptocurrencies</label>
-	<input id="search" type="text" bind:value={query} placeholder="Enter cryptocurrency name" />
+	<input id="search" type="search" bind:value={query} placeholder="Enter cryptocurrency name" />
 	<br />
 	<button type="submit">Search</button>
 </form>
