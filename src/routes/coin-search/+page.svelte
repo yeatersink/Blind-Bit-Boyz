@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	let query = '';
 	let results: Array<any> = [];
+let prices:{[key:string]:{price:string; name:string}} = {}
 	let blockchainList = [
 		{ name: 'Pulse Chain', value: 'pls' },
 	];
@@ -19,19 +20,56 @@ getPulseChainData()
 	}
 
 	async function getPulseChainData() {
+	try {
 		const response = await fetch(
 			`https://api.scan.pulsechain.com/api/v2/search?q=${query}`
 		);
 		const data = await response.json();
-		results = data.items;
+	let itemList = [];
+	if(data.items.length>30) {
+//Splits items into groups of 30
+for(let i = 0; i < data.items.length; i+=30) {
+itemList.push(data.items.slice(i, i+30))
+}
+//Get price info for each group of 30 items
+for(let items of itemList) {
+await getPriceInfo(items)
+}
+	} else {
+await getPriceInfo(data.items);
 	}
+		results = data.items;
+	} catch (error) {
+console.error('Error fetching data from Pulse Chain API');
+		console.error(error);
+	}
+	}
+
+	async function getPriceInfo(items:Array<any>) {
+	try {
+	const contractAddresses = items.map((item) => item.address)
+const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddresses.join(',')}`)
+const priceInfoList = await response.json()
+	for(let priceInfo of priceInfoList.pairs) {
+	if(priceInfo.priceUsd) {
+		prices[priceInfo.baseToken.address] = {price:`$${priceInfo.priceUsd}`,name:priceInfo.baseToken.name}
+	} else {
+		prices[priceInfo.baseToken.address] = {price:'N/A',name:priceInfo.baseToken.name}
+	}
+	}
+	} catch (error) {
+console.error('Error fetching price info from Dex Screener API');
+		console.error(error);
+	}
+	}
+
 </script>
 
 <svelte:head>
-	<title>Welcome to the Chart Analyzer.</title>
+	<title>Search for a Coin.</title>
 </svelte:head>
 
-<h1>Chart Analyzer</h1>
+<h1>Coin Search</h1>
 <form onsubmit={(event) => {
 event.preventDefault()
 searchCryptocurrencies()
@@ -62,10 +100,15 @@ searchCryptocurrencies()
 	<ul>
 		{#each results as result}
 			<li>
-<button onclick={() => goto(`/coins/${result.address}`)}>
+<a href={`/coins/${result.address}`} target="_blank">
 				<h3>{result.name}</h3>
+{#if prices[result.address]}
+<p>Price: {prices[result.address].price}</p>
+{:else}
+<p>Price: N/A</p>
+{/if}
 				<p>{result.address}</p>
-</button>
+</a>
 			</li>
 		{/each}
 	</ul>
