@@ -23,7 +23,7 @@ if(!exists) {
 walletList.push({address:walletAddress,name:walletName})
 localStorage.setItem('wallets', JSON.stringify(walletList))
 } else {
-alert('Wallet already saved')
+alert('Wallet already saved')	
 	}
         const response = await fetch(`https://api.scan.pulsechain.com/api?module=account&action=tokenlist&address=${walletAddress}`)
         const data=await response.json()
@@ -73,7 +73,7 @@ console.error('Error fetching price info from Dex Screener API');
 <h1>Welcome to your Lost Coin Finder!</h1>
 <p>Have you purchased coins and forgotten about them? This tool will help you dig up coins in your wallet that you have long forgotten about, and you don't even have to connect your wallet to find them.</p>
 <p>Using this tool is simple. Just put your wallet address in the search bar, and then choose which block chain that you purchased your coin on, and let the Lost Coin Finder locate them for you.</p>
-<p>This tool will give you a list of every item in your wallet. Be aware of dust coins or scam coins that have been air dropped into your wallet without your knowledge. This tool is very helpful in finding them in your wallet, but do not connect your actual wallet to these scam coins. </p>
+<p>This tool will give you a list of every item in your wallet. Be aware of dust coins or scam coins that have been air dropped into your wallet without your knowledge. This tool is very helpful in finding them in your wallet, but do not actualy connect your wallet  to these scam coins. </p>
 <form onsubmit={(event)=>{
     event.preventDefault()
     getCoinsFromWallet()
