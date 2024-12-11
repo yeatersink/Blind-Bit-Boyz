@@ -7,8 +7,8 @@
 	A Proud Product developed in partnership with :
 
 <a class="text-gold underline hover: text-gold-dark" href="https://envisionly.tech">Envisionly</a>
-
-<a class="text-gold underline hover: text-gold-dark" href="https://www.google.com/wp/en/</p>">And Yeatersink.</a>
+and
+<a class="text-gold underline hover: text-gold-dark" href="https://x.com/yeatersink?s=11">Yeatersink</a>.
 </p>
 
 
