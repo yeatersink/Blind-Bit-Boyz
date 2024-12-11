@@ -8,7 +8,7 @@
 
 <a class="text-gold underline hover: text-gold-dark" href="https://envisionly.tech">Envisionly</a>
 and
-<a class="text-gold underline hover: text-gold-dark" href="https://x.com/yeatersink?s=11">Yeatersink</a>.
+<a class="text-gold underline hover: text-gold-dark" href="https://x.com/yeatersink">Yeatersink</a>.
 </p>
 
 

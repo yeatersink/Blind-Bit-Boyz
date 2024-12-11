@@ -10,6 +10,10 @@
 const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${data.data.result.contractAddress}`)
 priceInfo = await response.json()
 	}
+
+	function formatNumberWithDecimals(number:string, decimals:string) {
+		    return (parseInt(number)/(10**parseInt(decimals))).toFixed(parseInt(decimals))
+	}
 </script>
 
 <svelte:head>
@@ -48,7 +52,7 @@ onclick={() => currentTab='panel-technical-analysis'}
 <p>Symbol: {data.data.result.symbol}</p>
 <p>Type: {data.data.result.type}</p>
 <p>Decimals: {data.data.result.decimals}</p>
-<p>Total Supply: {data.data.result.totalSupply}</p>
+<p>Total Supply: {formatNumberWithDecimals(data.data.result.totalSupply,data.data.result.decimals)}</p>
 
 <h2>Price Info</h2>
 {#await getPriceInfo()}

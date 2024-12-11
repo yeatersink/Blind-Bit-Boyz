@@ -11,5 +11,5 @@
 	{@render children()}
 </main>
 <footer><h2>Follow Us:</h2>
-<a href="https://x.com/yeatersink?s=11">X</a>
+<a href="https://x.com/yeatersink">X</a>
 </footer>
