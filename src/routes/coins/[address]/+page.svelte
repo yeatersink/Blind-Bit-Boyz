@@ -63,6 +63,20 @@
 		<h2>Price Details</h2>
 		<p>${data.pair.priceUsd}</p>
 		<p>Native: {data.pair.priceNative}</p>
+{#if data.pair.txns}
+<h3>Buys</h3>
+{#each Object.keys(data.pair.txns) as key}
+	<p>{key}: {data.pair.txns[key].buys}</p>
+{/each}
+<h3>Sells</h3>
+{#each Object.keys(data.pair.txns) as key}
+	<p>{key}: {data.pair.txns[key].sells}</p>
+{/each}
+{/if}
+<h3>Volume</h3>
+{#each Object.keys(data.pair.volume) as key}
+	<p>{key}: {data.pair.volume[key]}</p>
+{/each}
 	</div>
 	<div
 		class={`${currentTab != 'panel-technical-analysis' ? 'hidden' : ''}`}

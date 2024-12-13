@@ -9,20 +9,20 @@ let prices:{[key:string]:{price:string; name:string}} = {}
 	let currentBlockchain: string = $state(blockchainList[0].value);
 
 	async function searchCryptocurrencies() {
+let data:any;
+		//Checks if the user entered a contract address
+if(query.startsWith('0x') && query.length == 42){
+		const response = await fetch(
+			`https://api.dexscreener.com/latest/dex/tokens/${query}`
+		);
+		data = await response.json();
+} else {
 		const response = await fetch(
 			`https://api.dexscreener.com/latest/dex/search?q=${currentBlockchain}/${query}`
 		);
-		const data = await response.json();
-//Checks if the user was searching for a token address
-if(query.startsWith('0x') && query.length == 42){
-		//Finds the token in the results
-    let tokenList = data.pairs.filter((pair: any) => {
-        return pair.baseToken.address == query;
-    });
-results = {pairs:tokenList}
-} else {
-results=data;
+		data = await response.json();
 }
+results=data;
 	}
 
 </script>
@@ -66,6 +66,7 @@ searchCryptocurrencies()
 				<h3>{result.baseToken.name} ${result.priceUsd} - ({result.quoteToken.name})</h3>
 				<p>{result.baseToken.address}</p>
 </a>
+{JSON.stringify(result)}
 			</li>
 		{/each}
 	</ul>
