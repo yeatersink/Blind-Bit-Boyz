@@ -16,6 +16,7 @@
 
 {#if data.pair}
 	<h1>{data.pair.baseToken.name}</h1>
+	<img src={data.pair.info.imageUrl} alt={`${data.pair.baseToken.name} logo`} class="size-10" />
 	<p>{data.pair.baseToken.address}</p>
 	<button onclick={() => navigator.clipboard.writeText(data.pair.baseToken.address)}
 		>Copy Address</button
@@ -48,6 +49,10 @@
 		<h2>Token Details</h2>
 		<p>Symbol: {data.pair.baseToken.symbol}</p>
 		<p>Chain: {data.pair.chainId}</p>
+		{#each data.pair.labels as label}
+		<p>{label}</p>
+	{/each}
+
 		<h2>Pair Details</h2>
 		<p>Pair Address: {data.pair.pairAddress}</p>
 		<button onclick={() => navigator.clipboard.writeText(data.pair.pairAddress)}
@@ -63,6 +68,15 @@
 		<h2>Price Details</h2>
 		<p>${data.pair.priceUsd}</p>
 		<p>Native: {data.pair.priceNative}</p>
+		<h3>Liquidity</h3>
+		<p>${data.pair.liquidity.usd}</p>
+		<h3>Market Cap</h3>
+		<p>${data.pair.marketCap}</p>
+		<h3>Volume</h3>
+{#each Object.keys(data.pair.volume) as key}
+	<p>{key}: {data.pair.volume[key]}</p>
+{/each}
+
 {#if data.pair.txns}
 <h3>Buys</h3>
 {#each Object.keys(data.pair.txns) as key}
@@ -73,10 +87,17 @@
 	<p>{key}: {data.pair.txns[key].sells}</p>
 {/each}
 {/if}
-<h3>Volume</h3>
-{#each Object.keys(data.pair.volume) as key}
-	<p>{key}: {data.pair.volume[key]}</p>
+<h2>Social Media Information:</h2>
+{#if data.pair.info.websites}
+{#each data.pair.info.websites as website}
+<a href={website.url}>Website: {website.url}</a>
 {/each}
+{/if}
+{#if data.pair.info.socials}
+{#each data.pair.info.socials as social}
+	<a href={social.url}>{social.type}</a>
+{/each}
+{/if}
 	</div>
 	<div
 		class={`${currentTab != 'panel-technical-analysis' ? 'hidden' : ''}`}
