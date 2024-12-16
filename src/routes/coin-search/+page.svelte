@@ -66,7 +66,6 @@ searchCryptocurrencies()
 				<h3>{result.baseToken.name} ${result.priceUsd} - ({result.quoteToken.name})</h3>
 				<p>{result.baseToken.address}</p>
 </a>
-{JSON.stringify(result)}
 			</li>
 		{/each}
 	</ul>
