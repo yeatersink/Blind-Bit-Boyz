@@ -1,17 +1,45 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	let query =$state('');
-	let results: any|undefined = $state(undefined);
+type resultType = {
+	name:string;
+	symbol:string;
+	address:string;
+price:number|undefined;
+exchangeRate?:number;
+	chainId?:string;
+	pairedToken?:{
+pairAddress:string;
+	name:string;
+	symbol:string;
+	address:string;
+	}
+};
+	let results: Array<resultType>= $state([]);
 let prices:{[key:string]:{price:string; name:string}} = {}
+let dataProvidersList = [
+		{ name: 'Dex Screener', value: 'dexscreener' },
+		{name:'Pulsechain',value:'pulse'},
+	];
+	let currentDataProvider: string = $state(dataProvidersList[0].value);
 	let blockchainList = [
 		{ name: 'Pulse Chain', value: 'pls' },
 	];
 	let currentBlockchain: string = $state(blockchainList[0].value);
 
 	async function searchCryptocurrencies() {
+results = [];
+if (currentDataProvider=="dexscreener"){
+	searchDexscreener()
+} else if(currentDataProvider=="pulse"){
+	searchPulseChain()
+}
+	}
+
+async function searchDexscreener(){
 let data:any;
 		//Checks if the user entered a contract address
-if(query.startsWith('0x') && query.length == 42){
+		if(query.startsWith('0x') && query.length == 42){
 		const response = await fetch(
 			`https://api.dexscreener.com/latest/dex/tokens/${query}`
 		);
@@ -22,8 +50,48 @@ if(query.startsWith('0x') && query.length == 42){
 		);
 		data = await response.json();
 }
-results=data;
+for(let item of data.pairs) {
+		results.push({
+			name: item.baseToken.name,
+			symbol: item.baseToken.symbol,
+			address: item.baseToken.address,
+			price: item.priceUsd,
+chainId: item.chainId,
+			pairedToken: {
+pairAddress:item.pairAddress,
+				name: item.quoteToken.name,
+				symbol: item.quoteToken.symbol,
+				address: item.quoteToken.address,
+			},
+		});
 	}
+	}
+
+
+async function searchPulseChain() {
+	let data:any;
+	const response = await fetch(`https://api.scan.pulsechain.com/api/v2/tokens?q=${query}&type=ERC-20`)
+		data = await response.json();
+		let marketData:any;
+		const marketResponse=await fetch("https://api.scan.pulsechain.com/api/v2/stats")
+		marketData=marketResponse.json()
+		let plsPrice:number|undefined=undefined;
+if(marketData.coin_price) {
+plsPrice=marketData.coin_price
+}
+	for (let item of data.items){
+		results.push({name:item.name,symbol:item.symbol,address:item.address,price:plsPrice??0*item.exchange_rate,exchangeRate:item.exchange_rate})
+	}
+}
+
+
+function getResultUrl(result:resultType){
+	let url = result.address;
+	if(result.chainId && result.pairedToken?.pairAddress) {
+		url += `?chainId=${result.chainId}&pairAddress=${result.pairedToken.pairAddress}`;
+}
+	return url;
+}
 
 </script>
 
@@ -37,15 +105,14 @@ event.preventDefault()
 searchCryptocurrencies()
 }}>
 	<label for="provider">Choose Your Data Provider</label>
-	<select id="provider">
-		<option value="dexscreener">Dex Screener</option>
-		<option disabled value="dextools">Dex Tools</option>
-		<option disabled value="coingecko">Coin Gecko</option>
-		<option disabled value="coinbase">Coin Base</option>
+	<select id="provider" bind:value={currentDataProvider}>
+		{#each dataProvidersList as provider}
+			<option value={provider.value}>{provider.name}</option>
+		{/each}
 	</select>
 	<br />
 	<label for="blockchain">Choose Which Block Chain You Want to Search</label>
-	<select id="blockchain" bind:value={currentBlockchain}>
+	<select id="blockchain" bind:value={currentBlockchain} disabled={currentDataProvider!== 'dexscreener'}>
 		{#each blockchainList as blockchain}
 			<option value={blockchain.value}>{blockchain.name}</option>
 		{/each}
@@ -57,14 +124,20 @@ searchCryptocurrencies()
 	<button type="submit">Search</button>
 </form>
 
-{#if results?.pairs.length > 0}
-	<h2>Results: {results.pairs.length}</h2>
+{#if results.length > 0}
+	<h2>Results: {results.length}</h2>
+{#if currentDataProvider == 'pulse'}
+	<p role="alert">The Pulsechain data provider intigration is currently still in development and not fully functional.</p>
+{/if}
 	<ul>
-		{#each results.pairs as result}
+		{#each results as result}
 			<li>
-<a href={`/coins/${result.quoteToken.address}?chainid=${result.chainId}&pairid=${result.pairAddress}`} target="_blank">
-				<h3>{result.baseToken.name} ${result.priceUsd} - ({result.quoteToken.name})</h3>
-				<p>{result.baseToken.address}</p>
+<a href={`/coins/${getResultUrl(result)}`} target="_blank">
+				<h3>{result.name}: {result.price?'$'+result.price:'Price not available'}</h3>
+{#if result.exchangeRate}
+				<p>Exchange rate: {result.exchangeRate}</p>
+{/if}
+				<p>{result.address}</p>
 </a>
 			</li>
 		{/each}
