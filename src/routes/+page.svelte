@@ -1,14 +1,27 @@
-<h1 class="text-3xl sans-serif font-semibold text-blue-900 text-center uppercase">Welcome to The Blind Bit Boyz Crypto initiative! </h1>
+<section class="bg-gray-800 px-6 py-16 text-center">
+	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
+		Welcome to The Blind Bit Boyz Crypto initiative!
+	</h1>
 
+	<p class="text-xl">
+		This is a website that is designed to bring accessibility to the ever expanding cripto market
+		for users who are blind.
+	</p>
+</section>
 
-<p class="xl sans-serif text-blue-600  text-center ">
-        This is a website that is designed to bring accessibility to the ever expanding cripto market for users who are blind.</p>
-<p class="xl sans-serif text-blue-600  text-center ">
-	A Proud Product developed in partnership with :
+<section class="bg-gray-900 px-6 py-16">
+	<h2 class="mb-4 text-2xl font-semibold text-gray-100">Our Partners</h2>
+	<p class="text-gray-400">
+		A Proud Product developed in partnership with :
 
-<a class="text-gold underline hover: text-gold-dark" href="https://envisionly.tech">Envisionly</a>
-and
-<a class="text-gold underline hover: text-gold-dark" href="https://x.com/yeatersink">Yeatersink</a>.
-</p>
-
-
+		<a
+			class="border-b border-gray-300 hover:border-gold-400 hover:text-gold-500 focus:border-gold-400 focus:text-gold-500"
+			href="https://envisionly.tech">Envisionly</a
+		>
+		and
+		<a
+			class="border-b border-gray-300 hover:border-gold-400 hover:text-gold-500 focus:border-gold-400 focus:text-gold-500"
+			href="https://x.com/yeatersink">Yeatersink</a
+		>.
+	</p>
+</section>
