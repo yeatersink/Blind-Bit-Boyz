@@ -248,13 +248,18 @@
 	</form>
 </section>
 
-{#if status == 'loading'}
-	<p role="alert">Loading...</p>
-{:else if status == 'error'}
-	<p role="alert">Error loading data</p>
-{:else if status == 'done'}
+<div role="status" aria-live="polite">
+	{#if status == 'loading'}
+		<p>Loading...</p>
+	{:else if status == 'error'}
+		<p>Error loading data</p>
+	{:else if status == 'done'}
+		<h2>Results: {results.length}</h2>
+	{/if}
+</div>
+
+{#if status == 'done'}
 	{#if results.length > 0}
-		<h2 role="alert">Results: {results.length}</h2>
 		<label for="sorting">Sort by:</label>
 		<select id="sorting" bind:value={currentSortingOption}>
 			{#each sortingOptions as option}
