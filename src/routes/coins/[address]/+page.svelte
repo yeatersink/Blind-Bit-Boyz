@@ -106,5 +106,5 @@
 		aria-label="Technical Analysis"
 	>
 		<p>Chart Goes Here</p>
-	</div>
+				</div>
 {/if}
