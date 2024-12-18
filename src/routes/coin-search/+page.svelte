@@ -228,13 +228,18 @@
 		</div>
 		<div class="flex flex-col items-center gap-2">
 			<label for="search">Search Cryptocurrencies</label>
-			<input
-				id="search"
-				class="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-gray-200 placeholder-gray-400 hover:border-gray-400 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
-				type="search"
-				bind:value={query}
-				placeholder="Enter your search"
-			/>
+			<div class="flex flex-col items-center">
+				<input
+					id="search"
+					class="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-gray-200 hover:border-gray-400 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
+					type="search"
+					bind:value={query}
+					aria-describedby="search-help"
+				/>
+				<p id="search-help" class="text-sm text-gray-400">
+					You can search by name, symbol, or contract address
+				</p>
+			</div>
 		</div>
 		<button
 			class="rounded-md bg-gold-500 px-6 py-2 text-black hover:bg-gold-600 focus:ring-2 focus:ring-gold-500"
