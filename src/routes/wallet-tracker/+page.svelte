@@ -1,5 +1,4 @@
 <h1>Wallet Tracker</h1>
-<p>So you don't have a life at all and you want to be nosey and track someones wallet? Maybe you are a good person, but you want to try to get the jump on your favorite influencer? Maybe you want to try to find out which wallet holds the most coins before you ape in? Thats a good idea.</p>    
 <p>This tool will allow you to track a contract address to find out the following:</p> 
 <ol> 
 1 Search for a contract address.

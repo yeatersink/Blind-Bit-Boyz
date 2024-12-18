@@ -4,7 +4,7 @@
 	</h1>
 
 	<p class="text-xl">
-		This is a website that is designed to bring accessibility to the ever expanding cripto market
+		This is a website that is designed to bring accessibility to the ever expanding crypto market
 		for users who are blind.
 	</p>
 </section>
