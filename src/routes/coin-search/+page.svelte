@@ -270,9 +270,10 @@
 <div class="p-6">
 	<div role="status" aria-live="polite">
 		{#if status == 'loading'}
-			<p>Loading...</p>
+			<p class="sr-only">Loading...</p>
+			<span class="fa-solid fa-spinner fa-spin text-gold-500" aria-hidden="true"></span>
 		{:else if status == 'error'}
-			<p>Error loading data</p>
+			<p class="text-red-500" role="alert">An error occurred while fetching the data</p>
 		{:else if status == 'done'}
 			<h2 class="mb-4 text-2xl font-semibold text-gray-100">Results: {results.length}</h2>
 		{/if}
@@ -327,7 +328,7 @@
 					{/each}
 				</ul>
 			{:else}
-				<p role="alert">No results found</p>
+				<p>No results found</p>
 			{/if}
 		</section>
 	{/if}
