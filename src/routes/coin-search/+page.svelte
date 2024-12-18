@@ -5,9 +5,12 @@
 	let query = $state('');
 	let status: 'loading' | 'done' | 'error' | undefined = $state(undefined);
 	let sortingOptions: Array<{ name: string; value: string }> = [
-		{ name: 'Price', value: 'price' },
-		{ name: 'Name', value: 'name' },
-		{ name: 'Symbol', value: 'symbol' }
+		{ name: 'Name Ascending', value: 'name-asc' },
+		{ name: 'Name Descending', value: 'name-desc' },
+		{ name: 'Price Ascending', value: 'price-asc' },
+		{ name: 'Price Descending', value: 'price-desc' },
+		{ name: 'Symbol Ascending', value: 'symbol-asc' },
+		{ name: 'Symbol Descending', value: 'symbol-desc' }
 	];
 	let currentSortingOption: string = $state(sortingOptions[0].value);
 	let sortingDirection: 'asc' | 'desc' = $state('asc');
@@ -77,6 +80,7 @@
 			});
 		}
 		status = 'done';
+		sortResults();
 	}
 
 	async function searchPulseChain() {
@@ -138,6 +142,7 @@
 				}));
 			}
 			status = 'done';
+			sortResults();
 		} catch (error) {
 			console.error(error);
 			status = 'error';
@@ -154,35 +159,49 @@
 
 	function sortResults() {
 		if (results.length < 2) {
-			{
-				return;
-			}
+			return;
+		}
 
-			switch (currentSortingOption) {
-				case 'price': {
-					results.sort((a, b) => {
-						if (a.price && b.price) {
-							return sortingDirection === 'asc' ? a.price - b.price : b.price - a.price;
-						}
-					});
-					break;
-				}
-				case 'name': {
-					results.sort((a, b) => {
-						return sortingDirection === 'asc'
-							? a.name.localeCompare(b.name)
-							: b.name.localeCompare(a.name);
-					});
-					break;
-				}
-				case 'symbol': {
-					results.sort((a, b) => {
-						return sortingDirection === 'asc'
-							? a.symbol.localeCompare(b.symbol)
-							: b.symbol.localeCompare(a.symbol);
-					});
-					break;
-				}
+		switch (currentSortingOption) {
+			case 'name-asc': {
+				results.sort((a, b) => {
+					return a.name.localeCompare(b.name);
+				});
+				break;
+			}
+			case 'name-desc': {
+				results.sort((a, b) => {
+					return b.name.localeCompare(a.name);
+				});
+				break;
+			}
+			case 'price-asc': {
+				results.sort((a, b) => {
+					if (a.price && b.price) {
+						return a.price - b.price;
+					}
+				});
+				break;
+			}
+			case 'price-desc': {
+				results.sort((a, b) => {
+					if (a.price && b.price) {
+						return b.price - a.price;
+					}
+				});
+				break;
+			}
+			case 'symbol-asc': {
+				results.sort((a, b) => {
+					return a.symbol.localeCompare(b.symbol);
+				});
+				break;
+			}
+			case 'symbol-desc': {
+				results.sort((a, b) => {
+					return b.symbol.localeCompare(a.symbol);
+				});
+				break;
 			}
 		}
 	}
@@ -254,23 +273,18 @@
 	{:else if status == 'error'}
 		<p>Error loading data</p>
 	{:else if status == 'done'}
-		<h2>Results: {results.length}</h2>
+		<h2 class="mb-4 text-2xl font-semibold text-gray-100">Results: {results.length}</h2>
 	{/if}
 </div>
 
 {#if status == 'done'}
 	{#if results.length > 0}
 		<label for="sorting">Sort by:</label>
-		<select id="sorting" bind:value={currentSortingOption}>
+		<select id="sorting" bind:value={currentSortingOption} onchange={sortResults}>
 			{#each sortingOptions as option}
 				<option value={option.value}>{option.name}</option>
 			{/each}
 		</select>
-		<select id="sortingDirection" bind:value={sortingDirection}>
-			<option value="asc">Ascending</option>
-			<option value="desc">Descending</option>
-		</select>
-		<button onclick={() => sortResults()}>Sort</button>
 		{#if currentDataProvider == 'pulse'}
 			<p role="alert">
 				The Pulsechain data provider intigration is currently still in development and not fully
