@@ -15,7 +15,7 @@
 	{@render children()}
 </main>
 
-<footer class="bg-black py-8 text-gray-400">
+<footer class="border-t border-gold-500 bg-black py-8 text-gray-400">
 	<h2 class="mb-4 text-xl font-semibold text-gray-200">Follow Us:</h2>
 	<a
 		class="text-gray-400 hover:text-gold-500 focus:text-gold-500"

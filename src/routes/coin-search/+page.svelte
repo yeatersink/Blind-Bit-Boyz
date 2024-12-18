@@ -267,44 +267,68 @@
 	</form>
 </section>
 
-<div role="status" aria-live="polite">
-	{#if status == 'loading'}
-		<p>Loading...</p>
-	{:else if status == 'error'}
-		<p>Error loading data</p>
-	{:else if status == 'done'}
-		<h2 class="mb-4 text-2xl font-semibold text-gray-100">Results: {results.length}</h2>
+<div class="p-6">
+	<div role="status" aria-live="polite">
+		{#if status == 'loading'}
+			<p>Loading...</p>
+		{:else if status == 'error'}
+			<p>Error loading data</p>
+		{:else if status == 'done'}
+			<h2 class="mb-4 text-2xl font-semibold text-gray-100">Results: {results.length}</h2>
+		{/if}
+	</div>
+
+	{#if status == 'done'}
+		<section class="flex flex-col gap-4">
+			{#if results.length > 0}
+				<div>
+					<label for="sorting">Sort by:</label>
+					<select
+						id="sorting"
+						class="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-gray-200 hover:border-gray-400 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
+						bind:value={currentSortingOption}
+						onchange={sortResults}
+					>
+						{#each sortingOptions as option}
+							<option value={option.value}>{option.name}</option>
+						{/each}
+					</select>
+					{#if currentDataProvider == 'pulse'}
+						<p role="alert">
+							The Pulsechain data provider intigration is currently still in development and not
+							fully functional.
+						</p>
+					{/if}
+				</div>
+				<div role="separator" class="border-t border-gray-600"></div>
+				<ul class="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-4">
+					{#each results as result}
+						<li class="rounded-md bg-gray-800 p-4">
+							<a
+								class="visited:text-gold-400 hover:text-gold-500 focus:text-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500"
+								href={`/coins/${getResultUrl(result)}`}
+								target="_blank"
+							>
+								<h3 class="text-xl font-semibold">
+									{result.name}: {result.price ? '$' + result.price : 'Price not available'}
+								</h3>
+							</a>
+							<p>{result.symbol}</p>
+							<div class="flex items-center justify-between">
+								<p>{result.address}</p>
+								<button
+									class="rounded-md bg-gold-500 px-6 py-2 text-black hover:bg-gold-600 focus:ring-2 focus:ring-gold-500"
+									onclick={() => navigator.clipboard.writeText(result.address)}
+									aria-label={`Copy ${result.name} address`}
+									><span class="fa-solid fa-copy"></span></button
+								>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p role="alert">No results found</p>
+			{/if}
+		</section>
 	{/if}
 </div>
-
-{#if status == 'done'}
-	{#if results.length > 0}
-		<label for="sorting">Sort by:</label>
-		<select id="sorting" bind:value={currentSortingOption} onchange={sortResults}>
-			{#each sortingOptions as option}
-				<option value={option.value}>{option.name}</option>
-			{/each}
-		</select>
-		{#if currentDataProvider == 'pulse'}
-			<p role="alert">
-				The Pulsechain data provider intigration is currently still in development and not fully
-				functional.
-			</p>
-		{/if}
-		<ul>
-			{#each results as result}
-				<li>
-					<a href={`/coins/${getResultUrl(result)}`} target="_blank">
-						<h3>
-							{result.name}: {result.price ? '$' + result.price.toString() : 'Price not available'}
-						</h3>
-						<p>{result.symbol}</p>
-						<p>{result.address}</p>
-					</a>
-				</li>
-			{/each}
-		</ul>
-	{:else}
-		<p role="alert">No results found</p>
-	{/if}
-{/if}
