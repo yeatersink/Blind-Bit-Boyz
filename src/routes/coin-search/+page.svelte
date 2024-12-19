@@ -19,6 +19,7 @@
 		name: string;
 		symbol: string;
 		address: string;
+url: string;
 		price: number;
 		chainId?: string;
 		pairedToken?: {
@@ -69,6 +70,7 @@
 				name: item.baseToken.name,
 				symbol: item.baseToken.symbol,
 				address: item.baseToken.address,
+				url: `${item.baseToken.address}?dataProvider=${currentDataProvider}&chainId=${item.chainId}&pairAddress=${item.pairAddress}`,
 				price: item.priceUsd,
 				chainId: item.chainId,
 				pairedToken: {
@@ -130,6 +132,7 @@
 						name: data.token.name,
 						symbol: data.token.symbol,
 						address: data.token.id,
+						url: `${data.token.id}?dataProvider=${currentDataProvider}`,
 						price: data.token.derivedUSD
 					}
 				];
@@ -138,6 +141,7 @@
 					name: token.name,
 					symbol: token.symbol,
 					address: token.id,
+url: `${token.id}?dataProvider=${currentDataProvider}`,
 					price: token.derivedUSD
 				}));
 			}
@@ -149,13 +153,6 @@
 		}
 	}
 
-	function getResultUrl(result: resultType) {
-		let url = result.address;
-		if (result.chainId && result.pairedToken?.pairAddress) {
-			url += `?chainId=${result.chainId}&pairAddress=${result.pairedToken.pairAddress}`;
-		}
-		return url;
-	}
 
 	function sortResults() {
 		if (results.length < 2) {
@@ -307,7 +304,7 @@
 						<li class="rounded-md bg-gray-800 p-4">
 							<a
 								class="visited:text-gold-400 hover:text-gold-500 focus:text-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500"
-								href={`/coins/${getResultUrl(result)}`}
+								href={`/coins/${result.url}`}
 								target="_blank"
 							>
 								<h3 class="text-xl font-semibold">

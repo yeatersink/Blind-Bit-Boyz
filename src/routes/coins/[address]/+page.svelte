@@ -9,16 +9,18 @@
 </script>
 
 <svelte:head>
-	{#if data.pair}
-		<title>{data.pair.baseToken.name} ({data.pair.baseToken.symbol})</title>
+	{#if data.coin}
+		<title>{data.coin.name} ({data.coin.symbol})</title>
 	{/if}
 </svelte:head>
 
-{#if data.pair}
-	<h1>{data.pair.baseToken.name}</h1>
-	<img src={data.pair.info.imageUrl} alt={`${data.pair.baseToken.name} logo`} class="size-10" />
-	<p>{data.pair.baseToken.address}</p>
-	<button onclick={() => navigator.clipboard.writeText(data.pair.baseToken.address)}
+{#if data.coin}
+	<h1>{data.coin.name}</h1>
+{#if data.coin.imageUrl}
+	<img src={data.coin.imageUrl} alt={`${data.coin.name} logo`} class="size-10" />
+{/if}
+	<p>{data.coin.address}</p>
+	<button onclick={() => navigator.clipboard.writeText(data.coin.address)}
 		>Copy Address</button
 	>
 	<div>
@@ -47,56 +49,71 @@
 		aria-label="Coin Details"
 	>
 		<h2>Token Details</h2>
-		<p>Symbol: {data.pair.baseToken.symbol}</p>
-		<p>Chain: {data.pair.chainId}</p>
-		{#each data.pair.labels as label}
+		<p>Symbol: {data.coin.symbol}</p>
+		<p>Chain: {data.coin.chain}</p>
+{#if data.coin.labels}
+		{#each data.coin.labels as label}
 		<p>{label}</p>
 	{/each}
+{/if}
 
+{#if data.coin.pair}
 		<h2>Pair Details</h2>
-		<p>Pair Address: {data.pair.pairAddress}</p>
-		<button onclick={() => navigator.clipboard.writeText(data.pair.pairAddress)}
+		<p>Pair Address: {data.coin.pair.pairAddress}</p>
+		<button onclick={() => navigator.clipboard.writeText(data.coin.pair.pairAddress)}
 			>Copy Address</button
 		>
-		<p>Pair created on: {new Date(data.pair.pairCreatedAt)}</p>
-		<p>Paired with: {data.pair.quoteToken.name}</p>
-		<p>Paired token address: {data.pair.quoteToken.address}</p>
-		<button onclick={() => navigator.clipboard.writeText(data.pair.quoteToken.address)}
+		<p>Pair created on: {new Date(data.coin.pair.pairCreated)}</p>
+		<p>Paired with: {data.coin.pair.name}</p>
+		<p>Paired token address: {data.coin.pair.address}</p>
+		<button onclick={() => navigator.clipboard.writeText(data.coin.pair.address)}
 			>Copy Address</button
 		>
-		<p>Paired token symbol: {data.pair.quoteToken.symbol}</p>
-		<h2>Price Details</h2>
-		<p>${data.pair.priceUsd}</p>
-		<p>Native: {data.pair.priceNative}</p>
-		<h3>Liquidity</h3>
-		<p>${data.pair.liquidity.usd}</p>
-		<h3>Market Cap</h3>
-		<p>${data.pair.marketCap}</p>
-		<h3>Volume</h3>
-{#each Object.keys(data.pair.volume) as key}
-	<p>{key}: {data.pair.volume[key]}</p>
-{/each}
+		<p>Paired token symbol: {data.coin.pair.symbol}</p>
+{/if}
 
-{#if data.pair.txns}
-<h3>Buys</h3>
-{#each Object.keys(data.pair.txns) as key}
-	<p>{key}: {data.pair.txns[key].buys}</p>
-{/each}
-<h3>Sells</h3>
-{#each Object.keys(data.pair.txns) as key}
-	<p>{key}: {data.pair.txns[key].sells}</p>
+		<h2>Price Details</h2>
+		<p>${data.coin.priceUSD}</p>
+		<p>Native: {data.coin.priceNative}</p>
+		<h3>Liquidity</h3>
+		<p>${data.coin.liquidity}</p>
+{#if data.coin.fdv}
+<h3>FDV</h3>
+		<p>${data.coin.fdv}</p>
+{/if}
+{#if data.coin.marketCap}
+		<h3>Market Cap</h3>
+		<p>${data.coin.marketCap}</p>
+{/if}
+{#if data.coin.volume}
+		<h3>Volume</h3>
+{#each Object.keys(data.coin.volume) as key}
+	<p>{key}: {data.coin.volume[key]}</p>
 {/each}
 {/if}
-<h2>Social Media Information:</h2>
-{#if data.pair.info.websites}
-{#each data.pair.info.websites as website}
+
+{#if data.coin.transactions}
+<h3>Buys</h3>
+{#each Object.keys(data.coin.transactions) as key}
+	<p>{key}: {data.coin.transactions[key].buys}</p>
+{/each}
+<h3>Sells</h3>
+{#each Object.keys(data.coin.transactions) as key}
+	<p>{key}: {data.coin.transactions[key].sells}</p>
+{/each}
+{/if}
+{#if data.coin.contactInfo}
+<h2>Contact Information:</h2>
+{#if data.coin.contactInfo.websites}
+{#each data.coin.contactInfo.websites as website}
 <a href={website.url}>Website: {website.url}</a>
 {/each}
 {/if}
-{#if data.pair.info.socials}
-{#each data.pair.info.socials as social}
+{#if data.coin.contactInfo.socials}
+{#each data.coin.contactInfo.socials as social}
 	<a href={social.url}>{social.type}</a>
 {/each}
+{/if}
 {/if}
 	</div>
 	<div
