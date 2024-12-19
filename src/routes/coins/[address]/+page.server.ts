@@ -116,3 +116,4 @@ if (coin){
 	return {status:404,error:"We could not find this Coin."}
 }
 };
+ 
