@@ -291,12 +291,6 @@ url: `${token.id}?dataProvider=${currentDataProvider}`,
 							<option value={option.value}>{option.name}</option>
 						{/each}
 					</select>
-					{#if currentDataProvider == 'pulse'}
-						<p role="alert">
-							The Pulsechain data provider intigration is currently still in development and not
-							fully functional.
-						</p>
-					{/if}
 				</div>
 				<div role="separator" class="border-t border-gray-600"></div>
 				<ul class="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-4">

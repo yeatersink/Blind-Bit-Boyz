@@ -50,6 +50,9 @@
 	>
 		<h2>Token Details</h2>
 		<p>Symbol: {data.coin.symbol}</p>
+{#if data.coin.totalSupply}
+	<p>Total supply: {formatNumberWithDecimals(data.coin.totalSupply.toString(), data.coin.decimals)}</p>
+{/if}
 		<p>Chain: {data.coin.chain}</p>
 {#if data.coin.labels}
 		{#each data.coin.labels as label}
@@ -92,6 +95,23 @@
 {/each}
 {/if}
 
+{#if data.coin.tradeVolume}
+		<h3>Trade Volume</h3>
+						<p>Trade Volume: {data.coin.tradeVolume}</p>
+{/if}
+{#if data.coin.tradeVolumeUSD}
+	<p>Trade Volume USD: {data.coin.tradeVolumeUSD}</p>
+{/if}
+{#if data.coin.untrackedVolumeUSD}
+	<p>Untracked Volume USD: {data.coin.untrackedVolumeUSD}</p>
+{/if}
+
+{#if data.coin.transactions || data.coin.totalTransactions}
+<h2>Transactions</h2>
+{#if data.coin.totalTransactions}
+	<p>Total Transactions: {data.coin.totalTransactions}</p>
+{/if}
+
 {#if data.coin.transactions}
 <h3>Buys</h3>
 {#each Object.keys(data.coin.transactions) as key}
@@ -102,6 +122,8 @@
 	<p>{key}: {data.coin.transactions[key].sells}</p>
 {/each}
 {/if}
+{/if}
+
 {#if data.coin.contactInfo}
 <h2>Contact Information:</h2>
 {#if data.coin.contactInfo.websites}

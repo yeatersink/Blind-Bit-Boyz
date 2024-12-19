@@ -6,9 +6,12 @@ export const load = async ({ params, url }) => {
 	const dataProvider=url.searchParams.get('dataProvider')
 	let coin:{
 address:string;
+test?:any;
 name:string;
 imageUrl?:string;
 symbol:string;
+decimals?:number;
+totalSupply?:number;
 chain:string;
 labels?:string[];
 pair?:{
@@ -22,6 +25,10 @@ priceUSD:number;
 priceNative:number;
 liquidity:number;
 fdv?:number;
+						tradeVolume?:number;
+						tradeVolumeUSD?:number;
+						untrackedVolumeUSD?:number;
+						totalTransactions?:number;
 marketCap?:number;
 volume?:{[key:string]:number};
 transactions?:{[key:string]:{buys:number,sells:number}};
@@ -56,8 +63,15 @@ socials?:{type:string,url:string}[];
 						symbol
 						derivedUSD
 						derivedPLS
+decimals
+totalSupply
 						totalLiquidity
-												
+						tradeVolume
+						tradeVolumeUSD
+						untrackedVolumeUSD
+						totalTransactions
+						pairBase{name}
+pairQuote{name}
 					}
 				}
 			`;
@@ -66,21 +80,26 @@ socials?:{type:string,url:string}[];
 			};
 
 		try {
-console.log("Requesting PulseChain data")
 			const data:any = await request(endPoint, gqlQuery, variables);
-console.log("Data Received")
 			if (data.token) {
-console.log("Token Found")
 				coin = {
 						name: data.token.name,
 						symbol: data.token.symbol,
+						decimals: data.token.decimals,
+totalSupply:data.token.totalSupply,
 						address: data.token.id,
 						priceUSD: data.token.derivedUSD,
 						priceNative: data.token.derivedPLS,
 chain:"Pulse",
 						liquidity: data.token.totalLiquidity,
-
+						tradeVolume: data.token.tradeVolume,
+						tradeVolumeUSD: data.token.tradeVolumeUSD,
+						untrackedVolumeUSD: data.token.untrackedVolumeUSD,
+						totalTransactions: data.token.totalTransactions,
 					}
+if(data.token.pairBase){
+coin.test={base:data.token.pairBase,quote:data.token.pairQuote}
+}
 			} else {
 				return { status: 404, error: 'Token not found' };
 			}
