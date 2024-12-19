@@ -1,3 +1,12 @@
+<svelte:head>
+	<title>The Blind Bit Boyz Crypto Initiative</title>
+	<meta
+		name="description"
+		content="The Blind Bit Boyz Crypto Initiative is a website that is designed to bring accessibility to the ever expanding crypto market for users who are blind."
+	/>
+	<meta name="author" content="The Blind Bit Boyz" />
+</svelte:head>
+
 <section class="bg-gray-800 px-6 py-16 text-center">
 	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
 		Welcome to The Blind Bit Boyz Crypto initiative!
