@@ -7,7 +7,11 @@
 
 <header class="sticky top-0 z-50 border-b border-gold-500 bg-black text-gray-100 shadow-lg">
 	<div class="container mx-auto flex items-center justify-between px-6 py-4">
-		<img src="/bbb-logo.png" class="h-24 w-auto" alt="Blind Bit Boyz Logo" />
+		<img
+			src="/bbb-logo.png"
+			class="h-24 w-auto"
+			alt="The Bitcoin symbol is white and placed in the center of a circular background that transitions from gold in the middle to a gray border. The symbol is depicted as a person with a black blindfold, extending an arm to touch a black silhouette of a guide dog on the left. The other arm is holding a white cane with a red tip on the right."
+		/>
 		<DesktopNav />
 	</div>
 </header>
