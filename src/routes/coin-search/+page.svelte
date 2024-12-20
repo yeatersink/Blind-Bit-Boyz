@@ -14,6 +14,9 @@
 	];
 	let currentSortingOption: string = $state(sortingOptions[0].value);
 	let sortingDirection: 'asc' | 'desc' = $state('asc');
+let currentSearchType: 'token'|'pair'|'both'|undefined = $state(undefined);
+
+
 	//The type of the results
 	type resultType = {
 		name: string;
@@ -31,15 +34,15 @@ url: string;
 	};
 	let results: Array<resultType> = $state([]);
 	let prices: { [key: string]: { price: string; name: string } } = {};
-	let dataProvidersList: Array<{
+	let dataProvidersList: {
+[key: string]: {
 		name: string;
-		value: string;
-		exchanges?: Array<{ name: string; value: string }>;
-	}> = [
-		{ name: 'Dex Screener', value: 'dexscreener' },
-		{ name: 'Pulsechain', value: 'pulse', exchanges: [{ name: 'PulseX', value: 'pulsex' }] }
-	];
-	let currentDataProvider: string = $state(dataProvidersList[0].value);
+		searchType:'token'|'pair'|'both'
+	}} = {
+		dexscreener:{ name: 'Dex Screener', searchType:'pair' },
+		pulse:{ name: 'Pulsechain', searchType:'both'}
+	};
+	let currentDataProvider: string = $state(Object.keys(dataProvidersList)[0]);
 	let blockchainList = [{ name: 'Pulse Chain', value: 'pls' }];
 	let currentBlockchain: string = $state(blockchainList[0].value);
 
@@ -90,6 +93,7 @@ url: string;
 		const endPoint = 'https://graph.pulsechain.com/subgraphs/name/pulsechain/pulsex';
 		let gqlQuery = gql``;
 		let variables: { [key: string]: string } = {};
+		if (currentSearchType=='token') {
 		if (query.startsWith('0x') && query.length == 42) {
 			gqlQuery = gql`
 				query GetToken($address: String!) {
@@ -122,7 +126,6 @@ url: string;
 				symbol: query
 			};
 		}
-
 		try {
 			data = await request(endPoint, gqlQuery, variables);
 
@@ -151,6 +154,65 @@ url: `${token.id}?dataProvider=${currentDataProvider}`,
 			console.error(error);
 			status = 'error';
 		}
+	} else if(currentSearchType=='pair') {
+		if (query.startsWith('0x') && query.length == 42) {
+			gqlQuery = gql`
+				query GetPair($address: String!) {
+					pair(id: $address) {
+						id
+						name
+token0{derivedUSD}
+					}
+				}
+			`;
+			variables = {
+				address: query
+			};
+		} else {
+			gqlQuery = gql`
+				query GetPairs($name: String!) {
+					pairs(
+						where: { name_contains_nocase: $name }
+					) {
+						id
+						name
+token0{derivedUSD}
+					}
+				}
+			`;
+			variables = {
+				name: query,
+			};
+		}
+		try {
+			data = await request(endPoint, gqlQuery, variables);
+
+			if (data.pair) {
+				results = [
+					{
+						name: data.pair.name,
+						symbol: 'NA',
+						address: data.pair.id,
+						url: `${data.pair.id}?dataProvider=${currentDataProvider}`,
+						price: data.pair.token0.derivedUSD
+					}
+				];
+			} else {
+				results = data.pairs.map((pair: any) => ({
+					name: pair.name,
+					symbol: 'NA',
+					address: pair.id,
+url: `${pair.id}?dataProvider=${currentDataProvider}`,
+					price: pair.token0.derivedUSD
+				}));
+			}
+			status = 'done';
+			sortResults();
+		} catch (error) {
+			console.error(error);
+			status = 'error';
+		}
+	}
 	}
 
 
@@ -224,11 +286,12 @@ url: `${token.id}?dataProvider=${currentDataProvider}`,
 				class="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-gray-200 hover:border-gray-400 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
 				bind:value={currentDataProvider}
 			>
-				{#each dataProvidersList as provider}
-					<option value={provider.value}>{provider.name}</option>
+				{#each Object.keys(dataProvidersList) as provider}
+					<option value={provider}>{dataProvidersList[provider].name}</option>
 				{/each}
 			</select>
 		</div>
+
 		<div class="flex flex-col items-center gap-2">
 			<label for="blockchain">Choose Which Block Chain You Want to Search</label>
 			<select
@@ -242,6 +305,20 @@ url: `${token.id}?dataProvider=${currentDataProvider}`,
 				{/each}
 			</select>
 		</div>
+
+		<div class="flex flex-col items-center gap-2">
+			<label for="searchtype">What would you like to search for?</label>
+			<select
+				id="searchtype"
+				class="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-gray-200 hover:border-gray-400 focus:border-gold-500 focus:ring-1 focus:ring-gold-500 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={currentSearchType}
+				disabled={dataProvidersList[currentDataProvider].searchType!='both'}
+			>
+<option value="token">Token</option>
+<option value="pair">Pair</option>
+			</select>
+		</div>
+
 		<div class="flex flex-col items-center gap-2">
 			<label for="search">Search Cryptocurrencies</label>
 			<div class="flex flex-col items-center">
