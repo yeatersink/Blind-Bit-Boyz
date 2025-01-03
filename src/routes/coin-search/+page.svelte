@@ -2,8 +2,11 @@
 	import { goto } from '$app/navigation';
 	import { request, gql } from 'graphql-request';
 
+	//The query string
 	let query = $state('');
+	// Used to track the status of the search
 	let status: 'loading' | 'done' | 'error' | undefined = $state(undefined);
+	//The options for sorting the results
 	let sortingOptions: Array<{ name: string; value: string }> = [
 		{ name: 'Name Ascending', value: 'name-asc' },
 		{ name: 'Name Descending', value: 'name-desc' },
@@ -12,6 +15,7 @@
 		{ name: 'Symbol Ascending', value: 'symbol-asc' },
 		{ name: 'Symbol Descending', value: 'symbol-desc' }
 	];
+	//The current sorting option
 	let currentSortingOption: string = $state(sortingOptions[0].value);
 	let sortingDirection: 'asc' | 'desc' = $state('asc');
 let currentSearchType: 'token'|'pair'|'both'|undefined = $state(undefined);
@@ -162,6 +166,8 @@ url: `${token.id}?dataProvider=${currentDataProvider}`,
 						id
 						name
 token0{derivedUSD}
+token0{symbol}
+token1{symbol}
 					}
 				}
 			`;
@@ -177,6 +183,8 @@ token0{derivedUSD}
 						id
 						name
 token0{derivedUSD}
+token0{symbol}
+token1{symbol}
 					}
 				}
 			`;
@@ -191,7 +199,7 @@ token0{derivedUSD}
 				results = [
 					{
 						name: data.pair.name,
-						symbol: 'NA',
+						symbol: data.pair.token0.symbol + '/' + data.pair.token1.symbol,
 						address: data.pair.id,
 						url: `${data.pair.id}?dataProvider=${currentDataProvider}`,
 						price: data.pair.token0.derivedUSD
@@ -200,7 +208,7 @@ token0{derivedUSD}
 			} else {
 				results = data.pairs.map((pair: any) => ({
 					name: pair.name,
-					symbol: 'NA',
+					symbol: pair.token0.symbol + '/' + pair.token1.symbol,
 					address: pair.id,
 url: `${pair.id}?dataProvider=${currentDataProvider}`,
 					price: pair.token0.derivedUSD

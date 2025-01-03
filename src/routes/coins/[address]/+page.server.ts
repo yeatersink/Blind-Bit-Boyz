@@ -101,7 +101,62 @@ if(data.token.pairBase){
 coin.test={base:data.token.pairBase,quote:data.token.pairQuote}
 }
 			} else {
+				//Searches for a pair
+				const gqlQuery = gql`
+				query GetPair($address: String!) {
+					pair(id: $address) {
+						id
+timestamp
+token0{id}
+						token0{name}
+token0{symbol}
+						token0{derivedUSD}
+						token0{derivedPLS}
+token0{decimals}
+token0{totalSupply}
+						token0{totalLiquidity}
+						token0{tradeVolume}
+						token0{tradeVolumeUSD}
+						token0{untrackedVolumeUSD}
+						token0{totalTransactions}
+token1{id}
+						token1{name}
+token1{symbol}
+					}
+				}
+`;
+
+				const variables = {
+					address: coinAddress,
+				};
+
+				const data:any = await request(endPoint, gqlQuery, variables);
+
+				if (data.pair) {
+					coin = {
+	address: data.pair.token0.id,
+						name: data.pair.token0.name,
+						symbol: data.pair.token0.symbol,
+						priceUSD: data.pair.token0.derivedUSD,
+						priceNative: data.pair.token0.derivedPLS,
+						liquidity: data.pair.token0.totalLiquidity,
+						tradeVolume: data.pair.token0.tradeVolume,
+						tradeVolumeUSD: data.pair.token0.tradeVolumeUSD,
+						untrackedVolumeUSD: data.pair.token0.untrackedVolumeUSD,
+						totalTransactions: data.pair.token0.totalTransactions,
+						decimals: data.pair.token0.decimals,
+						chain:"Pulse",
+						totalSupply:data.pair.totalSupply,
+pair:{
+pairAddress:data.pair.id,
+pairCreated:data.pair.timestamp*1000,
+name:data.pair.token1.name,
+address:data.pair.token1.id,
+symbol:data.pair.token1.symbol}
+					}
+				} else {
 				return { status: 404, error: 'Token not found' };
+				}
 			}
 		} catch (error) {
 			console.error(error);
