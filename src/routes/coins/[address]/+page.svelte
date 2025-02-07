@@ -1,6 +1,6 @@
 <script lang="ts">
-import { request, gql } from 'graphql-request';
-import { page } from '$app/stores';
+	import { request, gql } from 'graphql-request';
+	import { page } from '$app/stores';
 	let currentTab: string = $state('panel-coin-details');
 
 	const { data } = $props();
@@ -9,85 +9,87 @@ import { page } from '$app/stores';
 		return (parseInt(number) / 10 ** parseInt(decimals)).toFixed(parseInt(decimals));
 	}
 
-
 	async function getTechnicalAnalysis() {
-	const dataProvider=$page.url.searchParams.get("dataProvider")
-const coinAddress=$page.url.pathname.split("/")[2]
-	if(dataProvider=="pulse") {
-		const endPoint = 'https://graph.pulsechain.com/subgraphs/name/pulsechain/pulsex';
-if(data.coin?.pair) {
-			const gqlQuery = gql`
-				query GetTokenTA($address: String!) {
+		const dataProvider = $page.url.searchParams.get('dataProvider');
+		const coinAddress = $page.url.pathname.split('/')[2];
+		if (dataProvider == 'pulse') {
+			const endPoint = 'https://graph.pulsechain.com/subgraphs/name/pulsechain/pulsex';
+			if (data.coin?.pair) {
+				const gqlQuery = gql`
+					query GetTokenTA($address: String!) {
 						pairDayDatas(
-where:{pairAddress: $address}
-first: 100 orderBy:"date" orderDirection:"desc"){id
-date
-dailyVolumeToken0
-dailyTxns
-reserveUSD
+							where: { pairAddress: $address }
+							first: 100
+							orderBy: "date"
+							orderDirection: "desc"
+						) {
+							id
+							date
+							dailyVolumeToken0
+							dailyTxns
+							reserveUSD
+						}
 					}
-				}
-			`;
-			const variables = {
-				address: data.coin.pair.pairAddress,
-			};
+				`;
+				const variables = {
+					address: data.coin.pair.pairAddress
+				};
 
-		try {
-			const response:any = await request(endPoint, gqlQuery, variables);
-if(response.pairDayDatas) {
-let taObject = response.pairDayDatas.map((day:any) => {
-	return {
-		date: day.date,
-		priceUSD: day.reserveUSD,
-		dailyTxns: day.dailyTxns,
-		dailyVolumeToken0: day.dailyVolumeToken0
-	}
-});
-	return taObject
-} else {
-	return {message:"Sorry that Token is not Found!"}
-}
-		} catch (error) {
-			console.error(error);
-			return {message:"Sorry something went wrong!"}
-		}
-} else {
-			const gqlQuery = gql`
-				query GetTokenTA($address: String!) {
-						tokenDayData(
-id: $address
-first: 100 orderBy:"date" orderDirection:"desc"){id
-date
-dailyVolumeToken
-dailyVolumePLS
-dailyVolumeUSD
-dailyTxns
-totalLiquidityToken
-totalLiquidityPLS
-totalLiquidityUSD
-priceUSD
+				try {
+					const response: any = await request(endPoint, gqlQuery, variables);
+					if (response.pairDayDatas) {
+						let taObject = response.pairDayDatas.map((day: any) => {
+							return {
+								date: day.date,
+								priceUSD: day.reserveUSD,
+								dailyTxns: day.dailyTxns,
+								dailyVolumeToken0: day.dailyVolumeToken0
+							};
+						});
+						return taObject;
+					} else {
+						return { message: 'Sorry that Token is not Found!' };
 					}
+				} catch (error) {
+					console.error(error);
+					return { message: 'Sorry something went wrong!' };
 				}
-			`;
-			const variables = {
-				address: coinAddress,
-			};
+			} else {
+				const gqlQuery = gql`
+					query GetTokenTA($address: String!) {
+						tokenDayData(id: $address, first: 100, orderBy: "date", orderDirection: "desc") {
+							id
+							date
+							dailyVolumeToken
+							dailyVolumePLS
+							dailyVolumeUSD
+							dailyTxns
+							totalLiquidityToken
+							totalLiquidityPLS
+							totalLiquidityUSD
+							priceUSD
+						}
+					}
+				`;
+				const variables = {
+					address: coinAddress
+				};
 
-		try {
-			const response:any = await request(endPoint, gqlQuery, variables);
-if(response.token) {
-	return response.token.tokenDayData
-} else {
-	return {message:"Sorry that Token is not Found!"}
-}
-		} catch (error) {
-			console.error(error);
-			return {message:"Sorry something went wrong!"}
+				try {
+					const response: any = await request(endPoint, gqlQuery, variables);
+					if (response.token) {
+						return response.token.tokenDayData;
+					} else {
+						return { message: 'Sorry that Token is not Found!' };
+					}
+				} catch (error) {
+					console.error(error);
+					return { message: 'Sorry something went wrong!' };
+				}
+			}
+		} else {
+			return { message: 'Sorry that Data Provider is not Supported at this Time!' };
 		}
-}
-	} else {
-		return {message:"Sorry that Data Provider is not Supported at this Time!"}
-	}
 	}
 </script>
 
@@ -247,21 +249,21 @@ if(response.token) {
 		aria-label="Technical Analysis"
 	>
 		<h2 class="mb-4 text-2xl font-semibold text-gray-100">Technical analysis</h2>
-{#await getTechnicalAnalysis()}
-	<p>Loading...</p>
-{:then value}
-{#if value}
-{#if value.message}
-<p>{value.message}</p>
-{/if}
-{#each value as day}
-<h3>{new Date(day.date*1000).toLocaleDateString()}:</h3>
-<p>${day.priceUSD}</p>
-<p>Transactions: {day.dailyTxns}</p>
-{/each}
-{/if}
-{:catch}
-<p>Sorry something went wrong!</p>
-	{/await}
+		{#await getTechnicalAnalysis()}
+			<p>Loading...</p>
+		{:then value}
+			{#if value}
+				{#if value.message}
+					<p>{value.message}</p>
+				{/if}
+				{#each value as day}
+					<h3>{new Date(day.date * 1000).toLocaleDateString()}:</h3>
+					<p>${day.priceUSD}</p>
+					<p>Transactions: {day.dailyTxns}</p>
+				{/each}
+			{/if}
+		{:catch}
+			<p>Sorry something went wrong!</p>
+		{/await}
 	</div>
 {/if}
