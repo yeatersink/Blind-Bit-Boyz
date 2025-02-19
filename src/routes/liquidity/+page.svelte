@@ -178,7 +178,7 @@ key: "liquidity"
 
     <!-- Right column for image -->
     <div class="md:w-1/2 mt-8 md:mt-0">
-        <img src="waterfall.png" alt="Waterfalls" class="w-full h-auto object-cover sticky top-20" />
+        <img src="bitcoin_pool_best.png" alt="Image is of a bitcoin man, swimming in a pool of cash." class="w-full h-auto object-cover sticky top-20" />
     </div>
 </div>
 
