@@ -2,9 +2,11 @@
 	import { page } from '$app/stores';
 	let navItems = [
 		{ name: 'Home', url: '/' },
-		{ name: 'Search for a Coin', url: '/coin-search' },
-		{ name: 'Lost Coin Finder', url: '/lost-coin-finder' },
-		{ name: 'Wallet Tracker', url: '/wallet-tracker' }
+		{ name: 'Coin Search', url: '/coin-search' },
+		{ name: 'Wallet', url: '/wallet' },
+		{ name: 'Tools', url: '/tools' },
+		{ name: 'Liquidity and LP', url: '/liquidity' },
+		{ name: 'Block Chain', url: '/block_chain' },
 	];
 </script>
 
