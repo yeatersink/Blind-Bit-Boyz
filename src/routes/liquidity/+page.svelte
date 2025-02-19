@@ -168,7 +168,7 @@ key: "liquidity"
                 {#if expandedTopics[topic.key]}
                     <div transition:fade={{ duration: 300 }}>
                         {#each topic.content as paragraph}
-                            <p class="text-gray-700 leading-relaxed mb-4">{@html paragraph}</p>
+                            <p class="text-white-700 leading-relaxed mb-4">{@html paragraph}</p>
                         {/each}
                     </div>
                 {/if}
