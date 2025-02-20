@@ -1,144 +1,214 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	let walletAddress: string = '';
-	let saveWallet: boolean | undefined;
-	let walletName: string = '';
-	let walletList: Array<{ address: string; name: string }> = [];
-	let results: Array<any> = [];
-	let prices: { [key: string]: { price: string; name: string } } = {};
+    import { fade } from 'svelte/transition';
+    import { goto } from '$app/navigation';
+    
+    // Defining ExpandedTopics 
+    interface ExpandedTopics {
+        digitalwallet: boolean;
+        commonwallet: boolean;
+        cryptowallet: boolean;
+    }
 
-	onMount(async () => {
-		if (localStorage.getItem('wallets')) {
-			walletList = JSON.parse(localStorage.getItem('wallets') || '[]');
-		}
-	});
+    // Defining Topic, which uses ExpandedTopics
+    interface Topic {
+        title: string;
+        content: string[];
+        key: keyof ExpandedTopics;
+    }
 
-	async function getCoinsFromWallet() {
-		if (saveWallet) {
-			let exists = false;
-			if (walletList.find((wallet) => wallet.address === walletAddress)) {
-				exists = true;
-			}
-			if (!exists) {
-				walletList.push({ address: walletAddress, name: walletName });
-				localStorage.setItem('wallets', JSON.stringify(walletList));
-			} else {
-				alert('Wallet already saved');
-			}
-		}
+    // Initializing variables
+    let expandedTopics: ExpandedTopics = {
+        digitalwallet: false,
+        commonwallet: false,
+        cryptowallet: false
+    };
 
-		const response = await fetch(
-			`https://api.scan.pulsechain.com/api?module=account&action=tokenlist&address=${walletAddress}`
-		);
-		const data = await response.json();
-		let itemList = [];
-		if (data.result.length > 30) {
-			//Splits items into groups of 30
-			for (let i = 0; i < data.result.length; i += 30) {
-				itemList.push(data.result.slice(i, i + 30));
-			}
-			//Get price info for each group of 30 items
-			for (let items of itemList) {
-				await getPriceInfo(items);
-			}
-		} else {
-			await getPriceInfo(data.result);
-		}
-		results = data.result;
-	}
+    const topics: Topic[] = [
+        {
+      title: "Introduction to the Digital Wallet",
+      content: [
+        "What is a Digital Wallet?",
+        "A digital wallet, also known as an e-wallet, is a software application or online service that allows individuals to store, send, and receive digital currency and other forms of electronic payment. Here's a detailed breakdown of its features, functionalities, and benefits:",
+        "Key Features:",
+        "1. Storage of Payment Information:",
+        " Digital wallets securely store various payment methods, including credit/debit card information, bank account details, and cryptocurrency addresses.",
+        " Users can add multiple payment options for convenience.",
+        
+        "Conclusion:",
+        "In summary, a digital wallet is a versatile tool that enhances the way people manage and make financial transactions. It combines convenience with security, catering to the evolving needs of consumers in an increasingly digital world.",
+        "How to Get a Digital Wallet:",
+        "Using a digital wallet involves several steps, and its functionality can vary based on the type of wallet and its intended purpose. Here's a detailed explanation of how to use a digital wallet:",
+        // ... (continue with the rest of the content)
+        "Conclusion:",
+        "Using a digital wallet is a straightforward process that enhances convenience and security in managing financial transactions. By following these steps, users can effectively leverage the various functionalities of digital wallets for everyday payments, money transfers, and financial management."
+      ],
+      key: "digitalwallet"
+    },
 
-	function formatBalance(balance: string, decimals: string) {
-		return (parseInt(balance) / 10 ** parseInt(decimals)).toFixed(parseInt(decimals));
-	}
+      {
+        title: "Common Digital Wallets",
+      content: [
+        "Here's a list of some of the most popular digital wallets, the blockchains they support, and their key features:",
 
-	async function getPriceInfo(items: Array<any>) {
-		try {
-			const contractAddresses = items.map((item) => item.contractAddress);
-			const response = await fetch(
-				`https://api.dexscreener.com/latest/dex/tokens/${contractAddresses.join(',')}`
-			);
-			const priceInfoList = await response.json();
-			for (let priceInfo of priceInfoList.pairs) {
-				if (priceInfo.priceUsd) {
-					prices[priceInfo.baseToken.address] = {
-						price: `$${priceInfo.priceUsd}`,
-						name: priceInfo.baseToken.name
-					};
-				} else {
-					prices[priceInfo.baseToken.address] = { price: 'N/A', name: priceInfo.baseToken.name };
-				}
-			}
-		} catch (error) {
-			console.error('Error fetching price info from Dex Screener API');
-			console.error(error);
-		}
-	}
+        "1. PayPal",
+        "Supported Blockchains: Primarily fiat currencies (USD, EUR, etc.), limited cryptocurrency support (Bitcoin, Ethereum, Litecoin, Bitcoin Cash).",
+        "Key Features:",
+        "- Easy online payments and money transfers.",
+        "- Buyer protection for eligible purchases.",
+        "- Integration with e-commerce platforms.",
+        "- Mobile app for on-the-go transactions.",
+        "- Cryptocurrency buying, selling, and holding.",
+
+        "2. Venmo",
+        "Supported Blockchains: Primarily fiat currencies (USD).",
+        "Key Features:",
+        "- Peer-to-peer payments with social feed for sharing transactions.",
+        "- Instant transfer to bank accounts (for a fee).",
+        "- QR code scanning for easy payments.",
+        "- Ability to pay for purchases at select merchants.",
+
+        "3. Apple Pay",
+        "Supported Blockchains: Primarily fiat currencies (USD, EUR, etc.).",
+        "Key Features:",
+        "- Contactless payments using NFC technology.",
+        "- Integration with Apple devices (iPhone, iPad, Apple Watch).",
+        "- Secure payments with Face ID, Touch ID, or passcode.",
+        "- Ability to store loyalty cards and tickets.",
+
+        // ... continue with other wallets ...
+
+        "10. Exodus Wallet",
+        "Supported Blockchains: Supports multiple cryptocurrencies including Bitcoin, Ethereum, and over 100 altcoins.",
+        "Key Features:",
+        "- User-friendly interface designed for beginners.",
+        "- Built-in exchange for swapping cryptocurrencies.",
+        "- Portfolio tracking to monitor asset performance.",
+        "- Mobile and desktop versions available.",
+
+        "Conclusion",
+        "These digital wallets cater to various user needs, from simple peer-to-peer payments to advanced cryptocurrency management. When choosing a wallet, consider the supported blockchains, security features, and specific functionalities that align with your financial activities and preferences."
+      ],
+      key: "commonwallet"
+    },
+
+    {
+      title: " Most Common Wallets used for Trading Crypto Currency ",
+      content: [
+        "Here's a list of the top 10 most popular digital wallets for trading cryptocurrency.",
+
+        "1. Coinbase",
+        "Supported Cryptocurrencies: Bitcoin, Ethereum, Litecoin, and many others.",
+        "Key Features:",
+        "- User-friendly interface suitable for beginners.",
+        "- Integrated exchange for easy buying and selling.",
+        "- High security with two-factor authentication.",
+        "- Mobile app for trading on the go.",
+
+        "2. Binance",
+        "Supported Cryptocurrencies: Supports hundreds of cryptocurrencies.",
+        "Key Features:",
+        "- Extensive trading options, including spot and futures trading.",
+        "- Low trading fees compared to other exchanges.",
+        "- Advanced charting tools and analysis features.",
+        "- Mobile app for trading anywhere.",
+
+        "3. Kraken",
+        "Supported Cryptocurrencies: Bitcoin, Ethereum, Ripple, and many more.",
+        "Key Features:",
+        "- High liquidity and a wide range of trading pairs.",
+        "- Advanced trading features, including margin trading.",
+        "- Strong security measures, including cold storage.",
+        "- User-friendly mobile app.",
+
+        // ... continue with other wallets ...
+
+        "10. Ledger Live",
+        "Supported Cryptocurrencies: Supports thousands of cryptocurrencies (when used with Ledger hardware wallets).",
+        "Key Features:",
+        "- Combines hardware wallet security with software wallet functionality.",
+        "- Allows direct trading and managing of assets within the app.",
+        "- Portfolio tracking features.",
+        "- Highly secure, as private keys are stored offline.",
+
+        "Conclusion",
+        "This updated list includes some of the most popular and trusted wallets and exchanges for trading cryptocurrency, featuring a mix of centralized and decentralized options. Each wallet offers unique features tailored to different user preferences and trading styles. When selecting a wallet, consider factors such as security, user experience, and supported cryptocurrencies."
+      ],
+      key: "cryptowallet"
+    }
+  ];
+
+        
+    const toggleContent = (topicKey: keyof ExpandedTopics): void => {
+        expandedTopics = {
+            ...expandedTopics,
+            [topicKey]: !expandedTopics[topicKey]
+        };
+    };
 </script>
 
 <svelte:head>
-	<title>Welcome to Your Lost Coin Finder!</title>
+    <title>The Blind Bit Boyz Crypto Initiative</title>
+    <meta
+        name="description"
+        content="The Blind Bit Boyz Crypto Initiative is a website that is designed to bring accessibility to the ever expanding crypto market for users who are blind."
+    />
+    <meta name="author" content="The Blind Bit Boyz" />
 </svelte:head>
 
-<h1>Welcome to your Lost Coin Finder!</h1>
-<p>
-	Have you purchased coins and forgotten about them? This tool will help you dig up coins in your
-	wallet that you have long forgotten about, and you don't even have to connect your wallet to find
-	them.
-</p>
-<p>
-	Using this tool is simple. Just put your wallet address in the search bar, and then choose which
-	block chain that you purchased your coin on, and let the Lost Coin Finder locate them for you.
-</p>
-<p>
-	This tool will give you a list of every item in your wallet. Be aware of dust coins or scam coins
-	that have been air dropped into your wallet without your knowledge. This tool is very helpful in
-	finding them in your wallet, but do not actualy connect your wallet to these scam coins.
-</p>
-<form
-	onsubmit={(event) => {
-		event.preventDefault();
-		getCoinsFromWallet();
-	}}
->
-	<label for="walletAddress">Enter Wallet Address</label>
-	<input required id="walletAddress" type="search" bind:value={walletAddress} />
-	{#if walletList && walletList.length > 0}
-		<label for="walletList">Saved Wallets</label>
-		<select id="walletList" bind:value={walletAddress}>
-			{#each walletList as wallet}
-				<option value={wallet.address}>{wallet.name} ({wallet.address})</option>
-			{/each}
-		</select>
-	{/if}
-	<input type="checkbox" id="saveWallet" name="saveWallet" bind:group={saveWallet} />
-	<label for="saveWallet">Save Wallet</label>
-	<p>
-		This will save the wallet to your browser's local storage so you can easily access it later.
-	</p>
-	{#if saveWallet}
-		<label for="walletName">Wallet Name</label>
-		<input required type="text" id="walletName" placeholder="My Wallet" bind:value={walletName} />
-	{/if}
-	<button>Search for Wallet</button>
-</form>
+<section class="bg-gray-800 px-6 py-16 text-center">
+    <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
+        The Digital Wallet</h1>
 
-{#if results.length > 0}
-	<h2>Coins Owned by this Wallet: {results.length}</h2>
-	{#each results as result}
-		<a href={`/coins/${result.contractAddress}`} target="_blank">
-			<h3>{result.name}</h3>
-			{#if prices[result.contractAddress]}
-				<p>Price: {prices[result.contractAddress].price}</p>
-			{:else}
-				<p>Price: N/A</p>
-			{/if}
-			<p>{result.contractAddress}</p>
-		</a>
-		<button onclick={() => navigator.clipboard.writeText(result.contractAddress)}
-			>Copy Contract Address</button
-		>
-		<p>Balance: {formatBalance(result.balance, result.decimals)}</p>
-		<p>Symbol: {result.symbol}</p>
-		<p>Type: {result.type}</p>
-	{/each}
-{/if}
+    <p class="text-xl">
+        
+
+    </p>
+</section>
+<div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
+    <!-- Left column for image -->
+    <div class="md:w-1/2 mt-8 md:mt-0 md:order-first">
+        <img src="bitcoin_wallet.png" alt="Image is of a bit coin guy, sitting on a couch, covered in wallets." class="w-full h-auto object-cover sticky top-20" />
+    </div>
+
+    <!-- Right column for topics -->
+    <div class="md:w-1/2 md:pl-8">
+        {#each topics as topic (topic.key)}
+            <div class="topic mb-16">
+                <h2 class="text-2xl font-bold text-yellow-500 mb-4">{topic.title}</h2>
+                <button
+                    on:click={() => toggleContent(topic.key)}
+                    class="bg-white text-gray-800 hover:text-yellow-500 transition duration-300 mb-6 focus:outline-none font-semibold py-2 px-4 rounded shadow-md hover:shadow-lg"
+                    aria-expanded={expandedTopics[topic.key]}
+                >
+                    {expandedTopics[topic.key] ? 'Show Less' : 'Show More'}
+                </button>
+
+                {#if expandedTopics[topic.key]}
+                    <div transition:fade={{ duration: 300 }}>
+                        {#each topic.content as paragraph}
+                            <p class="text-white-700 leading-relaxed mb-4">{@html paragraph}</p>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        {/each}
+    </div>
+</div>
+
+
+<section class="bg-gray-800 px-6 py-16 text-center">
+    <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
+        Accessible Resources for Wallet and Portfolio Tracking</h1>
+        
+    <p class="text-xl">We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
+
+    <h2 class="pt-24">PLS 369:</h2>
+	<p>PLS 369 is a site that will allow you to search any wallet on Pulse Chain with the necessary  wallet address. You can search for your wallet or anyone elses wallet. The results show up on the site or are downloadable. This site is very valuable in in being able to keep track of your own Portfolio. It is especially nice because it will give you a list of every token you have in your wallet. It will give you the balance of those tokens. Including how many of those tokens you possess, the price of the coin, and the total value of the balance of those tokens.  It will also give you a total value the wallet is worth which is comprised of all the tokens possessed by the wallet.</p>
+	<p>To use this site, just follow the link 		<a
+		class="border-b border-gray-300 hover:border-gold-400 hover:text-gold-500 focus:border-gold-400 focus:text-gold-500"
+		href="https://pls369.com/">PLS 369</a
+	>, and follow the instructions. The developer has been very willing to make sure that the site is accessible with a screen reader.</p>  
+
+	
+</section>
+

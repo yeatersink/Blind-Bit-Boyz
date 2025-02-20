@@ -98,22 +98,22 @@
 </script>
 
 <svelte:head>
-	<title>The Blind Bit Boyz Crypto Initiative</title>
-	<meta
-		name="description"
-		content="The Blind Bit Boyz Crypto Initiative is a website that is designed to bring accessibility to the ever expanding crypto market for users who are blind."
-	/>
-	<meta name="author" content="The Blind Bit Boyz" />
+    <title>The Blind Bit Boyz Crypto Initiative</title>
+    <meta
+        name="description"
+        content="The Blind Bit Boyz Crypto Initiative is a website that is designed to bring accessibility to the ever expanding crypto market for users who are blind."
+    />
+    <meta name="author" content="The Blind Bit Boyz" />
 </svelte:head>
 
 <section class="bg-gray-800 px-6 py-16 text-center">
-	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-		Accessible Tools for Engagement with the Blockchain</h1>
+    <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
+        Accessible Tools for Engagement with the Blockchain</h1>
 
-	<p class="text-xl">
-		
+    <p class="text-xl">
+        
 
-	</p>
+    </p>
 </section>
 <div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
     <!-- Left column for topics -->
@@ -147,11 +147,11 @@
 </div>
 
 <section class="bg-gray-800 px-6 py-16 text-center">
-	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-		Accessible Resources for Trading and Engaging </h1>
+    <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
+        Accessible Resources for Trading and Engaging </h1>
 
-	<p class="text-xl">We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
+    <p class="text-xl">We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
 
-
-		
+        
 </section>
+

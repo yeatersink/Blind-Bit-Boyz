@@ -146,10 +146,14 @@
 		
 
 	</p>
-</section>
-<div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
-    <!-- Left column for topics -->
-    <div class="md:w-1/2 pr-8">
+</section><div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
+    <!-- Left column for image -->
+    <div class="md:w-1/2 mt-8 md:mt-0">
+        <img src="bitcoin_block.png" alt="Image is of a bitcoin man, standing in front a chain of blocks, that continue into the background." class="w-full h-auto object-cover sticky top-20" />
+    </div>
+
+    <!-- Right column for topics -->
+    <div class="md:w-1/2 pl-8">
         {#each topics as topic (topic.key)}
             <div class="topic mb-16">
                 <h2 class="text-2xl font-bold text-yellow-500 mb-4">{topic.title}</h2>
@@ -171,14 +175,10 @@
             </div>
         {/each}
     </div>
-
-    <!-- Right column for image -->
-    <div class="md:w-1/2 mt-8 md:mt-0">
-        <img src="bitcoin_pool_best.png" alt="Image is of a bitcoin man, swimming in a pool of cash." class="w-full h-auto object-cover sticky top-20" />
-    </div>
 </div>
 
 <section class="bg-gray-800 px-6 py-16 text-center">
+
 	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
 		Recent Blockchain Releases:</h1>
 
