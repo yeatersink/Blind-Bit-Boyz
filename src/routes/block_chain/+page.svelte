@@ -180,8 +180,9 @@ onMount(() => {
 
 <section class="bg-gray-800 px-6 py-16 text-center">
 
-      <h1>Welcome to the Blockchain  and Exchange Information Page</h1>
+      <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">Welcome to the Blockchain  and Exchange Information Page</h1>
       
+      <h2>Contents</h2>
       <nav>
         <ul>
           <li><a href="#Introduction to blockchain">Introduction to Blockchain</a></li>
@@ -192,7 +193,7 @@ onMount(() => {
       </nav>
 
         <section id="Introduction to blockchain">
-            <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">Introduction to Blockchain </h1>
+            <h1 >Introduction to Blockchain </h1>
 
             <p class="text-xl"> This section has information about blockchain development and technology...</p>
           </section>

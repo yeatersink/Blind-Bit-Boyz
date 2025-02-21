@@ -1,6 +1,44 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
     import { goto } from '$app/navigation';
+      import { onMount } from 'svelte';
+// Video Element
+  let videoElement: HTMLVideoElement;
+  let isPlaying: boolean = false;
+
+  function togglePlay(): void {
+    if (videoElement) {
+      if (videoElement.paused) {
+        videoElement.play();
+      } else {
+        videoElement.pause();
+      }
+    }
+  }
+
+  function fastForward(): void {
+    if (videoElement) {
+      videoElement.currentTime += 10; // Fast forward 10 seconds
+    }
+  }
+
+  function rewind(): void {
+    if (videoElement) {
+      videoElement.currentTime -= 10; // Rewind 10 seconds
+    }
+  }
+
+  onMount(() => {
+    if (videoElement) {
+      videoElement.addEventListener('play', () => {
+        isPlaying = true;
+      });
+
+      videoElement.addEventListener('pause', () => {
+        isPlaying = false;
+      });
+    }
+  });
 	
     // Defineing ExpandedTopics 
     interface ExpandedTopics {
@@ -142,15 +180,26 @@ key: "liquidity"
 	<meta name="author" content="The Blind Bit Boyz" />
 </svelte:head>
 
-<section class="bg-gray-800 px-6 py-16 text-center">
+<section class="bg-gray-800 text-center">
 	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-		Liquidity and Liquidity Providing</h1>
-
-	<p class="text-xl">
-		
-
-	</p>
+		Welcome to the Liquidity and Liquidity Providing Page</h1>
+        <nav>
+            <h2>Contents</h2>
+            <ul>
+              <li><a href="#introduction">Introduction to Liquidity</a></li>
+              <li><a href="#how-to-provide">How to Provide Liquidity</a></li>
+              <li><a href="#accessible-tools">Accessible Tools for Liquidity Analysis</a></li>
+            </ul>
+          </nav>
+	
 </section>
+<section class="bg-gray-800 text-center">
+<section id="introduction">
+    <h2>Introduction to Liquidity</h2>
+    <p>This section will contain information about Liquidity and how it works.</p>
+  </section>
+</section>
+
 <div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
     <!-- Left column for topics -->
     <div class="md:w-1/2 pr-8">
@@ -183,10 +232,98 @@ key: "liquidity"
 </div>
 
 <section class="bg-gray-800 px-6 py-16 text-center">
-	<h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-		Accessible Resources for Liquidity and Liquidity Providing</h1>
+    <section id="how-to-provide">
+        <h1>How to become a Liquidity Provider</h1>
 
-	<p class="text-xl">We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
+        <p>Here's a brief list of instructions on how to provide liquidity on Uniswap and Pulse X:</p>
+        
+        <ol>
+            <li>1. Connect Your Wallet: Open the Uniswap interface and connect your Ethereum wallet (e.g., MetaMask).</li>
+        
+            <li>2. Select the Pool: Navigate to the "Pool" or "Liquidity" section and click on "Add Liquidity."</li>
+        
+            <li>3. Choose Tokens: Select the token pair you want to provide liquidity for. You'll need to input the amount of each token you wish to supply.</li>
+        
+            <li>4. Set Amounts: Enter the amount of one token; the other token will be automatically calculated based on the current exchange rate.</li>
+        
+            <li>5. Approve Tokens: If you haven't already, you may need to approve the tokens for Uniswap to use.</li>
+        
+            <li>6. Review Details: Check the details, including the share of the liquidity pool and potential rewards.</li>
+        
+            <li>7. Provide Liquidity: Click on the "Supply" button, review the transaction, and confirm it in your wallet.</li>
+        
+            <li>8. Check Your Position: After the transaction is confirmed, you can view your liquidity position in the "Pool" section.</li>
+        </ol>
+
+<p style="margin-bottom: 0.50in;">Make sure to do thorough research and understand the risks involved before providing liquidity! For more information, check out our video below:</p> 
+
+
+<div class="video-container">
+    <video bind:this={videoElement}>
+      <source src="test.MP4" type="video/mp4">
+      <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
+      Your browser does not support the video tag.
+    </video>
+  </div>
+  
+  <div class="controls">
+    <button on:click={rewind}>⏪</button>
+    <button on:click={togglePlay}>
+      {#if isPlaying}
+        ⏸️
+      {:else}
+        ▶️
+      {/if}
+    </button>
+    <button on:click={fastForward}>⏩</button>
+  </div>
+  <style>
+    .video-container {
+      width: 576px; /* 6 inches * 96 pixels/inch */
+      height: 480px; /* 5 inches * 96 pixels/inch */
+      margin: 0 auto;
+      border: 32px solid silver; /* Approximately 1/3 inch silver border */
+      box-sizing: content-box;
+    }
+  
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: pointer;
+      display: block;
+    }
+  
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+  
+    button {
+      padding: 10px 20px;
+      background-color: silver;
+      color: black;
+      border: none;
+      cursor: pointer;
+      margin: 0 5px;
+      font-size: 18px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+  
+    button:hover, button:active {
+      background-color: white;
+      color: gold;
+    }
+  </style>
+  
+      </section>
+</section>
+<section class="bg-gray-800 px-6 py-16 text-center">
+    <section id="accessible-tools">
+        <h2>Accessible Tools for Liquidity Analysis</h2>
+
+    <p >We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
 
 	<h2 class="pt-24">The Block Hive:</h2>
 	<p>The Block Hive is a site that will allow you to find any pair with the necessary  contract address. You can search for a token on every exchange in Pulse Chain. The results show up on the site or are downloadable. This site is very valuable in researching liquidity relevant to a pair, or the liquidity in all the pairs that a coin has been bonded with.</p>
@@ -195,6 +332,6 @@ key: "liquidity"
 		href="https://liquidity-pools.vercel.app/">Block Hive</a
 	>, and follow the instructions. The developer has been very willing to make sure that the site is accessible with a screen reader.</p>  
 
-		
+</section>
 		
 </section>

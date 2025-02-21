@@ -1,7 +1,45 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
     import { goto } from '$app/navigation';
-    
+  import { onMount } from 'svelte';
+
+  let videoElement: HTMLVideoElement;
+  let isPlaying: boolean = false;
+
+  function togglePlay(): void {
+    if (videoElement) {
+      if (videoElement.paused) {
+        videoElement.play();
+      } else {
+        videoElement.pause();
+      }
+    }
+  }
+
+  function fastForward(): void {
+    if (videoElement) {
+      videoElement.currentTime += 10; // Fast forward 10 seconds
+    }
+  }
+
+  function rewind(): void {
+    if (videoElement) {
+      videoElement.currentTime -= 10; // Rewind 10 seconds
+    }
+  }
+
+  onMount(() => {
+    if (videoElement) {
+      videoElement.addEventListener('play', () => {
+        isPlaying = true;
+      });
+
+      videoElement.addEventListener('pause', () => {
+        isPlaying = false;
+      });
+    }
+  });
+
     // Defining ExpandedTopics 
     interface ExpandedTopics {
         digitalwallet: boolean;
@@ -157,13 +195,22 @@
 
 <section class="bg-gray-800 px-6 py-16 text-center">
     <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-        The Digital Wallet</h1>
+        Welcome to the Digital Wallet Page</h1>
 
-    <p class="text-xl">
-        
-
-    </p>
-</section>
+        <nav>
+            <h2>Contents</h2>
+            <ul>
+              <li><a href="#introduction">Introduction to Digital Wallets</a></li>
+              <li><a href="#accessible-wallets">Accessible Wallets with Screen Readers</a></li>
+              <li><a href="#wallet-tracking">Wallet Tracking and Portfolio Resources</a></li>
+            </ul>
+        </nav>
+    
+        <section id="introduction">
+            <h2>Introduction to Digital Wallets</h2>
+            <p class="text-xl"> This section will contain information explaining digital wallets and how they are used.</p>
+        </section>
+    </section>
 <div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
     <!-- Left column for image -->
     <div class="md:w-1/2 mt-8 md:mt-0 md:order-first">
@@ -194,11 +241,86 @@
         {/each}
     </div>
 </div>
+<section id="accessible-wallets">
+    <h2>Accessible Wallets with Screen Readers</h2>
+    <ol>
+        <li>1. Most wallets are very accessible for both phones, tablets, and computers, especially if they work on IOs devices.</li>
+      
+        <li>2. As is the case with Centralized Exchanges, or Decentralized Exchanges, Centralized Exchanges may have their own wallets. It is best just to download the wallet you are interested in using, and checking it out for your self.</li>
+      
+        <li>3. For Decentralized Exchanges, MetaMask is the recommended wallet for most people. Nearly every button is labeled in MetaMask, but with a bit of help, you can easily label those buttons yourself on your phone or tablet devices. MetaMask works fine with NVDA on computer. Once this is done, MetaMask will be a nice work horse for you.</li>
+      
+        <li>4. You can find MetaMask in your app store, or simply do a google search. As you get acquainted with trading crypto currency, your tastes will change, and so will your desire for wallets that are better suited for your preferences.</li>
+      </ol>
+        
+      <p style="margin-bottom: 0.50in;">For more information about wallets and the accessibility of MetaMask, check out our bvideo below:</p>
 
+
+      <div class="video-container">
+        <video bind:this={videoElement}>
+          <source src="test.MP4" type="video/mp4">
+          <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      
+      <div class="controls">
+        <button on:click={rewind}>⏪</button>
+        <button on:click={togglePlay}>
+          {#if isPlaying}
+            ⏸️
+          {:else}
+            ▶️
+          {/if}
+        </button>
+        <button on:click={fastForward}>⏩</button>
+      </div>
+      <style>
+        .video-container {
+          width: 576px; /* 6 inches * 96 pixels/inch */
+          height: 480px; /* 5 inches * 96 pixels/inch */
+          margin: 0 auto;
+          border: 32px solid silver; /* Approximately 1/3 inch silver border */
+          box-sizing: content-box;
+        }
+      
+        video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          cursor: pointer;
+          display: block;
+        }
+      
+        .controls {
+          display: flex;
+          justify-content: center;
+          margin-top: 20px;
+        }
+      
+        button {
+          padding: 10px 20px;
+          background-color: silver;
+          color: black;
+          border: none;
+          cursor: pointer;
+          margin: 0 5px;
+          font-size: 18px;
+          transition: background-color 0.3s, color 0.3s;
+        }
+      
+        button:hover, button:active {
+          background-color: white;
+          color: gold;
+        }
+      </style>
+      
+  </section>
 
 <section class="bg-gray-800 px-6 py-16 text-center">
-    <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-        Accessible Resources for Wallet and Portfolio Tracking</h1>
+    
+        <section id="wallet-tracking">
+            <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">Accessible Resources for Wallet and Portfolio Tracking</h1>
         
     <p class="text-xl">We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
 
@@ -211,4 +333,4 @@
 
 	
 </section>
-
+</section>

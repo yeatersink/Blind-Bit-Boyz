@@ -1,6 +1,47 @@
 <script lang="ts">
     import { fade } from 'svelte/transition';
     import { goto } from '$app/navigation';
+      import { onMount } from 'svelte';
+  
+  
+  // Video Element     
+
+  let videoElement: HTMLVideoElement;
+  let isPlaying: boolean = false;
+
+  function togglePlay(): void {
+    if (videoElement) {
+      if (videoElement.paused) {
+        videoElement.play();
+      } else {
+        videoElement.pause();
+      }
+    }
+  }
+
+  function fastForward(): void {
+    if (videoElement) {
+      videoElement.currentTime += 10; // Fast forward 10 seconds
+    }
+  }
+
+  function rewind(): void {
+    if (videoElement) {
+      videoElement.currentTime -= 10; // Rewind 10 seconds
+    }
+  }
+
+  onMount(() => {
+    if (videoElement) {
+      videoElement.addEventListener('play', () => {
+        isPlaying = true;
+      });
+
+      videoElement.addEventListener('pause', () => {
+        isPlaying = false;
+      });
+    }
+  });
     
     // Defining ExpandedTopics 
     interface ExpandedTopics {
@@ -108,12 +149,20 @@
 
 <section class="bg-gray-800 px-6 py-16 text-center">
     <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-        Accessible Tools for Engagement with the Blockchain</h1>
-
-    <p class="text-xl">
-        
-
-    </p>
+        Welcome to the Getting Started Page</h1>
+        <nav>
+            <h2>Contents</h2>
+            <ul>
+              <li><a href="#general-info">General Information</a></li>
+<li><a href="#get-started">Step by Step Instructions to Get Started</a></li>
+<li><a href="#accessible-tools">Accessible Tools</a></li>
+            </ul>
+          </nav>
+          <section id="general-info">
+            <h2>General Information</h2>
+            <p>This section will contain general information to benefit you if you are blind or working with someone who is blind. </p>
+          </section>
+    
 </section>
 <div class="flex flex-col md:flex-row max-w-6xl mx-auto px-4 pt-20">
     <!-- Left column for topics -->
@@ -145,13 +194,188 @@
         <img src="tools_bitcoin.png" alt="Image is of a bit coin guy, working wiht his tools at his workstation." class="w-full h-auto object-cover sticky top-20" />
     </div>
 </div>
+<section class="bg-gray-800 px-6 py-16 text-center">
 
 <section class="bg-gray-800 px-6 py-16 text-center">
-    <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">
-        Accessible Resources for Trading and Engaging </h1>
-
-    <p class="text-xl">We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here. </p>
-
         
+  <section id="get-started">
+    <h2>Step by Step Instructions to Get Started</h2>
+    <h1>Getting Started with Cryptocurrency Trading</h1>
+
+    <h2>Steps to Begin Trading</h2>
+  
+    <p>To get started , here's what you have to do in order:</p>
+  
+    <ol>
+      <li>
+        <p>1. Choose what device you want to use to trade on. You can use phone, tablet, and computer.</p>
+      </li>
+      <li>
+        <p>2. Decide which blockchain you are going to trade on.</p>
+      </li>
+      <li>
+        <p>3. Download a digital wallet that will connect to your blockchain.</p>
+      </li>
+      <li>
+        <p>4. Set your wallet up and connect it to your Blockchain.</p>
+      </li>
+      <li>
+        <p>5. Connect your wallet to the Exchange that you are going to do your trading on.</p>
+      </li>
+    </ol>
+<p style="margin-bottom: 0.50in;">for more information check out our video below:</p>
+
+<div class="video-container">
+    <video bind:this={videoElement}>
+      <source src="test.MP4" type="video/mp4">
+      <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
+      Your browser does not support the video tag.
+    </video>
+  </div>
+  
+  <div class="controls">
+    <button on:click={rewind}>⏪</button>
+    <button on:click={togglePlay}>
+      {#if isPlaying}
+        ⏸️
+      {:else}
+        ▶️
+      {/if}
+    </button>
+    <button on:click={fastForward}>⏩</button>
+  </div>
+  <style>
+    .video-container {
+      width: 576px; /* 6 inches * 96 pixels/inch */
+      height: 480px; /* 5 inches * 96 pixels/inch */
+      margin: 0 auto;
+      border: 32px solid silver; /* Approximately 1/3 inch silver border */
+      box-sizing: content-box;
+    }
+  
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: pointer;
+      display: block;
+    }
+  
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+  
+    button {
+      padding: 10px 20px;
+      background-color: silver;
+      color: black;
+      border: none;
+      cursor: pointer;
+      margin: 0 5px;
+      font-size: 18px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+  
+    button:hover, button:active {
+      background-color: white;
+      color: gold;
+    }
+  </style>
+      
+    
+  </section>
+</section>
+<section class="bg-gray-800 px-6 py-16 text-center"></section>
+  <section id="accessible-tools">
+  <h2>Accessible Resources for Trading and Engaging </h2>
+
+    <p >We have been working diligently with developers to make sure that their sites and tools  are accessible. As we work with them, we will share them here.</p>
+    
+
+    <h2>Helpful Tools For Monitoring Cryptocurrency:</h2>
+  
+    <ol>
+      <li>
+        <p>1. Nearly everyone uses Telegram, so you have to utilize telegram as an investor and as a developer.Accessible on IPhone, and windows with NVDA and an NVDA add-on.</p>
+      </li>
+      <li>
+        <p>2. You have to monitor the market. You do this through third party sites such as Dex Screener, Dex Tools, Coin Base, Coin Gecko, and Coin Market Cap. All of these are very good tools, but you must know that the charts are not readable with a screen reader.</p>
+      </li>
+      
+      <li>
+        <p>3. The best tool out there I have found is Dropsbot. You can find it here 
+          <a
+            class="border-b border-gray-300 hover:border-gold-400 hover:text-gold-500 focus:border-gold-400 focus:text-gold-500"
+            href="https://dropstab.com/products/drops-bot"
+          >Dropsbot</a>.
+        </p>
+      </li>
+      <p style="margin-bottom: 0.50in;">for more information check out our video below:</p>
+
+
+      <div class="video-container">
+        <video bind:this={videoElement}>
+          <source src="test.MP4" type="video/mp4">
+          <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      
+      <div class="controls">
+        <button on:click={rewind}>⏪</button>
+        <button on:click={togglePlay}>
+          {#if isPlaying}
+            ⏸️
+          {:else}
+            ▶️
+          {/if}
+        </button>
+        <button on:click={fastForward}>⏩</button>
+      </div>
+      <style>
+        .video-container {
+          width: 576px; /* 6 inches * 96 pixels/inch */
+          height: 480px; /* 5 inches * 96 pixels/inch */
+          margin: 0 auto;
+          border: 32px solid silver; /* Approximately 1/3 inch silver border */
+          box-sizing: content-box;
+        }
+      
+        video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          cursor: pointer;
+          display: block;
+        }
+      
+        .controls {
+          display: flex;
+          justify-content: center;
+          margin-top: 20px;
+        }
+      
+        button {
+          padding: 10px 20px;
+          background-color: silver;
+          color: black;
+          border: none;
+          cursor: pointer;
+          margin: 0 5px;
+          font-size: 18px;
+          transition: background-color 0.3s, color 0.3s;
+        }
+      
+        button:hover, button:active {
+          background-color: white;
+          color: gold;
+        }
+      </style>
+      
+        
+      </section>
+
 </section>
 
