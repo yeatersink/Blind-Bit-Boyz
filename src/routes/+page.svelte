@@ -60,14 +60,8 @@
 </section>
 
 <section class="bg-gray-900 px-6 py-16">
-	<div class="mb-24">
-		<h2 class="text-2xl font-bold mb-4">Introduction to Blind Bit Boys</h2>	
-		<p class="text-lg"> 
-		  Check out our video which will offer some insight to the purpose of this site, and give you an idea what you should expect from Blind Bit Boys.
-		</p>
-	  </div>
-
-	  <div class="video-container">
+	
+<div class="video-container">
 	<video bind:this={videoElement}>
 	  <source src="test.MP4" type="video/mp4">
 	  <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
@@ -91,7 +85,7 @@
 	  width: 576px; /* 6 inches * 96 pixels/inch */
 	  height: 480px; /* 5 inches * 96 pixels/inch */
 	  margin: 0 auto;
-	  border: 32px solid gold; /* Approximately 1/3 inch gold border */
+	  border: 32px solid silver; /* Approximately 1/3 inch silver border */
 	  box-sizing: content-box;
 	}
   
@@ -111,7 +105,7 @@
   
 	button {
 	  padding: 10px 20px;
-	  background-color: gold;
+	  background-color: silver;
 	  color: black;
 	  border: none;
 	  cursor: pointer;

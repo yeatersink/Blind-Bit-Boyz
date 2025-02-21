@@ -63,7 +63,7 @@
     width: 576px; /* 6 inches * 96 pixels/inch */
     height: 480px; /* 5 inches * 96 pixels/inch */
     margin: 0 auto;
-    border: 32px solid gold; /* Approximately 1/3 inch gold border */
+    border: 32px solid silver; /* Approximately 1/3 inch silver border */
     box-sizing: content-box;
   }
 
@@ -83,7 +83,7 @@
 
   button {
     padding: 10px 20px;
-    background-color: gold;
+    background-color: silver;
     color: black;
     border: none;
     cursor: pointer;

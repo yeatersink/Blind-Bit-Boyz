@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	let navItems = [
-		{ name: 'Home', url: '/' },
-		{ name: 'Coin Search', url: '/coin-search' },
-		{ name: 'Wallet', url: '/wallet' },
-		{ name: 'Tools', url: '/tools' },
-		{ name: 'Liquidity and LP', url: '/liquidity' },
-		{ name: 'Block Chain', url: '/block_chain' },
+		{ name: 'Home Page', url: '/' },
+			{ name: 'Blockchain and Exchanges', url: '/block_chain' },
+				{ name: 'Digital Wallets', url: '/wallet' },
+					{ name: 'How to Get Started with Crypto', url: '/tools' },
+						{ name: 'Token Search and Analysis', url: '/coin-search' },
+		{ name: 'Liquidity and Liquidity Providing', url: '/liquidity' },
 	];
 </script>
 
