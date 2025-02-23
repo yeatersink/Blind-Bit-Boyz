@@ -38,6 +38,7 @@
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/adapter-static": "^3.0.8",
 		"graphql": "^16.10.0",
-		"graphql-request": "^7.1.2"
+		"graphql-request": "^7.1.2",
+		"highcharts": "^12.1.2"
 	}
 }
