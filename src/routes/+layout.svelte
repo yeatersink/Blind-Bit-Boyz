@@ -2,6 +2,9 @@
 	import '@fortawesome/fontawesome-free/css/all.css';
 	import '../app.css';
 	import DesktopNav from '../components/DesktopNav.svelte';
+	   // +layout.js
+	   export const prerender = true;
+   
 	let { children } = $props();
 </script>
 
