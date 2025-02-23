@@ -12,10 +12,10 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^3.3.1",
-		"@sveltejs/adapter-vercel": "^5.5.2",
-		"@sveltejs/kit": "^2.12.1",
-		"@sveltejs/vite-plugin-svelte": "^4.0.3",
+		"@sveltejs/adapter-auto": "^4.0.0",
+		"@sveltejs/adapter-vercel": "^5.6.3",
+		"@sveltejs/kit": "^2.17.2",
+		"@sveltejs/vite-plugin-svelte": "^5.0.3",
 		"@types/eslint": "^9.6.1",
 		"autoprefixer": "^10.4.20",
 		"eslint": "^9.17.0",
@@ -31,10 +31,11 @@
 		"tailwindcss": "^3.4.16",
 		"typescript": "^5.7.2",
 		"typescript-eslint": "^8.18.1",
-		"vite": "^5.4.11"
+		"vite": "^6.1.1"
 	},
 	"dependencies": {
 		"@fortawesome/fontawesome-free": "^6.7.2",
+		"@sveltejs/adapter-static": "^3.0.8",
 		"graphql": "^16.10.0",
 		"graphql-request": "^7.1.2"
 	}
