@@ -61,9 +61,10 @@
 
 <section class="bg-gray-900 px-6 py-16">
 	
+	
 <div class="video-container">
 	<video bind:this={videoElement}>
-	  <source src="test.MP4" type="video/mp4">
+	  <source src="introduction.mp4" type="video/mp4">
 	  <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
 	  Your browser does not support the video tag.
 	</video>

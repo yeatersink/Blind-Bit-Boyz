@@ -303,7 +303,7 @@ onMount(() => {
 <p style="margin-bottom: 0.25in;">For more information, check out the video below:</p>
     <div class="video-container">
         <video bind:this={videoElement}>
-          <source src="test.MP4" type="video/mp4">
+          <source src="blockchainintro.mp4" type="video/mp4">
           <track kind="captions" src="captions.VTT" srclang="en" label="English" default>
           Your browser does not support the video tag.
         </video>
