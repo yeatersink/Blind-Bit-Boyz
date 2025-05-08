@@ -1,26 +1,50 @@
 <script lang="ts">
-	// import * as Highcharts from 'highcharts';
-	// import 'highcharts/modules/exporting';
-	// import { Chart } from '@highcharts/svelte';
+	import Highcharts from 'highcharts/highstock';
+	import { StockChart } from '@highcharts/svelte';
+	import Accessibility from 'highcharts/modules/accessibility';
+	import Exporting from 'highcharts/modules/exporting';
+	import ExportData from 'highcharts/modules/export-data';
+	import { onMount } from 'svelte';
 
-	// let options = {
-	// 	chart: {
-	// 		type: 'line'
-	// 	},
-	// 	title: {
-	// 		text: 'My Chart'
-	// 	},
-	// 	series: [
-	// 		{
-	// 			data: [1, 2, 3, 4, 5]
-	// 		}
-	// 	]
-	// };
+	let options: Highcharts.Options | undefined = $state(undefined);
+
+	onMount(async () => {
+		Exporting(Highcharts);
+		ExportData(Highcharts);
+		Accessibility(Highcharts);
+
+		const data = await getData();
+
+		options = {
+			rangeSelector: {
+				selected: 1
+			},
+			title: {
+				text: 'Candlestick Chart Example'
+			},
+			series: [
+				{
+					type: 'candlestick',
+					name: 'Random Stock Data',
+					data: data
+				}
+			]
+		};
+	});
+
+	async function getData() {}
 
 	const { data } = $props();
 </script>
 
-<!-- <Chart {options} highcharts={Highcharts} /> -->
+<svelte:head>
+	<title>Candlestick Token Chart Example</title>
+</svelte:head>
+
+<h1>chart Example</h1>
+{#if options}
+	<StockChart {options} highcharts={Highcharts} />
+{/if}
 
 {#if data.token}
 	{#each data.token as block}

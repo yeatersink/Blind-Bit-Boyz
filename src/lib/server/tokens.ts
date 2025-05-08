@@ -1,3 +1,4 @@
+import { MORALIS_API_KEY } from '$env/static/private';
 import { moralisInitialized } from '$lib/server/moralis';
 import Moralis from 'moralis';
 import { EvmChain } from '@moralisweb3/common-evm-utils';
@@ -32,4 +33,40 @@ export async function getTokenHistoricalPrice(
 	}
 	console.log(historicalPrice);
 	return historicalPrice;
+}
+
+export async function getPairCandelstickData(
+	address: string = '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0',
+	chain = 'eth',
+	startDate: Date = new Date(Date.now() - 24 * 60 * 60 * 1000),
+	endDate: Date = new Date(Date.now())
+) {
+	if (!moralisInitialized) {
+		return {
+			error: 'Moralis is not initialized'
+		};
+	}
+
+	const url = `https://deep-index.moralis.io/api/v2.2/pairs/${address}?chain=${chain}&timeframe=1h&currency=usd&fromDate=${startDate}&toDate=${endDate}`;
+
+	try {
+		const response = await fetch(
+			'https://deep-index.moralis.io/api/v2.2/pairs/0xa43fe16908251ee70ef74718545e4fe6c5ccec9f/ohlcv?chain=eth&timeframe=1h&currency=usd&fromDate=2025-01-01T10%3A00%3A00.000&toDate=2025-01-02T10%3A00%3A00.000',
+			{
+				method: 'GET',
+				headers: {
+					accept: 'application/json',
+					'X-API-Key': MORALIS_API_KEY,
+					'Content-Type': 'application/json'
+				}
+			}
+		);
+		console.log('Response:', response);
+		return response?.json();
+	} catch (error) {
+		console.error('Error fetching pair candlestick data:', error);
+		return {
+			error: 'Failed to fetch pair candlestick data'
+		};
+	}
 }
