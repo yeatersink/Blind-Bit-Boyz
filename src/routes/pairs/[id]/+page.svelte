@@ -4,6 +4,7 @@
 	import Accessibility from 'highcharts/modules/accessibility';
 	import Exporting from 'highcharts/modules/exporting';
 	import ExportData from 'highcharts/modules/export-data';
+	import Sonification from 'highcharts/modules/sonification';
 	import { onMount } from 'svelte';
 
 	let candelStickDataArray: Array<{
@@ -22,6 +23,7 @@
 		Exporting(Highcharts);
 		ExportData(Highcharts);
 		Accessibility(Highcharts);
+		Sonification(Highcharts);
 
 		if (data.token) {
 			for (let result of data.token.result) {
@@ -34,17 +36,45 @@
 				});
 			}
 			options = {
+				sonification: {
+					enabled: true,
+					duration: 5000,
+					defaultInstrumentOptions: {
+						// Specify the instrument to use for sonification
+						instrument: 'piano'
+					}
+				},
 				rangeSelector: {
 					selected: 1
 				},
 				title: {
 					text: 'Candlestick Chart Example'
 				},
+				chart: {
+					type: 'candlestick'
+				},
 				series: [
 					{
 						type: 'candlestick',
 						name: 'Example Pair data',
-						data: candelStickDataArray
+						data: candelStickDataArray,
+						sonification: {
+							enabled: true,
+							tracks: [
+								{
+									instrument: 'piano',
+									mapping: {
+										pitch: {
+											mapTo: 'high',
+											min: 'c3',
+											max: 'g6'
+										},
+										volume: '1',
+										noteDuration: 300
+									}
+								}
+							]
+						}
 					}
 				]
 			};

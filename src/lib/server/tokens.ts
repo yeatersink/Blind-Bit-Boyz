@@ -47,20 +47,20 @@ export async function getPairCandelstickData(
 		};
 	}
 
-	const url = `https://deep-index.moralis.io/api/v2.2/pairs/${address}?chain=${chain}&timeframe=1h&currency=usd&fromDate=${startDate}&toDate=${endDate}`;
-
-	try {
-		const response = await fetch(
-			'https://deep-index.moralis.io/api/v2.2/pairs/0xa43fe16908251ee70ef74718545e4fe6c5ccec9f/ohlcv?chain=eth&timeframe=1h&currency=usd&fromDate=2025-05-01T10%3A00%3A00.000&toDate=2025-05-02T10%3A00%3A00.000',
-			{
-				method: 'GET',
-				headers: {
-					accept: 'application/json',
-					'X-API-Key': MORALIS_API_KEY,
-					'Content-Type': 'application/json'
-				}
-			}
+	const url =
+		`https://deep-index.moralis.io/api/v2.2/pairs/${address}/ohlcv?chain=${chain}&timeframe=1h&currency=usd&fromDate=${startDate}&toDate=${endDate}`.replace(
+			/\s/g,
+			'%20'
 		);
+	try {
+		const response = await fetch(url, {
+			method: 'GET',
+			headers: {
+				accept: 'application/json',
+				'X-API-Key': MORALIS_API_KEY,
+				'Content-Type': 'application/json'
+			}
+		});
 		console.log('Response:', response);
 		return response?.json();
 	} catch (error) {
