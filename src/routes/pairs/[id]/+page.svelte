@@ -7,7 +7,7 @@
 	import { onMount } from 'svelte';
 
 	let candelStickDataArray: Array<{
-		timestamp: number;
+		x: number;
 		open: number;
 		high: number;
 		low: number;
@@ -26,7 +26,7 @@
 		if (data.token) {
 			for (let result of data.token.result) {
 				candelStickDataArray.push({
-					timestamp: result.timestamp,
+					x: new Date(result.timestamp).getTime(),
 					open: result.open,
 					high: result.high,
 					low: result.low,
@@ -68,7 +68,7 @@
 {/if}
 
 {#each candelStickDataArray as block}
-	<h1>{new Date(block.timestamp)} - ({block.timestamp})</h1>
+	<h1>{block.x}</h1>
 	<p>{block.open}</p>
 	<p>{block.high}</p>
 	<p>{block.low}</p>

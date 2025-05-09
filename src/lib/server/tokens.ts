@@ -51,7 +51,7 @@ export async function getPairCandelstickData(
 
 	try {
 		const response = await fetch(
-			'https://deep-index.moralis.io/api/v2.2/pairs/0xa43fe16908251ee70ef74718545e4fe6c5ccec9f/ohlcv?chain=eth&timeframe=1h&currency=usd&fromDate=2025-01-01T10%3A00%3A00.000&toDate=2025-01-02T10%3A00%3A00.000',
+			'https://deep-index.moralis.io/api/v2.2/pairs/0xa43fe16908251ee70ef74718545e4fe6c5ccec9f/ohlcv?chain=eth&timeframe=1h&currency=usd&fromDate=2025-05-01T10%3A00%3A00.000&toDate=2025-05-02T10%3A00%3A00.000',
 			{
 				method: 'GET',
 				headers: {
