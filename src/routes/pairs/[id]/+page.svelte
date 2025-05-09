@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Highcharts, { dateFormat } from 'highcharts/highstock';
+	import Highcharts from 'highcharts/highstock';
 	import { StockChart } from '@highcharts/svelte';
 	import Accessibility from 'highcharts/modules/accessibility';
 	import Exporting from 'highcharts/modules/exporting';
