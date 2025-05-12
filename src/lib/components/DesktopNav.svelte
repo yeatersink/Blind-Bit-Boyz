@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 </script>
 
-<nav>
+<nav aria-label="Global">
 	<ul class="flex space-x-4">
 		{#each navItems as { name, url }}
 			<li>

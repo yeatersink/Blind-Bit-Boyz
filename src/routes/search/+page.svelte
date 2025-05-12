@@ -126,6 +126,6 @@
 		if (save) {
 			saveSearch();
 		}
-		//goto(`/${searchType}/${id}`);
+		goto(`/${searchType}/${id}`);
 	}}>Search</EnvisionButton
 >
