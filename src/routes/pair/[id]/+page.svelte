@@ -36,27 +36,15 @@
 				});
 			}
 			options = {
-				sonification: {
-					enabled: true,
-					duration: 5000,
-					defaultInstrumentOptions: {
-						// Specify the instrument to use for sonification
-						instrument: 'piano'
-					}
-				},
 				rangeSelector: {
 					selected: 1
 				},
 				title: {
 					text: 'Candlestick Chart Example'
 				},
-				chart: {
-					type: 'candlestick'
-				},
 				series: [
 					{
 						type: 'candlestick',
-						name: 'Example Pair data',
 						data: candelStickDataArray,
 						sonification: {
 							enabled: true,
@@ -96,11 +84,3 @@
 {#if options}
 	<StockChart {options} highcharts={Highcharts} />
 {/if}
-
-{#each candelStickDataArray as block}
-	<h1>{block.x}</h1>
-	<p>{block.open}</p>
-	<p>{block.high}</p>
-	<p>{block.low}</p>
-	<p>{block.close}</p>
-{/each}

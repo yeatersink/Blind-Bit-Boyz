@@ -41,13 +41,29 @@
 			]
 		};
 	});
+
+	const { data } = $props();
 </script>
 
 <svelte:head>
-	<title>Candlestick Chart Example</title>
+	<title>Candlestick Token Chart Example</title>
 </svelte:head>
 
 <h1>chart Example</h1>
 {#if options}
 	<StockChart {options} highcharts={Highcharts} />
+{/if}
+
+{#if data.token}
+	{#each data.token as block}
+		<h1>{new Date(Number(block.blockTimestamp))}</h1>
+		<p>{block.tokenName}</p>
+		<p>${block.usdPriceFormatted}</p>
+	{/each}
+{:else if data.error}
+	<h1>Error</h1>
+	<p>{data.error}</p>
+{:else}
+	<h1>Token not found</h1>
+	<p>No token data available.</p>
 {/if}
