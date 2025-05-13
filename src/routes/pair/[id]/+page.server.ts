@@ -1,8 +1,14 @@
-import { getPairCandelstickData } from '$lib/server/tokens';
+import { getPairData } from '$lib/server/tokens.js';
 
 export const load = async ({ params }) => {
 	const id = params.id;
-	const data = await getPairCandelstickData(id);
+	if (!id) {
+		return {
+			error: 'Pair address is required'
+		};
+	}
+
+	const data = await getPairData(id);
 
 	if (data.error) {
 		return {
@@ -11,6 +17,6 @@ export const load = async ({ params }) => {
 	}
 
 	return {
-		token: data
+		data
 	};
 };
