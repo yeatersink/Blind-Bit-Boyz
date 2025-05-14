@@ -41,7 +41,8 @@ export async function getPairCandelstickData(
 	chain = 'eth',
 	startDate: Date = new Date(Date.now() - 24 * 60 * 60 * 1000),
 	endDate: Date = new Date(Date.now()),
-	interval = '1h'
+	interval = '1h',
+	currency = 'usd'
 ) {
 	if (!moralisInitialized) {
 		return {
@@ -50,10 +51,10 @@ export async function getPairCandelstickData(
 	}
 
 	const url =
-		`https://deep-index.moralis.io/api/v2.2/pairs/${address}/ohlcv?chain=${chain}&timeframe=${interval}&currency=usd&fromDate=${startDate}&toDate=${endDate}`.replace(
-			/\s/g,
-			'%20'
-		);
+		`https://deep-index.moralis.io/api/v2.2/pairs/` +
+		`${address}/ohlcv?chain=${chain}&timeframe=${interval}&fromDate=${startDate}&toDate=${endDate}&currency=${currency}`
+			.replaceAll(/\s/g, '%20')
+			.replaceAll(':', '%3A');
 	try {
 		const response = await fetch(url, {
 			method: 'GET',

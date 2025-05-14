@@ -7,8 +7,20 @@
 	import Sonification from 'highcharts/modules/sonification';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
+	import {
+		type IntervalKey,
+		dataIntervalsList,
+		type CurrencyKey,
+		currencyList
+	} from '$lib/utils/common.js';
 
 	let currentTab: 'details' | 'technical-analysis' = $state('details');
+	let currentInterval: IntervalKey = $state('1h');
+	let currentStartDate: string = $state(
+		new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('.')[0]
+	);
+	let currentEndDate: string = $state(new Date().toISOString().split('.')[0]);
+	let currentCurrency: CurrencyKey = $state('usd');
 	let intervalsList: Array<string> = ['5min', '1h', '4h', '24h'];
 	let candelStickDataArray: Array<{
 		x: number;
@@ -40,7 +52,7 @@
 	}
 
 	async function generateCamndleStickChart() {
-		const url = `/api/pair/getCandleStickData?address=${data.data.pairAddress}`;
+		const url = `/api/pair/getCandleStickData?address=${data.data.pairAddress}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
 		const result = await fetch(url, {
 			method: 'get',
 			headers: {
@@ -71,7 +83,7 @@
 					text: `${data.data.tokenName} (${data.data.tokenSymbol}) Price`
 				},
 				subtitle: {
-					text: `Price in ${candleStickData.currency} as of ${result.headers.get('date')}`
+					text: `Price in ${currencyList[candleStickData.currency as CurrencyKey].text} as of ${result.headers.get('date')}`
 				},
 				series: [
 					{
@@ -233,6 +245,51 @@
 		tabindex={currentTab === 'technical-analysis' ? 0 : -1}
 	>
 		<h2>Technical Analysis</h2>
+		<p>You can change any of the below options to change the data displayed in the charts.</p>
+		<div>
+			<label for="interval">Interval</label>
+			<select id="interval" bind:value={currentInterval}>
+				{#each Object.entries(dataIntervalsList) as [key, value]}
+					<option value={key}>{value.text}</option>
+				{/each}
+			</select>
+		</div>
+		<div>
+			<label for="start-date">Start Date</label>
+			<input
+				type="datetime-local"
+				id="start-date"
+				bind:value={currentStartDate}
+				max={currentEndDate}
+			/>
+		</div>
+		<div>
+			<label for="end-date">End Date</label>
+			<input
+				type="datetime-local"
+				id="end-date"
+				bind:value={currentEndDate}
+				min={currentStartDate}
+				max={new Date().toISOString().split('.')[0]}
+			/>
+		</div>
+		<div>
+			<label for="currency">Currency</label>
+			<select id="currency" bind:value={currentCurrency}>
+				{#each Object.entries(currencyList) as [key, value]}
+					<option value={key}>{value.text}</option>
+				{/each}
+			</select>
+		</div>
+		<button
+			onclick={() => {
+				candelStickDataArray = [];
+				candleStickOptions = undefined;
+				generateCamndleStickChart();
+			}}
+		>
+			Generate Chart
+		</button>
 		{#if candleStickOptions}
 			<StockChart options={candleStickOptions} highcharts={Highcharts} />
 		{/if}
