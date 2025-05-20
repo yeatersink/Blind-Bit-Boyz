@@ -1,13 +1,16 @@
 <script lang="ts">
+	import { chainList, chains } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { EnvisionButton } from '@envisionly/envisiontech-core';
+	import { EnvisionButton, EnvisionSelect } from '@envisionly/envisiontech-core';
 	import { onMount } from 'svelte';
 
 	let id = $state('');
+	let chain = $state('');
 	let savedSearches: Array<{
 		id: number;
 		type: string;
+		chain: string;
 		name: string;
 		value: string;
 	}> = $state([]);
@@ -43,6 +46,7 @@
 			id: Date.now(),
 			type: searchType,
 			name,
+			chain,
 			value: id
 		};
 		savedSearches.push(newSearch);
@@ -78,8 +82,8 @@
 	<ul>
 		{#each savedSearches as search (search.id)}
 			<li>
-				<a href={`/${search.type}/${search.value}`}>
-					{search.name} ({search.type}): {search.value}
+				<a href={`/${search.type}/${search.value}?chain=${search.chain}`}>
+					{search.name} ({search.type} from {chains[search.chain as keyof typeof chains].name}): {search.value}
 				</a>
 				<EnvisionButton
 					size="small"
@@ -106,6 +110,11 @@
 		/>
 	{/each}
 </fieldset>
+
+<div>
+	<EnvisionSelect label="Chain" options={chainList} search bind:value={chain} />
+</div>
+
 <label for="search">{searchTypes[searchType].label} ID:</label>
 <input id="search" type="text" bind:value={id} placeholder="Enter the ID..." />
 
@@ -126,6 +135,6 @@
 		if (save) {
 			saveSearch();
 		}
-		goto(`/${searchType}/${id}`);
+		goto(`/${searchType}/${id}?chain=${chain}`);
 	}}>Search</EnvisionButton
 >
