@@ -13,6 +13,7 @@
 		type CurrencyKey,
 		currencyList
 	} from '$lib/utils/common.js';
+	import { page } from '$app/state';
 
 	let currentTab: 'details' | 'technical-analysis' = $state('details');
 	let currentInterval: IntervalKey = $state('1h');
@@ -52,7 +53,8 @@
 	}
 
 	async function generateCamndleStickChart() {
-		const url = `/api/pair/getCandleStickData?address=${data.data.pairAddress}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
+		const chain = page.url.searchParams.get('chain') || undefined;
+		const url = `/api/pair/getCandleStickData?address=${data.data.pairAddress}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
 		const result = await fetch(url, {
 			method: 'get',
 			headers: {

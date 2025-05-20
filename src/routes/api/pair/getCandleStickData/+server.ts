@@ -1,6 +1,7 @@
 import { getPairCandelstickData } from '$lib/server/tokens';
 
 export const GET = async ({ url }) => {
+	console.log(url.searchParams);
 	const address = url.searchParams.get('address');
 	const chain = url.searchParams.get('chain') ?? undefined;
 	const startDateParam = url.searchParams.get('startDate');
