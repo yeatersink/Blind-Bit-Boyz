@@ -112,12 +112,8 @@
 					},
 					// Keyboard navigation options
 					keyboardNavigation: {
-						enabled: true,
-						seriesNavigation: {
-							mode: 'serialize'
-						}
+						enabled: true
 					},
-					// Custom point description for screen readers
 					point: {
 						descriptionFormatter: function (point) {
 							const date = new Date(point.x);
@@ -131,7 +127,6 @@
 							return `${dateString}, open ${point.open}, high ${point.high}, low ${point.low}, close ${point.close}`;
 						}
 					},
-					// Series description for screen readers
 					series: {
 						descriptionFormatter: function (series) {
 							return `This series shows the price movement of ${data.data.tokenName} as candlesticks over time.`;
