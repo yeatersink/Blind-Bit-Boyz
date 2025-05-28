@@ -87,6 +87,23 @@
 				subtitle: {
 					text: `Price in ${currencyList[candleStickData.currency as CurrencyKey].text} as of ${result.headers.get('date')}`
 				},
+				accessibility: {
+					enabled: true,
+					point: {
+						descriptionFormatter: function (point) {
+							// Format the date for screen readers
+							const date = new Date(point.x);
+							const dateString = date.toLocaleString(undefined, {
+								year: 'numeric',
+								month: 'long',
+								day: 'numeric',
+								hour: '2-digit',
+								minute: '2-digit'
+							});
+							return `On ${dateString}, open ${point.open}, high ${point.high}, low ${point.low}, close ${point.close}`;
+						}
+					}
+				},
 				series: [
 					{
 						type: 'candlestick',
