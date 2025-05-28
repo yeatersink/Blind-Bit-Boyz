@@ -89,9 +89,37 @@
 				},
 				accessibility: {
 					enabled: true,
+					// Provide a summary for the chart
+					description: `${data.data.tokenName} (${data.data.tokenSymbol}) candlestick chart showing price movements over time.`,
+					// Announce new data when the chart updates
+					announceNewData: {
+						enabled: true,
+						minAnnounceInterval: 5000, // ms between announcements
+						announcementFormatter: function (allSeries, newSeries, newPoint) {
+							if (newPoint) {
+								const date = new Date(newPoint.x);
+								const dateString = date.toLocaleString(undefined, {
+									year: 'numeric',
+									month: 'long',
+									day: 'numeric',
+									hour: '2-digit',
+									minute: '2-digit'
+								});
+								return `New data: On ${dateString}, open ${newPoint.open}, high ${newPoint.high}, low ${newPoint.low}, close ${newPoint.close}`;
+							}
+							return false;
+						}
+					},
+					// Keyboard navigation options
+					keyboardNavigation: {
+						enabled: true,
+						seriesNavigation: {
+							mode: 'serialize'
+						}
+					},
+					// Custom point description for screen readers
 					point: {
 						descriptionFormatter: function (point) {
-							// Format the date for screen readers
 							const date = new Date(point.x);
 							const dateString = date.toLocaleString(undefined, {
 								year: 'numeric',
@@ -100,7 +128,13 @@
 								hour: '2-digit',
 								minute: '2-digit'
 							});
-							return `On ${dateString}, open ${point.open}, high ${point.high}, low ${point.low}, close ${point.close}`;
+							return `${dateString}, open ${point.open}, high ${point.high}, low ${point.low}, close ${point.close}`;
+						}
+					},
+					// Series description for screen readers
+					series: {
+						descriptionFormatter: function (series) {
+							return `This series shows the price movement of ${data.data.tokenName} as candlesticks over time.`;
 						}
 					}
 				},
