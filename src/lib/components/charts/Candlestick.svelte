@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Highcharts from 'highcharts/highstock';
+	import Highcharts, { type Options } from 'highcharts/highstock';
 	import { StockChart } from '@highcharts/svelte';
 	import Accessibility from 'highcharts/modules/accessibility';
 	import Exporting from 'highcharts/modules/exporting';
@@ -8,7 +8,15 @@
 	import Annotations from 'highcharts/modules/annotations';
 	import Indicators from 'highcharts/indicators/indicators-all';
 	import { onMount } from 'svelte';
-	import { type CurrencyKey, currencyList } from '$lib/utils/common';
+	import {
+		type CurrencyKey,
+		currencyList,
+		chartOverlays,
+		type ChartOverlayKey,
+		chartOscillators,
+		type ChartOscillatorKey
+	} from '$lib/utils/common';
+	import { EnvisionSelect } from '@envisionly/envisiontech-core';
 
 	export type CandlestickData = Array<{
 		x: number;
@@ -26,6 +34,8 @@
 	};
 
 	let candleStickOptions: Highcharts.Options | undefined = $state(undefined);
+	let currentOverlay: string = $state('none');
+	let currentOscillator: string = $state('none');
 
 	interface Props {
 		data: CandlestickData;
@@ -34,12 +44,54 @@
 
 	let { data, options }: Props = $props();
 
+	let currentSeriesOverlay: {
+		type: ChartOverlayKey;
+		linkedTo: string;
+		name: string;
+		visible: boolean;
+		yAxis: number;
+		params: {
+			period: number;
+		};
+	} = $derived.by(() => {
+		return {
+			type: currentOverlay,
+			linkedTo: options.symbol,
+			name: currentOverlay,
+			visible: currentOverlay !== 'none',
+			yAxis: 0,
+			params: {
+				period: 14
+			}
+		};
+	});
+	let currentSeriesOscillator: {
+		type: ChartOscillatorKey;
+		linkedTo: string;
+		name: string;
+		visible: boolean;
+		yAxis: number;
+		params: {
+			period: number;
+		};
+	} = $derived.by(() => ({
+		type: currentOscillator,
+		linkedTo: options.symbol,
+		name: currentOscillator,
+		visible: currentOscillator !== 'none',
+		yAxis: 1,
+		params: {
+			period: 14
+		}
+	}));
+
 	onMount(() => {
 		Exporting(Highcharts);
 		ExportData(Highcharts);
 		Accessibility(Highcharts);
 		Sonification(Highcharts);
 		Annotations(Highcharts);
+		Indicators(Highcharts);
 	});
 
 	$effect(() => {
@@ -119,7 +171,10 @@
 						id: options.symbol,
 						name: options.name,
 						data: data
-					}
+					},
+					...(currentOverlay === 'none'
+						? []
+						: [currentSeriesOverlay as Highcharts.SeriesOptionsType])
 				]
 			};
 		} else {
@@ -129,5 +184,15 @@
 </script>
 
 {#if candleStickOptions}
+	<h3>Chart Options</h3>
+	<div>
+		<EnvisionSelect search label="Overlays" options={chartOverlays} bind:value={currentOverlay} />
+		<EnvisionSelect
+			search
+			label="Oscillators"
+			options={chartOscillators}
+			bind:value={currentOscillator}
+		/>
+	</div>
 	<StockChart options={candleStickOptions} highcharts={Highcharts} />
 {/if}

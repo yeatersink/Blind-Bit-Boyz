@@ -35,3 +35,64 @@ export const dataIntervalsList: Record<IntervalKey, { text: string }> = {
 	'1w': { text: '1 week' },
 	'1m': { text: '1 month' }
 };
+
+const chartOverlaysList: Array<{ value: string; label: string }> = [
+	{ value: 'abands', label: 'Acceleration Bands' },
+	{ value: 'bb', label: 'Bollinger Bands' },
+	{ value: 'dema', label: 'DEMA (Double Exponential Moving Average)' },
+	{ value: 'ema', label: 'EMA (Exponential Moving Average)' },
+	{ value: 'ikh', label: 'Ichimoku Kinko Hyo' },
+	{ value: 'keltnerchannels', label: 'Keltner Channels' },
+	{ value: 'linearRegression', label: 'Linear Regression' },
+	{ value: 'pivotpoints', label: 'Pivot Points' },
+	{ value: 'pc', label: 'Price Channel' },
+	{ value: 'priceenvelopes', label: 'Price Envelopes' },
+	{ value: 'psar', label: 'PSAR (Parabolic SAR)' },
+	{ value: 'sma', label: 'SMA (Simple Moving Average)' },
+	{ value: 'supertrend', label: 'Super Trend' },
+	{ value: 'tema', label: 'TEMA (Triple Exponential Moving Average)' },
+	{ value: 'vbp', label: 'VbP (Volume by Price)' },
+	{ value: 'vwap', label: 'WMA (Weighted Moving Average)' },
+	{ value: 'wma', label: 'VWAP (Volume Weighted Average Price)' },
+	{ value: 'zigzag', label: 'Zig Zag' }
+].sort((a, b) => a.label.localeCompare(b.label));
+
+export type ChartOverlayKey = (typeof chartOverlaysList)[number]['value'];
+
+export const chartOverlays = [{ value: 'none', label: 'None' }, ...chartOverlaysList];
+
+const chartOscillatorsList: Array<{ value: string; label: string }> = [
+	{ value: 'apo', label: 'Absolute price indicator' },
+	{ value: 'ad', label: 'A/D (Accumulation/Distribution)' },
+	{ value: 'aroon', label: 'Aroon' },
+	{ value: 'aroonoscillator', label: 'Aroon oscillator' },
+	{ value: 'atr', label: 'ATR (Average True Range)' },
+	{ value: 'ao', label: 'Awesome oscillator' },
+	{ value: 'cci', label: 'CCI (Commodity Channel Index)' },
+	{ value: 'chaikin', label: 'Chaikin' },
+	{ value: 'cmf', label: 'CMF (Chaikin Money Flow)' },
+	{ value: 'disparityindex', label: 'Disparity Index' },
+	{ value: 'cmo', label: 'CMO (Chande Momentum Oscillator)' },
+	{ value: 'dmi', label: 'DMI (Directional Movement Index)' },
+	{ value: 'dpo', label: 'Detrended price' },
+	{ value: 'linearRegressionAngle', label: 'Linear Regression Angle' },
+	{ value: 'linearRegressionIntercept', label: 'Linear Regression Intercept' },
+	{ value: 'linearRegressionSlope', label: 'Linear Regression Slope' },
+	{ value: 'klinger', label: 'Klinger Oscillator' },
+	{ value: 'macd', label: 'MACD (Moving Average Convergence Divergence)' },
+	{ value: 'mfi', label: 'MFI (Money Flow Index)' },
+	{ value: 'momentum', label: 'Momentum' },
+	{ value: 'natr', label: 'NATR (Normalized Average True Range)' },
+	{ value: 'obv', label: 'OBV (On-Balance Volume)' },
+	{ value: 'ppo', label: 'Percentage Price oscillator' },
+	{ value: 'roc', label: 'RoC (Rate of Change)' },
+	{ value: 'rsi', label: 'RSI (Relative Strength Index)' },
+	{ value: 'slowstochastic', label: 'Slow Stochastic' },
+	{ value: 'stochastic', label: 'Stochastic' },
+	{ value: 'trix', label: 'TRIX' },
+	{ value: 'williamsr', label: 'Williams %R' }
+].sort((a, b) => a.label.localeCompare(b.label));
+
+export type ChartOscillatorKey = (typeof chartOscillatorsList)[number]['value'];
+
+export const chartOscillators = [{ value: 'none', label: 'None' }, ...chartOscillatorsList];
