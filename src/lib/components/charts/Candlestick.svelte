@@ -44,6 +44,7 @@
 
 	$effect(() => {
 		if (options) {
+			// Ensure data is in the correct format for Highcharts
 			candleStickOptions = {
 				title: {
 					text: `${options.name} (${options.symbol}) Price`
@@ -97,29 +98,27 @@
 						}
 					}
 				},
+				sonification: {
+					enabled: true,
+					masterVolume: 0.5,
+					duration: 5000,
+					order: 'simultaneous',
+					showTooltip: false,
+					defaultInstrumentOptions: {
+						mapping: {
+							pitch: {
+								min: 'a3',
+								max: 'a7'
+							}
+						}
+					}
+				},
 				series: [
 					{
 						type: 'candlestick',
 						id: options.symbol,
 						name: options.name,
-						data: data,
-						sonification: {
-							enabled: true,
-							tracks: [
-								{
-									instrument: 'piano',
-									mapping: {
-										pitch: {
-											mapTo: 'high',
-											min: 'c3',
-											max: 'g6'
-										},
-										volume: '1',
-										noteDuration: 300
-									}
-								}
-							]
-						}
+						data: data
 					}
 				]
 			};
