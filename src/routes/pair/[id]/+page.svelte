@@ -1,10 +1,4 @@
 <script lang="ts">
-	import Highcharts from 'highcharts/highstock';
-	import { StockChart } from '@highcharts/svelte';
-	import Accessibility from 'highcharts/modules/accessibility';
-	import Exporting from 'highcharts/modules/exporting';
-	import ExportData from 'highcharts/modules/export-data';
-	import Sonification from 'highcharts/modules/sonification';
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
 	import {
@@ -13,6 +7,10 @@
 		type CurrencyKey,
 		currencyList
 	} from '$lib/utils/common.js';
+	import Candlestick, {
+		type CandlestickOptions,
+		type CandlestickData
+	} from '$lib/components/charts/Candlestick.svelte';
 	import { page } from '$app/state';
 
 	let currentTab: 'details' | 'technical-analysis' = $state('details');
@@ -23,36 +21,18 @@
 	let currentEndDate: string = $state(new Date().toISOString().split('.')[0]);
 	let currentCurrency: CurrencyKey = $state('usd');
 	let intervalsList: Array<string> = ['5min', '1h', '4h', '24h'];
-	let candelStickDataArray: Array<{
-		x: number;
-		open: number;
-		high: number;
-		low: number;
-		close: number;
-	}> = $state([]);
-
-	let candleStickOptions: Highcharts.Options | undefined = $state(undefined);
+	let candleStickDataArray: CandlestickData = $state([]);
+	let candleStickOptions: CandlestickOptions | undefined = $state(undefined);
 
 	const { data } = $props();
 
 	$effect(() => {
 		if (currentTab === 'technical-analysis') {
-			setUpTA();
+			generateCandleStickChart();
 		}
 	});
 
-	function setUpTA() {
-		Exporting(Highcharts);
-		ExportData(Highcharts);
-		Accessibility(Highcharts);
-		Sonification(Highcharts);
-
-		if (!candleStickOptions) {
-			generateCamndleStickChart();
-		}
-	}
-
-	async function generateCamndleStickChart() {
+	async function generateCandleStickChart() {
 		const chain = page.url.searchParams.get('chain') || undefined;
 		const url = `/api/pair/getCandleStickData?address=${data.data.pairAddress}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
 		const result = await fetch(url, {
@@ -69,100 +49,21 @@
 				console.log('Candlestick data', candleStickData);
 			}
 			for (let item of candleStickData.result) {
-				candelStickDataArray.push({
+				candleStickDataArray.push({
 					x: new Date(item.timestamp).getTime(),
 					open: item.open,
 					high: item.high,
 					low: item.low,
 					close: item.close
 				});
+
+				candleStickOptions = {
+					name: data.data.tokenName,
+					symbol: data.data.tokenSymbol,
+					currency: currentCurrency,
+					time: result.headers.get('date') || new Date().toISOString()
+				};
 			}
-			candleStickOptions = {
-				rangeSelector: {
-					selected: 1
-				},
-				title: {
-					text: `${data.data.tokenName} (${data.data.tokenSymbol}) Price`
-				},
-				subtitle: {
-					text: `Price in ${currencyList[candleStickData.currency as CurrencyKey].text} as of ${result.headers.get('date')}`
-				},
-				accessibility: {
-					enabled: true,
-					// Provide a summary for the chart
-					description: `${data.data.tokenName} (${data.data.tokenSymbol}) candlestick chart showing price movements over time.`,
-					// Announce new data when the chart updates
-					announceNewData: {
-						enabled: true,
-						minAnnounceInterval: 5000, // ms between announcements
-						announcementFormatter: function (allSeries, newSeries, newPoint) {
-							if (newPoint) {
-								const date = new Date(newPoint.x);
-								const dateString = date.toLocaleString(undefined, {
-									year: 'numeric',
-									month: 'long',
-									day: 'numeric',
-									hour: '2-digit',
-									minute: '2-digit'
-								});
-								return `New data: On ${dateString}, open ${newPoint.open}, high ${newPoint.high}, low ${newPoint.low}, close ${newPoint.close}`;
-							}
-							return false;
-						}
-					},
-					// Keyboard navigation options
-					keyboardNavigation: {
-						enabled: true
-					},
-					point: {
-						descriptionFormatter: function (point) {
-							const date = new Date(point.x);
-							const dateString = date.toLocaleString(undefined, {
-								year: 'numeric',
-								month: 'long',
-								day: 'numeric',
-								hour: '2-digit',
-								minute: '2-digit'
-							});
-							return `${dateString}, open ${point.open}, high ${point.high}, low ${point.low}, close ${point.close}`;
-						}
-					},
-					series: {
-						descriptionFormatter: function (series) {
-							return `This series shows the price movement of ${data.data.tokenName} as candlesticks over time.`;
-						}
-					}
-				},
-				series: [
-					{
-						type: 'candlestick',
-						data: candelStickDataArray,
-						sonification: {
-							enabled: true,
-							tracks: [
-								{
-									instrument: 'piano',
-									mapping: {
-										pitch: {
-											mapTo: 'high',
-											min: 'c3',
-											max: 'g6'
-										},
-										volume: '1',
-										noteDuration: 300
-									}
-								}
-							]
-						}
-					}
-				]
-			};
-		} else {
-			candleStickOptions = {
-				title: {
-					text: 'No data available'
-				}
-			};
 		}
 	}
 </script>
@@ -331,15 +232,15 @@
 		</div>
 		<button
 			onclick={() => {
-				candelStickDataArray = [];
+				candleStickDataArray = [];
 				candleStickOptions = undefined;
-				generateCamndleStickChart();
+				generateCandleStickChart();
 			}}
 		>
 			Generate Chart
 		</button>
 		{#if candleStickOptions}
-			<StockChart options={candleStickOptions} highcharts={Highcharts} />
+			<Candlestick options={candleStickOptions} data={candleStickDataArray} />
 		{/if}
 	</div>
 {:else}
