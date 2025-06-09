@@ -1,71 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { dev } from '$app/environment';
+	import Chart from '$lib/components/charts/Chart.svelte';
 	import {
 		type IntervalKey,
 		dataIntervalsList,
 		type CurrencyKey,
 		currencyList
 	} from '$lib/utils/common.js';
-	import Candlestick, {
-		type CandlestickOptions,
-		type CandlestickData
-	} from '$lib/components/charts/Candlestick.svelte';
 	import { page } from '$app/state';
 
 	let currentTab: 'details' | 'technical-analysis' = $state('details');
-	let currentInterval: IntervalKey = $state('1h');
-	let currentStartDate: string = $state(
-		new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('.')[0]
-	);
-	let currentEndDate: string = $state(new Date().toISOString().split('.')[0]);
-	let currentCurrency: CurrencyKey = $state('usd');
 	let intervalsList: Array<string> = ['5min', '1h', '4h', '24h'];
-	let candleStickDataArray: CandlestickData = $state([]);
-	let candleStickOptions: CandlestickOptions | undefined = $state(undefined);
 
 	const { data } = $props();
-
-	$effect(() => {
-		if (currentTab === 'technical-analysis') {
-			generateCandleStickChart();
-		}
-	});
-
-	async function generateCandleStickChart() {
-		const chain = page.url.searchParams.get('chain') || undefined;
-		const url = `/api/pair/getCandleStickData?address=${data.data.pairAddress}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
-		const result = await fetch(url, {
-			method: 'get',
-			headers: {
-				'Content-Type': 'application/json',
-				Accept: 'application/json'
-			}
-		});
-		if (result.ok) {
-			const candleStickData = await result.json();
-
-			if (dev) {
-				console.log('Candlestick data', candleStickData);
-			}
-			for (let item of candleStickData.result) {
-				candleStickDataArray.push({
-					x: new Date(item.timestamp).getTime(),
-					open: item.open,
-					high: item.high,
-					low: item.low,
-					close: item.close
-				});
-
-				candleStickOptions = {
-					name: data.data.tokenName,
-					symbol: data.data.tokenSymbol,
-					currency: currentCurrency,
-					time: result.headers.get('date') || new Date().toISOString()
-				};
-			}
-		}
-	}
 </script>
 
 <svelte:head>
@@ -199,53 +147,11 @@
 	>
 		<h2>Technical Analysis</h2>
 		<p>You can change any of the below options to change the data displayed in the charts.</p>
-		<div>
-			<label for="interval">Interval</label>
-			<select id="interval" bind:value={currentInterval}>
-				{#each Object.entries(dataIntervalsList) as [key, value]}
-					<option value={key}>{value.text}</option>
-				{/each}
-			</select>
-		</div>
-		<div>
-			<label for="start-date">Start Date</label>
-			<input
-				type="datetime-local"
-				id="start-date"
-				bind:value={currentStartDate}
-				max={currentEndDate}
-			/>
-		</div>
-		<div>
-			<label for="end-date">End Date</label>
-			<input
-				type="datetime-local"
-				id="end-date"
-				bind:value={currentEndDate}
-				min={currentStartDate}
-				max={new Date().toISOString().split('.')[0]}
-			/>
-		</div>
-		<div>
-			<label for="currency">Currency</label>
-			<select id="currency" bind:value={currentCurrency}>
-				{#each Object.entries(currencyList) as [key, value]}
-					<option value={key}>{value.text}</option>
-				{/each}
-			</select>
-		</div>
-		<button
-			onclick={() => {
-				candleStickDataArray = [];
-				candleStickOptions = undefined;
-				generateCandleStickChart();
-			}}
-		>
-			Generate Chart
-		</button>
-		{#if candleStickOptions}
-			<Candlestick options={candleStickOptions} data={candleStickDataArray} />
-		{/if}
+		<Chart
+			address={data.data.pairAddress}
+			name={data.data.tokenName}
+			symbol={data.data.tokenSymbol}
+		/>
 	</div>
 {:else}
 	<h1>Data not available</h1>
