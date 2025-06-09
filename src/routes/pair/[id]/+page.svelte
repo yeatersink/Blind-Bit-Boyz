@@ -134,10 +134,14 @@
 		<h2>Price Info</h2>
 		<p>USD: ${data.data.currentUsdPrice}</p>
 		<p>Native: {data.data.currentNativePrice}</p>
-		<h3>Price Change</h3>
-		{#each intervalsList as interval}
-			<p>{interval}: {data.data.pricePercentChange[interval]}%</p>
-		{/each}
+		{#if data.data.pricePercentChange}
+			<h3>Price Change</h3>
+			{#each intervalsList as interval}
+				{#if data.data.pricePercentChange[interval]}
+					<p>{interval}: {data.data.pricePercentChange[interval]}%</p>
+				{/if}
+			{/each}
+		{/if}
 
 		<h2>Liquidity</h2>
 		<p>Total liquidity USD: {data.data.totalLiquidityUsd}</p>
