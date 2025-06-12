@@ -112,7 +112,6 @@
 					point: {
 						descriptionFormatter: function (point) {
 							const date = new Date(point.x);
-							console.log('Point:', point);
 							const dateString = date.toLocaleString(undefined, {
 								year: 'numeric',
 								month: 'long',

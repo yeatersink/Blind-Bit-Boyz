@@ -26,6 +26,7 @@
 	);
 	let currentEndDate: string = $state(new Date().toISOString().split('.')[0]);
 	let currentCurrency: CurrencyKey = $state('usd');
+	let time: string | undefined = $state(undefined);
 	let chartDataArray: CandlestickData | LineData = $state([]);
 	let chartOptions: CandlestickOptions | LineOptions | undefined = $state(undefined);
 
@@ -55,7 +56,8 @@
 		}
 	}
 
-	async function generateCandleStickChart() {
+	async function getChartData(type: ChartKeyType) {
+		time = undefined;
 		const chain = page.url.searchParams.get('chain') || undefined;
 		const url = `/api/pair/getCandleStickData?address=${address}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
 		const result = await fetch(url, {
@@ -67,59 +69,55 @@
 		});
 		if (result.ok) {
 			const candleStickData = await result.json();
-
+			time = result.headers.get('date') || new Date().toISOString();
 			if (dev) {
-				console.log('Candlestick data', candleStickData);
+				console.log('Result', candleStickData);
+			}
+			if (dev) {
+				console.log('Chart Type:', type);
 			}
 			for (let item of candleStickData.result) {
-				chartDataArray.push({
-					x: new Date(item.timestamp).getTime(),
-					open: item.open,
-					high: item.high,
-					low: item.low,
-					close: item.close
-				});
-
-				chartOptions = {
-					name: name,
-					symbol: symbol,
-					currency: currentCurrency,
-					time: result.headers.get('date') || new Date().toISOString()
-				};
+				if (type === 'candlestick') {
+					chartDataArray.push({
+						x: new Date(item.timestamp).getTime(),
+						open: item.open,
+						high: item.high,
+						low: item.low,
+						close: item.close
+					});
+				} else if (type === 'line') {
+					chartDataArray.push({
+						x: new Date(item.timestamp).getTime(),
+						y: item.close
+					});
+				}
 			}
+			if (dev) {
+				console.log('Data Array:', chartDataArray);
+			}
+		} else {
+			console.error('Failed to fetch candlestick data:', result.statusText);
 		}
 	}
 
+	async function generateCandleStickChart() {
+		await getChartData('candlestick');
+		chartOptions = {
+			name: name,
+			symbol: symbol,
+			currency: currentCurrency,
+			time: time || new Date().toISOString()
+		};
+	}
+
 	async function generateLineChart() {
-		const chain = page.url.searchParams.get('chain') || undefined;
-		const url = `/api/pair/getPriceData?address=${address}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
-		const result = await fetch(url, {
-			method: 'get',
-			headers: {
-				'Content-Type': 'application/json',
-				Accept: 'application/json'
-			}
-		});
-		if (result.ok) {
-			const lineData = await result.json();
-
-			if (dev) {
-				console.log('Line data', lineData);
-			}
-			for (let item of lineData.result) {
-				chartDataArray.push({
-					x: new Date(item.timestamp).getTime(),
-					y: item.price
-				});
-
-				chartOptions = {
-					name: name,
-					symbol: symbol,
-					currency: currentCurrency,
-					time: result.headers.get('date') || new Date().toISOString()
-				};
-			}
-		}
+		await getChartData('line');
+		chartOptions = {
+			name: name,
+			symbol: symbol,
+			currency: currentCurrency,
+			time: time || new Date().toISOString()
+		};
 	}
 </script>
 
