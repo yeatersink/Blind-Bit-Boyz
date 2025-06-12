@@ -150,21 +150,6 @@
 						}
 					}
 				},
-				sonification: {
-					enabled: true,
-					masterVolume: 0.5,
-					duration: 5000,
-					order: 'simultaneous',
-					showTooltip: false,
-					defaultInstrumentOptions: {
-						mapping: {
-							pitch: {
-								min: 'a3',
-								max: 'a7'
-							}
-						}
-					}
-				},
 				series: [
 					{
 						type: 'candlestick',

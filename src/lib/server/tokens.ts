@@ -104,3 +104,40 @@ export async function getPairData(address: string, chain: string = 'eth') {
 		};
 	}
 }
+
+export async function getPairPriceData(
+	address: string,
+	chain = 'eth',
+	startDate: Date = new Date(Date.now() - 24 * 60 * 60 * 1000),
+	endDate: Date = new Date(Date.now()),
+	interval = '1h',
+	currency = 'usd'
+) {}
+
+export async function getTokenData(address: string, chain = 'eth') {
+	if (!moralisInitialized) {
+		return {
+			error: 'Moralis is not initialized'
+		};
+	}
+
+	const url = `https://deep-index.moralis.io/api/v2.2/erc20/${address}/stats?chain=${chain}`;
+
+	try {
+		const response = await fetch(url, {
+			method: 'GET',
+			headers: {
+				accept: 'application/json',
+				'X-API-Key': MORALIS_API_KEY,
+				'Content-Type': 'application/json'
+			}
+		});
+		console.log('Response:', response);
+		return response?.json();
+	} catch (error) {
+		console.error('Error fetching token data:', error);
+		return {
+			error: 'Failed to fetch token data'
+		};
+	}
+}

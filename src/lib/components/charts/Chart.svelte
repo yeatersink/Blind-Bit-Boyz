@@ -90,10 +90,9 @@
 		}
 	}
 
-	/*
 	async function generateLineChart() {
 		const chain = page.url.searchParams.get('chain') || undefined;
-		const url = `/api/pair/getLineData?address=${address}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
+		const url = `/api/pair/getPriceData?address=${address}${chain ? '&chain=' + chain : ''}&interval=${currentInterval}&startDate=${currentStartDate}&endDate=${currentEndDate}&currency=${currentCurrency}`;
 		const result = await fetch(url, {
 			method: 'get',
 			headers: {
@@ -121,26 +120,6 @@
 				};
 			}
 		}
-	}
-*/
-
-	//Temporary example for line chart
-	async function generateLineChart() {
-		chartDataArray = [
-			{ x: new Date().getTime() - 1000 * 60 * 180, y: 90 },
-			{ x: new Date().getTime() - 1000 * 60 * 150, y: 100 },
-			{ x: new Date().getTime() - 1000 * 60 * 120, y: 95 },
-			{ x: new Date().getTime() - 1000 * 60 * 90, y: 100 },
-			{ x: new Date().getTime() - 1000 * 60 * 60, y: 100 },
-			{ x: new Date().getTime() - 1000 * 60 * 30, y: 105 },
-			{ x: new Date().getTime(), y: 110 }
-		];
-		chartOptions = {
-			name: name,
-			symbol: symbol,
-			currency: currentCurrency,
-			time: new Date().toISOString()
-		};
 	}
 </script>
 
