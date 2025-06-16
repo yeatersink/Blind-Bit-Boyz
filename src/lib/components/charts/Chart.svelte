@@ -56,6 +56,13 @@
 		}
 	}
 
+	$effect(() => {
+		if (dev) {
+			console.log('Current Chart Type:', currentChartType);
+		}
+		changeChartType();
+	});
+
 	async function getChartData(type: ChartKeyType) {
 		time = undefined;
 		const chain = page.url.searchParams.get('chain') || undefined;
@@ -178,3 +185,4 @@
 {:else}
 	<p>No data available for the selected parameters.</p>
 {/if}
+|
