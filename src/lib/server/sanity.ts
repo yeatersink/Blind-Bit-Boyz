@@ -75,3 +75,30 @@ export async function getContentBySlug(slug: string) {
 		throw error;
 	}
 }
+
+export async function getAuthorBySlug(slug: string) {
+	if (!sanityClient) {
+		throw new Error('Sanity client is not initialized');
+	}
+
+	try {
+		const query = `*[_type == "author" && slug.current == $slug][0] {
+			name,
+			"slug": slug.current,
+			bio,
+email,
+"image": image.asset->{
+				_url
+	},
+"socials": socials[]->{
+				platform,
+				url
+			}
+		}`;
+		const author = await sanityClient.fetch(query, { slug });
+		return author;
+	} catch (error) {
+		console.error('Error fetching author by slug from Sanity:', error);
+		throw error;
+	}
+}
