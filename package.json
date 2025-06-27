@@ -40,6 +40,7 @@
 		"@fortawesome/fontawesome-free": "^6.7.2",
 		"@highcharts/svelte": "^1.1.1",
 		"@moralisweb3/common-evm-utils": "^2.27.2",
+		"@portabletext/svelte": "^3.0.0",
 		"@sanity/client": "^7.6.0",
 		"highcharts": "^11.4.8",
 		"moralis": "^2.27.2"
