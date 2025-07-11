@@ -4,10 +4,12 @@ import { searchTokens } from '$lib/server/tokens';
 export const GET = async ({ url }) => {
 	const search = url.searchParams.get('search') ?? undefined;
 	const chain = url.searchParams.get('chain') ?? undefined;
-	const verified = url.searchParams.get('verified') === 'false';
+	const verifiedParam = url.searchParams.get('verified');
+	const verified = verifiedParam === null ? undefined : verifiedParam === 'true';
 	const limit = parseInt(url.searchParams.get('limit') ?? '10', 10);
 	const sortBy = url.searchParams.get('sortBy') ?? undefined;
-	const boostVerified = url.searchParams.get('boostVerified') === 'false';
+	const boostVerifiedParam = url.searchParams.get('boostVerified');
+	const boostVerified = boostVerifiedParam === null ? undefined : boostVerifiedParam === 'true';
 
 	if (!search) {
 		return json({ error: 'Search term is required' }, { status: 400 });

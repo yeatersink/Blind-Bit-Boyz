@@ -252,7 +252,7 @@
 						Copy Address</button
 					>
 					<p>Verified contract: {result.isVerifiedContract}</p>
-					<p>Security score: {result.securityScore}</p>
+					<p>Security score: {result.securityScore}/100</p>
 				</li>
 			{/each}
 		</ul>
