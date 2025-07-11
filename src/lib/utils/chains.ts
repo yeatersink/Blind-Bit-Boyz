@@ -105,3 +105,8 @@ export const chainList = Object.entries(chains)
 	.sort((a, b) => {
 		return a.label.localeCompare(b.label);
 	});
+
+export function getChainKeyByMoralisId(moralisId: string): string | undefined {
+	const decimalId = parseInt(moralisId, 16);
+	return Object.entries(chains).find(([key, value]) => value.chainId === decimalId)?.[1].name;
+}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { chainList, chains } from '$lib/utils/chains';
+	import { chainList, chains, getChainKeyByMoralisId } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { EnvisionButton, EnvisionSelect } from '@envisionly/envisiontech-core';
@@ -251,6 +251,7 @@
 					<button onclick={() => navigator.clipboard.writeText(result.tokenAddress)}>
 						Copy Address</button
 					>
+					<p>Chain: {getChainKeyByMoralisId(result.chainId) ?? result.chainId}</p>
 					<p>Verified contract: {result.isVerifiedContract}</p>
 					<p>Security score: {result.securityScore}/100</p>
 				</li>
