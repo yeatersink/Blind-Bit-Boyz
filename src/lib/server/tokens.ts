@@ -141,3 +141,37 @@ export async function getTokenData(address: string, chain = 'eth') {
 		};
 	}
 }
+
+export async function searchTokens(
+	search: string,
+	chain: string = 'eth',
+	verified: boolean = false,
+	boostVerified: boolean = false,
+	limit: number = 10,
+	sortBy: string = 'marketCapDesc'
+) {
+	if (!moralisInitialized) {
+		return {
+			error: 'Moralis is not initialized'
+		};
+	}
+
+	const url = `https://deep-index.moralis.io/api/v2.2/tokens/search?query=${search}&chains=${chain}&isVerifiedContract=${verified}&limit=${limit}&sortBy=${sortBy}&boostVerifiedContracts=${boostVerified}`;
+	try {
+		console.log('Searching tokens with URL:', url);
+		const response = await fetch(url, {
+			method: 'GET',
+			headers: {
+				accept: 'application/json',
+				'X-API-Key': MORALIS_API_KEY,
+				'Content-Type': 'application/json'
+			}
+		});
+		return response;
+	} catch (error) {
+		console.error('Error searching tokens:', error);
+		return {
+			error: 'Failed to search tokens'
+		};
+	}
+}
