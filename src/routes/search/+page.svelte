@@ -2,9 +2,11 @@
 	import { chainList, chains, getChainKeyByMoralisId } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { EnvisionButton, EnvisionSelect } from '@envisionly/envisiontech-core';
+	import { EnvisionButton } from '@envisionly/envisiontech-core';
+	import '@awesome.me/webawesome/dist/components/select/select.js';
 	import { onMount } from 'svelte';
 
+	let loading: boolean = $state(false);
 	let search = $state('');
 	let chain = $state('eth');
 	let limit = $state(10);
@@ -77,6 +79,7 @@
 */
 
 	async function getSearchResults() {
+		loading = true;
 		error = null;
 		results = null;
 		if (dev) {
@@ -98,6 +101,7 @@
 		if (!response.ok) {
 			console.error('Failed to fetch search results:', response.statusText);
 			error = response.statusText;
+			loading = false;
 			return;
 		}
 		const newResponse = await response.json();
@@ -111,6 +115,7 @@
 		} else {
 			error = 'Something went wrong';
 		}
+		loading = false;
 	}
 </script>
 
@@ -181,7 +186,13 @@
 </div>
 
 <div>
-	<EnvisionSelect label="Chain" options={chainList} search bind:value={chain} />
+	<wa-select label="Chain" value={chain} onchange={(e) => (chain = e.target.value)}>
+		{#each chainList as chainItem}
+			<wa-option value={chainItem.value}>
+				{chainItem.label}
+			</wa-option>
+		{/each}
+	</wa-select>
 </div>
 
 <details>
@@ -218,16 +229,12 @@
 		</div>
 
 		<div>
-			<EnvisionSelect
-				label="Sort By"
-				options={[
-					{ label: 'Volume 1h Desc', value: 'volume1hDesc' },
-					{ label: 'Volume 24h Desc', value: 'volume24hDesc' },
-					{ label: 'Liquidity Desc', value: 'liquidityDesc' },
-					{ label: 'Market Cap Desc', value: 'marketCapDesc' }
-				]}
-				bind:value={sortBy}
-			/>
+			<wa-select label="Sort By" value={sortBy} onchange={(e) => (sortBy = e.target.value)}>
+				<wa-option value="volume1hDesc" selected>Volume 1h Desc</wa-option>
+				<wa-option value="volume24hDesc">Volume 24h Desc</wa-option>
+				<wa-option value="liquidityDesc">Liquidity Desc</wa-option>
+				<wa-option value="marketCapDesc">Market Cap Desc</wa-option>
+			</wa-select>
 		</div>
 	</section>
 </details>
@@ -261,4 +268,6 @@
 {:else if error}
 	<h2>Error</h2>
 	<p role="alert">Error: {error}</p>
+{:else if loading}
+	<p role="alert">Searching...</p>
 {/if}
