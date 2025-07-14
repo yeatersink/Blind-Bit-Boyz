@@ -36,6 +36,7 @@
 		"vite": "^6.3.5"
 	},
 	"dependencies": {
+		"@awesome.me/webawesome": "^3.0.0-beta.2",
 		"@envisionly/envisiontech-core": "^0.9.0",
 		"@fortawesome/fontawesome-free": "^6.7.2",
 		"@highcharts/svelte": "^1.1.1",

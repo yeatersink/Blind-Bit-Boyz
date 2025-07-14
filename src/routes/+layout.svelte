@@ -1,5 +1,8 @@
 <script lang="ts">
+	import '@awesome.me/webawesome/dist/styles/webawesome.css';
 	import '@fortawesome/fontawesome-free/css/all.css';
+	import '@awesome.me/webawesome/dist/components/button/button.js';
+	import '@awesome.me/webawesome/dist/components/icon/icon.js';
 	import '../app.css';
 	import DesktopNav from '$lib/components/DesktopNav.svelte';
 
@@ -24,15 +27,12 @@
 
 <footer class="border-gold-500 border-t bg-black py-8 text-gray-400">
 	<h2 class="mb-4 text-xl font-semibold text-gray-200">Follow Us:</h2>
-	<a
-		class="hover:text-gold-500 focus:text-gold-500 text-gray-400"
-		href="https://x.com/yeatersink"
-		aria-label="X"><span class="fa-brands fa-x"></span></a
-	>
-	<a
-		href="https://github.com/yeatersink"
-		class="hover:text-gold-500 focus:text-gold-500 text-gray-400"
-		aria-label="GitHub"><span class="fa-brands fa-github"></span></a
-	>
+	<wa-button href="https://x.com/yeatersink">
+		<wa-icon family="brands" name="x" label="X"></wa-icon>
+	</wa-button>
+	<!-- replacing github link with wa-->
+	<wa-button href="https://github.com/yeatersink">
+		<wa-icon family="brands" name="github" label="GitHub"></wa-icon>
+	</wa-button>
 </footer>
 <a class="sr-only" href="#main">Back to main content</a>
