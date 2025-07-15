@@ -1,10 +1,23 @@
 <script lang="ts">
-	import { chainList, chains, getChainKeyByMoralisId } from '$lib/utils/chains';
+	import {
+		chainList,
+		chains,
+		getChainKeyByMoralisId,
+		getChainNameByMoralisId
+	} from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { EnvisionButton } from '@envisionly/envisiontech-core';
 	import '@awesome.me/webawesome/dist/components/select/select.js';
+	import '@awesome.me/webawesome/dist/components/input/input.js';
+	import '@awesome.me/webawesome/dist/components/checkbox/checkbox.js';
+	import '@awesome.me/webawesome/dist/components/details/details.js';
+	import '@awesome.me/webawesome/dist/components/button/button.js';
+	import '@awesome.me/webawesome/dist/components/divider/divider.js';
+	import '@awesome.me/webawesome/dist/components/card/card.js';
+	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	let loading: boolean = $state(false);
 	let search = $state('');
@@ -181,8 +194,8 @@
 -->
 
 <div>
-	<label for="search">Search:</label>
-	<input id="search" type="text" bind:value={search} />
+	<wa-input label="Search" type="search" value={search} oninput={(e) => (search = e.target.value)}
+	></wa-input>
 </div>
 
 <div>
@@ -195,37 +208,38 @@
 	</wa-select>
 </div>
 
-<details>
-	<summary>Advanced</summary>
+<wa-details summary="Advanced">
 	<section>
 		<div>
-			<label for="search-limit">limitnumber</label>
-			<input
-				id="search-limit"
+			<wa-input
+				label="Limit Number"
 				type="number"
-				aria-describedby="search-limit-description"
-				bind:value={limit}
+				hint="How many results to return"
+				value={limit}
 				min="1"
 				max="50"
 				step="1"
-			/>
-			<p id="search-limit-description">The desired page size of the result.</p>
+				oninput={(e) => (limit = parseInt(e.target.value))}
+			>
+			</wa-input>
 		</div>
 
 		<div>
-			<label for="search-verified">Verified</label>
-			<input
-				id="search-verified"
-				type="checkbox"
-				aria-describedby="search-verified-description"
-				bind:checked={verified}
-			/>
-			<p id="search-verified-description">Only show verified contracts</p>
+			<wa-checkbox
+				hint="Only show verified contracts"
+				checked={verified}
+				onchange={(e) => (verified = e.target.checked)}
+				>Verified
+			</wa-checkbox>
 		</div>
 
 		<div>
-			<label for="search-boost-verified">Boost Verified Contracts</label>
-			<input id="search-boost-verified" type="checkbox" bind:checked={boostVerified} />
+			<wa-checkbox
+				hint="Make verified contracts appear first"
+				checked={boostVerified}
+				onchange={(e) => (boostVerified = e.target.checked)}
+				>Boost Verified
+			</wa-checkbox>
 		</div>
 
 		<div>
@@ -237,37 +251,52 @@
 			</wa-select>
 		</div>
 	</section>
-</details>
+</wa-details>
 
 <div>
-	<button onclick={getSearchResults}> Search </button>
+	<wa-button onclick={getSearchResults}> Search </wa-button>
 </div>
 
 {#if results}
+	<wa-divider></wa-divider>
+
 	<h2>Results</h2>
 	{#if results.total}
 		<p role="alert">{results.total} results found</p>
 	{/if}
 	{#if results.result}
-		<ul>
+		<ul class="mx-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 			{#each results.result as result}
 				<li>
-					<h3>{result.name} ({result.symbol})</h3>
-					<p>${result.usdPrice}</p>
-					<p>Address: {result.tokenAddress}</p>
-					<button onclick={() => navigator.clipboard.writeText(result.tokenAddress)}>
-						Copy Address</button
-					>
-					<p>Chain: {getChainKeyByMoralisId(result.chainId) ?? result.chainId}</p>
-					<p>Verified contract: {result.isVerifiedContract}</p>
-					<p>Security score: {result.securityScore}/100</p>
+					<wa-card>
+						<div slot="header">
+							<wa-button
+								appearance="plain"
+								href={`/token/${result.tokenAddress}?chain=${getChainKeyByMoralisId(result.chainId)}`}
+							>
+								<h3>{result.name} ({result.symbol})</h3>
+							</wa-button>
+						</div>
+						<p>${result.usdPrice}</p>
+						<p>Address: {result.tokenAddress}</p>
+						<wa-copy-button value={result.tokenAddress}></wa-copy-button>
+
+						<p>Chain: {getChainNameByMoralisId(result.chainId) ?? result.chainId}</p>
+						<p>Verified contract: {result.isVerifiedContract}</p>
+						<p>Security score: {result.securityScore}/100</p>
+						<div slot="footer"></div>
+					</wa-card>
 				</li>
 			{/each}
 		</ul>
 	{/if}
 {:else if error}
+	<wa-divider></wa-divider>
+
 	<h2>Error</h2>
 	<p role="alert">Error: {error}</p>
 {:else if loading}
+	<wa-divider></wa-divider>
+
 	<p role="alert">Searching...</p>
 {/if}

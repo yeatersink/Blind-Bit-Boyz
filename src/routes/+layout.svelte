@@ -27,11 +27,10 @@
 
 <footer class="border-gold-500 border-t bg-black py-8 text-gray-400">
 	<h2 class="mb-4 text-xl font-semibold text-gray-200">Follow Us:</h2>
-	<wa-button href="https://x.com/yeatersink">
-		<wa-icon family="brands" name="x" label="X"></wa-icon>
+	<wa-button appearance="plain" href="https://x.com/yeatersink">
+		<wa-icon family="brands" name="x-twitter" label="X"></wa-icon>
 	</wa-button>
-	<!-- replacing github link with wa-->
-	<wa-button href="https://github.com/yeatersink">
+	<wa-button appearance="plain" href="https://github.com/yeatersink">
 		<wa-icon family="brands" name="github" label="GitHub"></wa-icon>
 	</wa-button>
 </footer>

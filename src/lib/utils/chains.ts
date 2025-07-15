@@ -108,5 +108,10 @@ export const chainList = Object.entries(chains)
 
 export function getChainKeyByMoralisId(moralisId: string): string | undefined {
 	const decimalId = parseInt(moralisId, 16);
+	return Object.entries(chains).find(([key, value]) => value.chainId === decimalId)?.[0];
+}
+
+export function getChainNameByMoralisId(moralisId: string): string | undefined {
+	const decimalId = parseInt(moralisId, 16);
 	return Object.entries(chains).find(([key, value]) => value.chainId === decimalId)?.[1].name;
 }
