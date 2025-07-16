@@ -121,7 +121,7 @@ export async function getTokenData(address: string, chain = 'eth') {
 		};
 	}
 
-	const url = `https://deep-index.moralis.io/api/v2.2/erc20/${address}/stats?chain=${chain}`;
+	const url = `https://deep-index.moralis.io/api/v2.2/discovery/token?chain=${chain}&token_address=${address}`;
 
 	try {
 		const response = await fetch(url, {
