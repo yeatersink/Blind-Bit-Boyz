@@ -13,7 +13,7 @@ export type IntervalKey =
 	| '12h'
 	| '1d'
 	| '1w'
-	| '1m';
+	| '1M';
 
 export const currencyList: Record<CurrencyKey, { text: string }> = {
 	usd: { text: 'USD' },
@@ -33,7 +33,7 @@ export const dataIntervalsList: Record<IntervalKey, { text: string }> = {
 	'12h': { text: '12 hours' },
 	'1d': { text: '1 day' },
 	'1w': { text: '1 week' },
-	'1m': { text: '1 month' }
+	'1M': { text: '1 month' }
 };
 
 const chartOverlaysList: Array<{ value: string; label: string }> = [

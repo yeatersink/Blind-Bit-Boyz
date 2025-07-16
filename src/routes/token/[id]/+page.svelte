@@ -9,8 +9,6 @@
 	} from '$lib/utils/common.js';
 	import { page } from '$app/state';
 
-	let intervalsList: Array<string> = ['5min', '1h', '4h', '24h'];
-
 	const { data } = $props();
 	console.log(data);
 </script>
@@ -37,19 +35,18 @@
 		<p>USD: ${data.data.price_usd}</p>
 		{#if data.data.price_percent_change_usd}
 			<h3>Price Change</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.price_percent_change_usd[interval]}
 					<p>{interval}: {data.data.price_percent_change_usd[interval]}%</p>
 				{/if}
 			{/each}
 		{/if}
-
 		<h2>Liquidity</h2>
 		<p>Total liquidity USD: {data.data.totalLiquidityUsd}</p>
 
 		{#if data.data.liquidityPercentChange}
 			<h3>Liquidity Change</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.liquidityPercentChange[interval]}
 					<p>{interval}: {data.data.liquidityPercentChange[interval]}%</p>
 				{/if}
@@ -59,7 +56,7 @@
 
 		{#if data.data.buys && data.data.buys.length > 0}
 			<h3>Buys</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.buys[interval]}
 					<p>{interval}: {data.data.buys[interval]}</p>
 				{/if}
@@ -68,7 +65,7 @@
 
 		{#if data.data.sells && data.data.sells.length > 0}
 			<h3>Sells</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.sells[interval]}
 					<p>{interval}: {data.data.sells[interval]}</p>
 				{/if}
@@ -77,7 +74,7 @@
 
 		{#if data.data.buyers && data.data.buyers.length > 0}
 			<h3>buyers</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.buyers[interval]}
 					<p>{interval}: {data.data.buyers[interval]}</p>
 				{/if}
@@ -86,7 +83,7 @@
 
 		{#if data.data.sellers && data.data.sellers.length > 0}
 			<h3>sellers</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.sellers[interval]}
 					<p>{interval}: {data.data.sellers[interval]}</p>
 				{/if}
@@ -97,7 +94,7 @@
 
 		{#if data.data.totalVolume && data.data.totalVolume.length > 0}
 			<h3>Total Volume</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.totalVolume[interval]}
 					<p>{interval}: {data.data.totalVolume[interval]}</p>
 				{/if}
@@ -106,7 +103,7 @@
 
 		{#if data.data.buyVolume && data.data.buyVolume.length > 0}
 			<h3>Buy Volume</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.buyVolume[interval]}
 					<p>{interval}: {data.data.buyVolume[interval]}</p>
 				{/if}
@@ -115,7 +112,7 @@
 
 		{#if data.data.sellVolume && data.data.sellVolume.length > 0}
 			<h3>Sell Volume</h3>
-			{#each intervalsList as interval}
+			{#each Object.keys(dataIntervalsList) as interval}
 				{#if data.data.sellVolume[interval]}
 					<p>{interval}: {data.data.sellVolume[interval]}</p>
 				{/if}
