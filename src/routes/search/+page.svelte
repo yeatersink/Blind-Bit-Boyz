@@ -1,10 +1,5 @@
 <script lang="ts">
-	import {
-		chainList,
-		chains,
-		getChainKeyByMoralisId,
-		getChainNameByMoralisId
-	} from '$lib/utils/chains';
+	import { chainList, chains, getChainKeyByMoralisId } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { EnvisionButton } from '@envisionly/envisiontech-core';
@@ -272,7 +267,7 @@
 						<div slot="header">
 							<wa-button
 								appearance="plain"
-								href={`/token/${result.tokenAddress}?chain=${getChainKeyByMoralisId(result.chainId)}`}
+								href={`/token/${result.tokenAddress}?chain=${result.chainId}`}
 							>
 								<h3>{result.name} ({result.symbol})</h3>
 							</wa-button>
@@ -281,7 +276,7 @@
 						<p>Address: {result.tokenAddress}</p>
 						<wa-copy-button value={result.tokenAddress}></wa-copy-button>
 
-						<p>Chain: {getChainNameByMoralisId(result.chainId) ?? result.chainId}</p>
+						<p>Chain: {chains[getChainKeyByMoralisId(result.chainId)].name ?? result.chainId}</p>
 						<p>Verified contract: {result.isVerifiedContract}</p>
 						<p>Security score: {result.securityScore}/100</p>
 						<div slot="footer"></div>
