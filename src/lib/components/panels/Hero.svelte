@@ -50,7 +50,7 @@
 		{/if}
 	{/if}
 	{#if marketCap}
-		<p>Market Cap: ${marketCap > 1000000 ? (marketCap / 1000000).toFixed(2) + 'M' : marketCap}</p>
+		<p>Market Cap: ${marketCap}</p>
 	{/if}
 	{#if volumeChange && volumeChange['1d']}
 		{#if volumeChange['1d'] < 0}

@@ -8,7 +8,7 @@
 		currencyList
 	} from '$lib/utils/common.js';
 	import { page } from '$app/state';
-	import Price from '$lib/components/panels/Price.svelte';
+	import Performance from '$lib/components/panels/Performance.svelte';
 	import Liquidity from '$lib/components/panels/Liquidity.svelte';
 	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
@@ -33,24 +33,30 @@
 		logo={data.data.token_logo}
 		usd={data.data.price_usd || null}
 		usdChange={data.data.price_percent_change_usd || null}
+		marketCap={data.data.market_cap || null}
+		volumeChange={data.data.volume_change_usd || null}
 	/>
 
 	<Token
 		address={data.data.token_address}
 		symbol={data.data.token_symbol}
 		chainHexId={data.data.chain_id}
+		ageInDays={data.data.token_age_in_days}
 	/>
 
 	<div>
-		<Price
-			usd={data.data.price_usd || null}
-			native={data.data.price_native || null}
+		<Performance
 			priceChange={data.data.price_percent_change_usd || null}
+			volumeChange={data.data.volume_change_usd}
+			liquidityChange={data.data.liquidity_change_usd || null}
 		/>
+
+		<!--
 		<Liquidity
 			liquidityLockedInPercent={data.data.total_liquidity_locked_in_percent || null}
 			liquidityChangeUsd={data.data.liquidity_change_usd || null}
 		/>
+-->
 
 		<Links links={data.data.links || null} />
 	</div>

@@ -3,8 +3,12 @@
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
 	import { chains, getChainKeyByMoralisId } from '$lib/utils/chains';
 
-	let { address, symbol, chainHexId }: { address: string; symbol: string; chainHexId: string } =
-		$props();
+	let {
+		address,
+		symbol,
+		chainHexId,
+		ageInDays
+	}: { address: string; symbol: string; chainHexId: string; ageInDays: number } = $props();
 </script>
 
 {#if address || symbol || chainHexId}
@@ -21,6 +25,9 @@
 		{/if}
 		{#if chainHexId}
 			<p>Chain: {chains[getChainKeyByMoralisId(chainHexId)].name || chainHexId}</p>
+		{/if}
+		{#if ageInDays}
+			<p>Age: {ageInDays} days</p>
 		{/if}
 	</wa-card>
 {/if}
