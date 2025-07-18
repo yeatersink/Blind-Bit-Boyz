@@ -8,6 +8,9 @@
 		currencyList
 	} from '$lib/utils/common.js';
 	import { page } from '$app/state';
+	import Price from '$lib/components/panels/Price.svelte';
+	import Liquidity from '$lib/components/panels/Liquidity.svelte';
+	import Links from '$lib/components/panels/Links.svelte';
 
 	const { data } = $props();
 	console.log(data);
@@ -29,29 +32,20 @@
 		Copy Address</button
 	>
 	<p>Symbol: {data.data.token_symbol}</p>
+	<p>Chain: {data.data.chain_id}</p>
 
 	<div>
-		<h2>Price Info</h2>
-		<p>USD: ${data.data.price_usd}</p>
-		{#if data.data.price_percent_change_usd}
-			<h3>Price Change</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.price_percent_change_usd[interval]}
-					<p>{interval}: {data.data.price_percent_change_usd[interval]}%</p>
-				{/if}
-			{/each}
-		{/if}
-		<h2>Liquidity</h2>
-		<p>Total liquidity USD: {data.data.totalLiquidityUsd}</p>
+		<Price
+			usd={data.data.price_usd || null}
+			native={data.data.price_native || null}
+			priceChange={data.data.price_percent_change_usd || null}
+		/>
+		<Liquidity
+			liquidityLockedInPercent={data.data.total_liquidity_locked_in_percent || null}
+			liquidityChangeUsd={data.data.liquidity_change_usd || null}
+		/>
 
-		{#if data.data.liquidityPercentChange}
-			<h3>Liquidity Change</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.liquidityPercentChange[interval]}
-					<p>{interval}: {data.data.liquidityPercentChange[interval]}%</p>
-				{/if}
-			{/each}
-		{/if}
+		<Links links={data.data.links || null} />
 		<h2>Transactions</h2>
 
 		{#if data.data.buys && data.data.buys.length > 0}
