@@ -12,6 +12,7 @@
 	import Liquidity from '$lib/components/panels/Liquidity.svelte';
 	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
+	import Token from '$lib/components/panels/Token.svelte';
 
 	const { data } = $props();
 	console.log(data);
@@ -33,12 +34,12 @@
 		usd={data.data.price_usd || null}
 		usdChange={data.data.price_percent_change_usd || null}
 	/>
-	<p>Token address: {data.data.token_address}</p>
-	<button onclick={() => navigator.clipboard.writeText(data.data.token_address)}>
-		Copy Address</button
-	>
-	<p>Symbol: {data.data.token_symbol}</p>
-	<p>Chain: {data.data.chain_id}</p>
+
+	<Token
+		address={data.data.token_address}
+		symbol={data.data.token_symbol}
+		chainHexId={data.data.chain_id}
+	/>
 
 	<div>
 		<Price
