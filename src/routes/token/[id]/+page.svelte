@@ -11,6 +11,7 @@
 	import Price from '$lib/components/panels/Price.svelte';
 	import Liquidity from '$lib/components/panels/Liquidity.svelte';
 	import Links from '$lib/components/panels/Links.svelte';
+	import Hero from '$lib/components/panels/Hero.svelte';
 
 	const { data } = $props();
 	console.log(data);
@@ -25,8 +26,13 @@
 </svelte:head>
 
 {#if data.data && !data.error}
-	<h1>{data.data.token_name}</h1>
-	<img src={data.data.token_logo} alt="Token Logo" height="20%" width="20%" />
+	<Hero
+		name={data.data.token_name}
+		symbol={data.data.token_symbol}
+		logo={data.data.token_logo}
+		usd={data.data.price_usd || null}
+		usdChange={data.data.price_percent_change_usd || null}
+	/>
 	<p>Token address: {data.data.token_address}</p>
 	<button onclick={() => navigator.clipboard.writeText(data.data.token_address)}>
 		Copy Address</button
@@ -46,72 +52,6 @@
 		/>
 
 		<Links links={data.data.links || null} />
-		<h2>Transactions</h2>
-
-		{#if data.data.buys && data.data.buys.length > 0}
-			<h3>Buys</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.buys[interval]}
-					<p>{interval}: {data.data.buys[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
-
-		{#if data.data.sells && data.data.sells.length > 0}
-			<h3>Sells</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.sells[interval]}
-					<p>{interval}: {data.data.sells[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
-
-		{#if data.data.buyers && data.data.buyers.length > 0}
-			<h3>buyers</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.buyers[interval]}
-					<p>{interval}: {data.data.buyers[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
-
-		{#if data.data.sellers && data.data.sellers.length > 0}
-			<h3>sellers</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.sellers[interval]}
-					<p>{interval}: {data.data.sellers[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
-
-		<h2>Volume</h2>
-
-		{#if data.data.totalVolume && data.data.totalVolume.length > 0}
-			<h3>Total Volume</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.totalVolume[interval]}
-					<p>{interval}: {data.data.totalVolume[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
-
-		{#if data.data.buyVolume && data.data.buyVolume.length > 0}
-			<h3>Buy Volume</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.buyVolume[interval]}
-					<p>{interval}: {data.data.buyVolume[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
-
-		{#if data.data.sellVolume && data.data.sellVolume.length > 0}
-			<h3>Sell Volume</h3>
-			{#each Object.keys(dataIntervalsList) as interval}
-				{#if data.data.sellVolume[interval]}
-					<p>{interval}: {data.data.sellVolume[interval]}</p>
-				{/if}
-			{/each}
-		{/if}
 	</div>
 {:else}
 	<h1>Data not available</h1>
