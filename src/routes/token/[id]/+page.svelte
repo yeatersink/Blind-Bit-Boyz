@@ -15,9 +15,20 @@
 	import Token from '$lib/components/panels/Token.svelte';
 	import Health from '$lib/components/Health.svelte';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
+	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
 
 	const { data } = $props();
-	console.log(data);
+
+	let lineChartOptions: LineOptions | undefined = $state(undefined);
+
+	onMount(() => {
+		lineChartOptions = {
+			name: data.data.token_name,
+			symbol: data.data.token_symbol,
+			currency: 'usd',
+			time: new Date().toISOString()
+		};
+	});
 </script>
 
 <svelte:head>
@@ -69,8 +80,9 @@
 			<Links links={data.data.links || null} />
 		</wa-tab-panel>
 		<wa-tab-panel name="technical-analysis">
-			<p>Technical analysis data will be displayed here.</p>
-			<!-- Placeholder for future technical analysis component -->
+			{#if lineChartOptions}
+				<Line data={[{ x: 1, y: 1 }]} options={lineChartOptions} />
+			{/if}
 		</wa-tab-panel>
 	</wa-tab-group>
 {:else}

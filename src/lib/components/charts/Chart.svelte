@@ -185,4 +185,3 @@
 {:else}
 	<p>No data available for the selected parameters.</p>
 {/if}
-|
