@@ -1,4 +1,6 @@
 <script lang="ts">
+	import '@awesome.me/webawesome/dist/components/card/card.js';
+
 	import {
 		formatCryptoPrice,
 		formatLargeNumber,

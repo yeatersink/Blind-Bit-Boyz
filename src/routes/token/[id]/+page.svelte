@@ -13,6 +13,7 @@
 	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
 	import Token from '$lib/components/panels/Token.svelte';
+	import Health from '$lib/components/Health.svelte';
 
 	const { data } = $props();
 	console.log(data);
@@ -44,25 +45,21 @@
 		ageInDays={data.data.token_age_in_days}
 	/>
 
-	<div>
-		<Performance
-			priceChange={data.data.price_percent_change_usd || null}
-			volumeChange={data.data.volume_change_usd}
-			netVolumeChange={data.data.net_volume_change_usd || null}
-			liquidityChange={data.data.liquidity_change_usd || null}
-			holdersChange={data.data.holders_change || null}
-			experiencedNetBuyersChange={data.data.experienced_net_buyers_change || null}
-		/>
+	<Performance
+		priceChange={data.data.price_percent_change_usd || null}
+		volumeChange={data.data.volume_change_usd}
+		netVolumeChange={data.data.net_volume_change_usd || null}
+		liquidityChange={data.data.liquidity_change_usd || null}
+		holdersChange={data.data.holders_change || null}
+		experiencedNetBuyersChange={data.data.experienced_net_buyers_change || null}
+	/>
 
-		<!--
-		<Liquidity
-			liquidityLockedInPercent={data.data.total_liquidity_locked_in_percent || null}
-			liquidityChangeUsd={data.data.liquidity_change_usd || null}
-		/>
--->
+	<Health
+		securityScore={data.data.security_score || null}
+		onChainStrengthIndex={data.data.on_chain_strength_index || null}
+	/>
 
-		<Links links={data.data.links || null} />
-	</div>
+	<Links links={data.data.links || null} />
 {:else}
 	<h1>Data not available</h1>
 	<p>
