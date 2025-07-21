@@ -13,6 +13,7 @@
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
 
 	let loading: boolean = $state(false);
 	let search = $state('');
@@ -272,7 +273,7 @@
 								<h3>{result.name} ({result.symbol})</h3>
 							</wa-button>
 						</div>
-						<p>${result.usdPrice}</p>
+						<p>{formatCryptoPrice(result.usdPrice)}</p>
 						<p>Address: {result.tokenAddress}</p>
 						<wa-copy-button value={result.tokenAddress}></wa-copy-button>
 
