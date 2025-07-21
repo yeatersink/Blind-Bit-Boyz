@@ -1,12 +1,24 @@
 <script lang="ts">
+	import {
+		formatCryptoPrice,
+		formatLargeNumber,
+		formatPercentage
+	} from '$lib/utils/formatting.svelte';
+
 	let {
 		priceChange,
 		volumeChange,
-		liquidityChange
+		netVolumeChange,
+		liquidityChange,
+		holdersChange,
+		experiencedNetBuyersChange
 	}: {
 		priceChange: Record<string, number> | null;
 		volumeChange: Record<string, number> | null;
+		netVolumeChange: Record<string, number> | null;
 		liquidityChange: Record<string, number> | null;
+		holdersChange: Record<string, number> | null;
+		experiencedNetBuyersChange: Record<string, number> | null;
 	} = $props();
 
 	let tableData: Array<String[]> | null = $state(null);
@@ -19,7 +31,7 @@
 			tableData = [headers];
 
 			const values = headers.map((key) =>
-				key === 'Metric' ? 'Price Change' : priceChange[key].toFixed(2) + '%'
+				key === 'Metric' ? 'Price Change' : formatPercentage(priceChange[key])
 			);
 			tableData.push(values);
 		}
@@ -31,7 +43,23 @@
 			}
 
 			const values = headers.map((key) =>
-				key === 'Metric' ? 'Volume Change' : volumeChange[key] ? '$' + volumeChange[key] : 'N/A'
+				key === 'Metric'
+					? 'Volume Change'
+					: formatLargeNumber(volumeChange[key], undefined, true, '$')
+			);
+			tableData.push(values);
+		}
+		if (netVolumeChange) {
+			if (!tableData) {
+				headers = Object.keys(netVolumeChange);
+				headers.unshift('Metric');
+				tableData = [headers];
+			}
+
+			const values = headers.map((key) =>
+				key === 'Metric'
+					? 'Net Volume Change'
+					: formatLargeNumber(netVolumeChange[key], undefined, true, '$')
 			);
 			tableData.push(values);
 		}
@@ -45,9 +73,33 @@
 			const values = headers.map((key) =>
 				key === 'Metric'
 					? 'Liquidity Change'
-					: liquidityChange[key]
-						? '$' + liquidityChange[key]
-						: 'N/A'
+					: formatLargeNumber(liquidityChange[key], undefined, true, '$')
+			);
+			tableData.push(values);
+		}
+		if (holdersChange) {
+			if (!tableData) {
+				headers = Object.keys(holdersChange);
+				headers.unshift('Metric');
+				tableData = [headers];
+			}
+
+			const values = headers.map((key) =>
+				key === 'Metric' ? 'Holders Change' : formatLargeNumber(holdersChange[key], 0, true)
+			);
+			tableData.push(values);
+		}
+		if (experiencedNetBuyersChange) {
+			if (!tableData) {
+				headers = Object.keys(experiencedNetBuyersChange);
+				headers.unshift('Metric');
+				tableData = [headers];
+			}
+
+			const values = headers.map((key) =>
+				key === 'Metric'
+					? 'Experienced Net Buyers Change'
+					: formatLargeNumber(experiencedNetBuyersChange[key], 0, true)
 			);
 			tableData.push(values);
 		}

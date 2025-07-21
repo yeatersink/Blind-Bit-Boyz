@@ -48,7 +48,10 @@
 		<Performance
 			priceChange={data.data.price_percent_change_usd || null}
 			volumeChange={data.data.volume_change_usd}
+			netVolumeChange={data.data.net_volume_change_usd || null}
 			liquidityChange={data.data.liquidity_change_usd || null}
+			holdersChange={data.data.holders_change || null}
+			experiencedNetBuyersChange={data.data.experienced_net_buyers_change || null}
 		/>
 
 		<!--
