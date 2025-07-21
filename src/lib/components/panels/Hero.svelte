@@ -14,6 +14,7 @@
 		usd,
 		usdChange,
 		marketCap,
+		fullyDilutedValuation,
 		volumeChange
 	}: {
 		name: string;
@@ -22,6 +23,7 @@
 		usd: number | null;
 		usdChange: Record<string, number> | null;
 		marketCap: number | null;
+		fullyDilutedValuation: number | null;
 		volumeChange: Record<string, number> | null;
 	} = $props();
 </script>
@@ -56,6 +58,9 @@
 	{/if}
 	{#if marketCap}
 		<p>Market Cap: {formatLargeNumber(marketCap, undefined, true, '$')}</p>
+	{/if}
+	{#if fullyDilutedValuation}
+		<p>Fully Diluted Valuation: {formatLargeNumber(fullyDilutedValuation, undefined, true, '$')}</p>
 	{/if}
 	{#if volumeChange && volumeChange['1d']}
 		{#if volumeChange['1d'] < 0}

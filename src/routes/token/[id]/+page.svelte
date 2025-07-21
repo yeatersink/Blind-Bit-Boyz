@@ -35,6 +35,7 @@
 		usd={data.data.price_usd || null}
 		usdChange={data.data.price_percent_change_usd || null}
 		marketCap={data.data.market_cap || null}
+		fullyDilutedValuation={data.data.fully_diluted_valuation || null}
 		volumeChange={data.data.volume_change_usd || null}
 	/>
 
