@@ -14,6 +14,7 @@
 	import Hero from '$lib/components/panels/Hero.svelte';
 	import Token from '$lib/components/panels/Token.svelte';
 	import Health from '$lib/components/Health.svelte';
+	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
 
 	const { data } = $props();
 	console.log(data);
@@ -39,28 +40,39 @@
 		volumeChange={data.data.volume_change_usd || null}
 	/>
 
-	<Token
-		address={data.data.token_address}
-		symbol={data.data.token_symbol}
-		chainHexId={data.data.chain_id}
-		ageInDays={data.data.token_age_in_days}
-	/>
+	<wa-tab-group>
+		<wa-tab panel="overview">Overview</wa-tab>
+		<wa-tab panel="technical-analysis">Technical Analysis</wa-tab>
 
-	<Performance
-		priceChange={data.data.price_percent_change_usd || null}
-		volumeChange={data.data.volume_change_usd}
-		netVolumeChange={data.data.net_volume_change_usd || null}
-		liquidityChange={data.data.liquidity_change_usd || null}
-		holdersChange={data.data.holders_change || null}
-		experiencedNetBuyersChange={data.data.experienced_net_buyers_change || null}
-	/>
+		<wa-tab-panel name="overview">
+			<Token
+				address={data.data.token_address}
+				symbol={data.data.token_symbol}
+				chainHexId={data.data.chain_id}
+				ageInDays={data.data.token_age_in_days}
+			/>
 
-	<Health
-		securityScore={data.data.security_score || null}
-		onChainStrengthIndex={data.data.on_chain_strength_index || null}
-	/>
+			<Performance
+				priceChange={data.data.price_percent_change_usd || null}
+				volumeChange={data.data.volume_change_usd}
+				netVolumeChange={data.data.net_volume_change_usd || null}
+				liquidityChange={data.data.liquidity_change_usd || null}
+				holdersChange={data.data.holders_change || null}
+				experiencedNetBuyersChange={data.data.experienced_net_buyers_change || null}
+			/>
 
-	<Links links={data.data.links || null} />
+			<Health
+				securityScore={data.data.security_score || null}
+				onChainStrengthIndex={data.data.on_chain_strength_index || null}
+			/>
+
+			<Links links={data.data.links || null} />
+		</wa-tab-panel>
+		<wa-tab-panel name="technical-analysis">
+			<p>Technical analysis data will be displayed here.</p>
+			<!-- Placeholder for future technical analysis component -->
+		</wa-tab-panel>
+	</wa-tab-group>
 {:else}
 	<h1>Data not available</h1>
 	<p>
