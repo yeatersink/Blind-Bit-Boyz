@@ -70,7 +70,7 @@
 			</wa-button>{/if}
 		{#if links.tiktok}
 			<wa-button appearance="plain" href={links.tiktok}>
-				<wa-icon family="brands" name="tiktok" label="TikTok"></wa-icon>
+				<wa-icon family="brands" name=" " label="TikTok"></wa-icon>
 			</wa-button>{/if}
 		{#if links.twitter}
 			<wa-button appearance="plain" href={links.twitter}>
