@@ -175,3 +175,29 @@ export async function searchTokens(
 		};
 	}
 }
+
+export async function getTokenPairs(tokenAddress: string, chainId: string = 'eth') {
+	if (!moralisInitialized) {
+		return {
+			error: 'Moralis is not initialized'
+		};
+	}
+
+	const url = `https://deep-index.moralis.io/api/v2.2/erc20/${tokenAddress}/pairs?chain=${chainId}`;
+	try {
+		const response = await fetch(url, {
+			method: 'GET',
+			headers: {
+				accept: 'application/json',
+				'X-API-Key': MORALIS_API_KEY,
+				'Content-Type': 'application/json'
+			}
+		});
+		return await response.json();
+	} catch (error) {
+		console.error('Error fetching token pairs:', error);
+		return {
+			error: 'Failed to fetch token pairs'
+		};
+	}
+}
