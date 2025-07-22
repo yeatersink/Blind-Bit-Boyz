@@ -43,6 +43,28 @@
 		console.log('Pairs response:', response);
 		return response.json();
 	}
+
+	function getQuoteToken(pair: Array<any>) {
+		if (!pair || pair.length !== 2) {
+			console.warn('Invalid pair object structure:', pair);
+			return { symbol: 'N/A', name: 'N/A', logo: '' };
+		}
+
+		// Find the token object within the 'pair' array whose 'pair_token_type' is "token1"
+		const quoteToken = pair.find((token: any) => token.pair_token_type === 'token1');
+
+		if (quoteToken) {
+			return {
+				symbol: quoteToken.token_symbol,
+				name: quoteToken.token_name,
+				logo: quoteToken.token_logo
+			};
+		}
+
+		// Fallback if quoteToken isn't found (shouldn't happen with valid data)
+		console.warn("Quote token with pair_token_type 'token1' not found:", pair);
+		return { symbol: 'N/A', name: 'N/A', logo: '' };
+	}
 </script>
 
 <svelte:head>
@@ -116,7 +138,7 @@
 						<tbody>
 							{#each pairs.pairs as pair}
 								<tr>
-									<td>{pair.pair_label}</td>
+									<td>{pair.pair_label} ({getQuoteToken(pair.pair).name})</td>
 									<td>{pair.exchange_name ? pair.exchange_name : 'N/A'}</td>
 									<td>{formatCryptoPrice(pair.usd_price)}</td>
 									<td>{formatPercentage(pair.usd_price_24hr_percent_change)}</td>
