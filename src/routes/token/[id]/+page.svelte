@@ -16,6 +16,11 @@
 	import Health from '$lib/components/Health.svelte';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
 	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
+	import {
+		formatCryptoPrice,
+		formatLargeNumber,
+		formatPercentage
+	} from '$lib/utils/formatting.svelte';
 
 	const { data } = $props();
 
@@ -29,6 +34,37 @@
 			time: new Date().toISOString()
 		};
 	});
+
+	async function getPairs(tokenAddress: string, chainId: string) {
+		const response = await fetch(`/api/token/getPairs?address=${tokenAddress}&chain=${chainId}`);
+		if (!response.ok) {
+			throw new Error('Failed to fetch pairs');
+		}
+		console.log('Pairs response:', response);
+		return response.json();
+	}
+
+	function getQuoteToken(pair: Array<any>) {
+		if (!pair || pair.length !== 2) {
+			console.warn('Invalid pair object structure:', pair);
+			return { symbol: 'N/A', name: 'N/A', logo: '' };
+		}
+
+		// Find the token object within the 'pair' array whose 'pair_token_type' is "token1"
+		const quoteToken = pair.find((token: any) => token.pair_token_type === 'token1');
+
+		if (quoteToken) {
+			return {
+				symbol: quoteToken.token_symbol,
+				name: quoteToken.token_name,
+				logo: quoteToken.token_logo
+			};
+		}
+
+		// Fallback if quoteToken isn't found (shouldn't happen with valid data)
+		console.warn("Quote token with pair_token_type 'token1' not found:", pair);
+		return { symbol: 'N/A', name: 'N/A', logo: '' };
+	}
 </script>
 
 <svelte:head>
@@ -53,7 +89,8 @@
 
 	<wa-tab-group>
 		<wa-tab panel="overview">Overview</wa-tab>
-		<wa-tab panel="technical-analysis">Technical Analysis</wa-tab>
+		<wa-tab panel="pairs">Pairs</wa-tab>
+		<wa-tab disabled panel="technical-analysis">Technical Analysis</wa-tab>
 
 		<wa-tab-panel name="overview">
 			<Token
@@ -78,6 +115,46 @@
 			/>
 
 			<Links links={data.data.links || null} />
+		</wa-tab-panel>
+		<wa-tab-panel name="pairs">
+			<h2>Token Pairs</h2>
+			{#await getPairs(data.data.token_address, data.data.chain_id)}
+				<p role="alert">Loading pairs...</p>
+			{:then pairs}
+				<p role="alert">{pairs.page_size} pairs found</p>
+				{#if pairs && pairs.pairs && pairs.pairs.length > 0}
+					<table>
+						<thead>
+							<tr>
+								<th>Pair</th>
+								<th>Exchange</th>
+								<th>Current Price</th>
+								<th>24h Price Change</th>
+								<th>Liquidity (USD)</th>
+								<th>24h Volume (USD)</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each pairs.pairs as pair}
+								<tr>
+									<td>{pair.pair_label} ({getQuoteToken(pair.pair).name})</td>
+									<td>{pair.exchange_name ? pair.exchange_name : 'N/A'}</td>
+									<td>{formatCryptoPrice(pair.usd_price)}</td>
+									<td>{formatPercentage(pair.usd_price_24hr_percent_change)}</td>
+									<td>{formatLargeNumber(pair.liquidity_usd, undefined, true, '$')}</td>
+									<td>{formatLargeNumber(pair.volume_24h_usd, undefined, true, '$')}</td>
+									<td>{pair.inactive_pair ? 'Inactive' : 'Active'}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				{:else}
+					<p>No pairs found for this token.</p>
+				{/if}
+			{:catch error}
+				<p role="alert">Error loading pairs: {error.message}</p>
+			{/await}
 		</wa-tab-panel>
 		<wa-tab-panel name="technical-analysis">
 			{#if lineChartOptions}
