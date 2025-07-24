@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Saved from '$lib/components/Saved.svelte';
+	import Saved from '$lib/components/SavedSearches/Saved.svelte';
 	import { savedSearchService } from '$lib/utils/saved.svelte';
 	import { chainList, chains, getChainKeyByMoralisId } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
@@ -18,6 +18,7 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
+	import Bookmark from '$lib/components/SavedSearches/Bookmark.svelte';
 
 	let loading: boolean = $state(false);
 	let search = $state('');
@@ -174,31 +175,12 @@
 										<h3>{result.name} ({result.symbol})</h3>
 									</wa-button>
 
-									<wa-button
-										variant="neutral"
-										appearance="plain"
-										onclick={() => {
-											if (savedSearchService.has(result.tokenAddress, result.chainId)) {
-												savedSearchService.remove(result.tokenAddress, result.chainId);
-											} else {
-												savedSearchService.add(
-													result.tokenAddress,
-													result.name,
-													result.chainId,
-													'token'
-												);
-											}
-										}}
-										><wa-icon
-											variant={savedSearchService.has(result.tokenAddress, result.chainId)
-												? 'solid'
-												: 'regular'}
-											name="bookmark"
-											label={savedSearchService.has(result.tokenAddress, result.chainId)
-												? 'Remove bookmark'
-												: 'Add bookmark'}
-										></wa-icon></wa-button
-									>
+									<Bookmark
+										address={result.tokenAddress}
+										name={result.name}
+										chainId={result.chainId}
+										type="token"
+									/>
 								</div>
 								<p>{formatCryptoPrice(result.usdPrice)}</p>
 								<p>Address: {result.tokenAddress}</p>

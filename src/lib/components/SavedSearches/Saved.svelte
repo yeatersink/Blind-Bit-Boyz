@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { chains, getChainKeyByMoralisId } from '$lib/utils/chains';
+	import { chains, getChainKeyByMoralisId, getChainNameByMoralisId } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { onMount } from 'svelte';
 	import '@awesome.me/webawesome/dist/components/card/card.js';
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
-	import '@awesome.me/webawesome/dist/components/icon/icon.js';
 	import { savedSearchService } from '$lib/utils/saved.svelte';
+	import Bookmark from './Bookmark.svelte';
+	import Trash from './Trash.svelte';
 </script>
 
 {#if savedSearchService.count > 0}
@@ -14,20 +15,18 @@
 			<li>
 				<wa-card>
 					<div slot="header" class="flex items-center justify-between">
-						<wa-button appearance="plain" href={`/token/${search.address}?chain=${search.chainId}`}>
+						<wa-button
+							appearance="plain"
+							href={`/${search.type}/${search.address}?chain=${search.chainId}`}
+						>
 							<h3>{search.name}</h3>
 						</wa-button>
 
-						<wa-button
-							variant="neutral"
-							appearance="plain"
-							onclick={() => savedSearchService.remove(search.address, search.chainId)}
-							><wa-icon variant="solid" name="trash" label="Delete search"></wa-icon></wa-button
-						>
+						<Trash address={search.address} chainId={search.chainId} />
 					</div>
 					<p>Address: {search.address}</p>
 					<wa-copy-button value={search.address}></wa-copy-button>
-					<p>Chain: {chains[getChainKeyByMoralisId(search.chainId)].name ?? search.chainId}</p>
+					<p>Chain: {getChainNameByMoralisId(search.chainId) ?? search.chainId}</p>
 				</wa-card>
 			</li>
 		{/each}

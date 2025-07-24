@@ -9,11 +9,10 @@
 	} from '$lib/utils/common.js';
 	import { page } from '$app/state';
 	import Performance from '$lib/components/panels/Performance.svelte';
-	import Liquidity from '$lib/components/panels/Liquidity.svelte';
 	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
 	import Token from '$lib/components/panels/Token.svelte';
-	import Health from '$lib/components/Health.svelte';
+	import Health from '$lib/components/panels/Health.svelte';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
 	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
 	import {
@@ -77,7 +76,9 @@
 
 {#if data.data && !data.error}
 	<Hero
+		address={data.data.token_address}
 		name={data.data.token_name}
+		chainId={data.data.chain_id}
 		symbol={data.data.token_symbol}
 		logo={data.data.token_logo}
 		usd={data.data.price_usd || null}

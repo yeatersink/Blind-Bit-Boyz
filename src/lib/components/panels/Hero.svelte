@@ -4,20 +4,27 @@
 		formatLargeNumber,
 		formatPercentage
 	} from '$lib/utils/formatting.svelte';
+	import type { SearchType } from '$lib/utils/saved.svelte';
 	import '@awesome.me/webawesome/dist/components/card/card.js';
 	import '@awesome.me/webawesome/dist/components/divider/divider.js';
+	import Bookmark from '../SavedSearches/Bookmark.svelte';
 
 	let {
+		address,
 		name,
+		chainId,
 		symbol,
 		logo,
 		usd,
 		usdChange,
 		marketCap,
 		fullyDilutedValuation,
-		volumeChange
+		volumeChange,
+		type
 	}: {
+		address: string;
 		name: string;
+		chainId: string;
 		symbol: string;
 		logo: string;
 		usd: number | null;
@@ -25,12 +32,14 @@
 		marketCap: number | null;
 		fullyDilutedValuation: number | null;
 		volumeChange: Record<string, number> | null;
+		type: SearchType;
 	} = $props();
 </script>
 
 <wa-card>
-	<div slot="header">
+	<div slot="header" class="flex items-center justify-between">
 		<h1>{name} ({symbol})</h1>
+		<Bookmark {address} {name} {chainId} {type} />
 	</div>
 	{#if logo}
 		<img class="h-16 w-16" slot="media" src={logo} alt="{name} logo" />

@@ -1,4 +1,4 @@
-type SearchType = 'token' | 'pair';
+export type SearchType = 'token' | 'pair';
 
 export interface SavedSearch {
 	chainId: string;
