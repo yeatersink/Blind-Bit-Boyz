@@ -11,7 +11,7 @@
 	}: { address: string; symbol: string; chainHexId: string; ageInDays: number } = $props();
 </script>
 
-{#if address || symbol || chainHexId}
+{#if address || symbol || chainHexId || ageInDays}
 	<wa-card>
 		<div slot="header">
 			<h2>Token Info</h2>
