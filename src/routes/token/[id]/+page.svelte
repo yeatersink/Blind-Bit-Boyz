@@ -156,7 +156,9 @@
 								<th>24h Price Change</th>
 								<th>Liquidity (USD)</th>
 								<th>24h Volume (USD)</th>
-								<th>Status</th>
+								{#if !active}
+									<th>Status</th>
+								{/if}
 							</tr>
 						</thead>
 						<tbody>
@@ -168,7 +170,9 @@
 									<td>{formatPercentage(pair.usd_price_24hr_percent_change)}</td>
 									<td>{formatLargeNumber(pair.liquidity_usd, undefined, true, '$')}</td>
 									<td>{formatLargeNumber(pair.volume_24h_usd, undefined, true, '$')}</td>
-									<td>{pair.inactive_pair ? 'Inactive' : 'Active'}</td>
+									{#if !active}
+										<td>{pair.inactive_pair ? 'Inactive' : 'Active'}</td>
+									{/if}
 								</tr>
 							{/each}
 						</tbody>
