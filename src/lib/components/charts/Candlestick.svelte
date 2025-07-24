@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '@awesome.me/webawesome/dist/components/select/select.js';
 	import Highcharts, { type Options } from 'highcharts/highstock';
 	import { StockChart } from '@highcharts/svelte';
 	import Accessibility from 'highcharts/modules/accessibility';
@@ -16,7 +17,6 @@
 		chartOscillators,
 		type ChartOscillatorKey
 	} from '$lib/utils/common';
-	import { EnvisionSelect } from '@envisionly/envisiontech-core';
 
 	export type CandlestickData = Array<{
 		x: number;
@@ -171,13 +171,24 @@
 {#if candleStickOptions}
 	<h3>Chart Options</h3>
 	<div>
-		<EnvisionSelect search label="Overlays" options={chartOverlays} bind:value={currentOverlay} />
-		<EnvisionSelect
-			search
+		<wa-select
+			label="Overlays"
+			value={currentOverlay}
+			onchange={(e) => (currentOverlay = e.detail.value)}
+		>
+			{#each chartOverlays as overlay}
+				<wa-option value={overlay.value}>{overlay.label}</wa-option>
+			{/each}
+		</wa-select>
+		<wa-select
 			label="Oscillators"
-			options={chartOscillators}
-			bind:value={currentOscillator}
-		/>
+			value={currentOscillator}
+			onchange={(e) => (currentOscillator = e.detail.value)}
+		>
+			{#each chartOscillators as oscillator}
+				<wa-option value={oscillator.value}>{oscillator.label}</wa-option>
+			{/each}
+		</wa-select>
 	</div>
 	<StockChart options={candleStickOptions} highcharts={Highcharts} />
 {/if}
