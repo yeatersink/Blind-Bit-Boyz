@@ -13,6 +13,7 @@
 	import Hero from '$lib/components/panels/Hero.svelte';
 	import Token from '$lib/components/panels/Token.svelte';
 	import Health from '$lib/components/panels/Health.svelte';
+	import '@awesome.me/webawesome/dist/components/checkbox/checkbox.js';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
 	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
 	import {
@@ -20,6 +21,8 @@
 		formatLargeNumber,
 		formatPercentage
 	} from '$lib/utils/formatting.svelte';
+
+	let active: boolean = $state(true);
 
 	const { data } = $props();
 
@@ -64,6 +67,14 @@
 		console.warn("Quote token with pair_token_type 'token1' not found:", pair);
 		return { symbol: 'N/A', name: 'N/A', logo: '' };
 	}
+
+	function filterPairs(pairs: Array<any>) {
+		let filteredPairs: Array<any> = pairs;
+		if (active) {
+			filteredPairs = filteredPairs.filter((pair) => !pair.inactive_pair);
+		}
+		return filteredPairs;
+	}
 </script>
 
 <svelte:head>
@@ -86,6 +97,7 @@
 		marketCap={data.data.market_cap || null}
 		fullyDilutedValuation={data.data.fully_diluted_valuation || null}
 		volumeChange={data.data.volume_change_usd || null}
+		type="token"
 	/>
 
 	<wa-tab-group>
@@ -123,6 +135,17 @@
 				<p role="alert">Loading pairs...</p>
 			{:then pairs}
 				<p role="alert">{pairs.page_size} pairs found</p>
+
+				<div>
+					<wa-checkbox
+						hint="Only show active pairs"
+						checked={active}
+						defaultChecked={true}
+						onchange={(e) => (active = e.target.checked)}
+						>Active
+					</wa-checkbox>
+				</div>
+
 				{#if pairs && pairs.pairs && pairs.pairs.length > 0}
 					<table>
 						<thead>
@@ -137,7 +160,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each pairs.pairs as pair}
+							{#each filterPairs(pairs.pairs) as pair}
 								<tr>
 									<td>{pair.pair_label} ({getQuoteToken(pair.pair).name})</td>
 									<td>{pair.exchange_name ? pair.exchange_name : 'N/A'}</td>
