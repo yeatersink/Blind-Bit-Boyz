@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Saved from '$lib/components/Saved.svelte';
+	import { savedSearchService } from '$lib/utils/saved.svelte';
 	import { chainList, chains, getChainKeyByMoralisId } from '$lib/utils/chains';
 	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
@@ -13,7 +15,6 @@
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
 	import '@awesome.me/webawesome/dist/components/icon/icon.js';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
-
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
@@ -27,49 +28,6 @@
 	let sortBy = $state('volume1hDesc');
 	let results = $state(null);
 	let error: string | null = $state(null);
-
-	let savedSearches: Record<
-		string,
-		{
-			chainId: string;
-			name: string;
-			address: string;
-		}
-	> = $state({});
-
-	onMount(() => {
-		if (localStorage.getItem('savedSearches')) {
-			savedSearches = JSON.parse(localStorage.getItem('savedSearches') || '{}');
-		} else {
-			savedSearches = {};
-		}
-	});
-
-	function saveToken(address: string, name: string, chainId: string) {
-		if (dev) {
-			console.log('Saving token:', { name, address, chainId });
-		}
-		const newSearch = {
-			name,
-			chainId,
-			address
-		};
-		savedSearches[chainId + '-' + address] = newSearch;
-		localStorage.setItem('savedSearches', JSON.stringify(savedSearches));
-	}
-
-	function deleteSavedSearch(id: string) {
-		if (dev) {
-			console.log('Deleting search:', id);
-		}
-		if (!savedSearches[id]) {
-			console.warn('No saved search found with id:', id);
-			return;
-		}
-
-		delete savedSearches[id];
-		localStorage.setItem('savedSearches', JSON.stringify(savedSearches));
-	}
 
 	async function getSearchResults() {
 		loading = true;
@@ -121,8 +79,8 @@
 
 <wa-tab-group>
 	<wa-tab panel="new">New</wa-tab>
-	<wa-tab disabled={!Object.keys(savedSearches).length} panel="saved"
-		>Saved ({Object.keys(savedSearches).length})</wa-tab
+	<wa-tab disabled={!savedSearchService.count} panel="saved"
+		>Saved ({savedSearchService.count})</wa-tab
 	>
 
 	<wa-tab-panel name="new">
@@ -220,18 +178,23 @@
 										variant="neutral"
 										appearance="plain"
 										onclick={() => {
-											if (savedSearches[result.chainId + '-' + result.tokenAddress]) {
-												deleteSavedSearch(result.chainId + '-' + result.tokenAddress);
+											if (savedSearchService.has(result.tokenAddress, result.chainId)) {
+												savedSearchService.remove(result.tokenAddress, result.chainId);
 											} else {
-												saveToken(result.tokenAddress, result.name, result.chainId);
+												savedSearchService.add(
+													result.tokenAddress,
+													result.name,
+													result.chainId,
+													'token'
+												);
 											}
 										}}
 										><wa-icon
-											variant={savedSearches[result.chainId + '-' + result.tokenAddress]
+											variant={savedSearchService.has(result.tokenAddress, result.chainId)
 												? 'solid'
 												: 'regular'}
 											name="bookmark"
-											label={savedSearches[result.chainId + '-' + result.tokenAddress]
+											label={savedSearchService.has(result.tokenAddress, result.chainId)
 												? 'Remove bookmark'
 												: 'Add bookmark'}
 										></wa-icon></wa-button
@@ -264,36 +227,6 @@
 		{/if}
 	</wa-tab-panel>
 	<wa-tab-panel name="saved">
-		{#if Object.keys(savedSearches).length}
-			<ul class="mx-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-				{#each Object.entries(savedSearches) as [id, search]}
-					<li>
-						<wa-card>
-							<div slot="header" class="flex items-center justify-between">
-								<wa-button
-									appearance="plain"
-									href={`/token/${search.address}?chain=${search.chainId}`}
-								>
-									<h3>{search.name}</h3>
-								</wa-button>
-
-								<wa-button
-									variant="neutral"
-									appearance="plain"
-									onclick={() => deleteSavedSearch(id)}
-									><wa-icon variant="solid" name="trash" label="Delete search"></wa-icon></wa-button
-								>
-							</div>
-							<p>Address: {search.address}</p>
-							<wa-copy-button value={search.address}></wa-copy-button>
-							<p>Chain: {chains[getChainKeyByMoralisId(search.chainId)].name ?? search.chainId}</p>
-							<div slot="footer"></div>
-						</wa-card>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p>No saved searches found.</p>
-		{/if}
+		<Saved />
 	</wa-tab-panel>
 </wa-tab-group>
