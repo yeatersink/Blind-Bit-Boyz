@@ -146,6 +146,8 @@
 					</wa-checkbox>
 				</div>
 
+				{JSON.stringify(pairs, null, 2)}
+
 				{#if pairs && pairs.pairs && pairs.pairs.length > 0}
 					<table>
 						<thead>
@@ -164,7 +166,14 @@
 						<tbody>
 							{#each filterPairs(pairs.pairs) as pair}
 								<tr>
-									<td>{pair.pair_label} ({getQuoteToken(pair.pair).name})</td>
+									<td>
+										<wa-button
+											appearance="plain"
+											href={`/pair/${pair.pair_address}?chain=${data.data.chain_id}`}
+										>
+											{pair.pair_label} ({getQuoteToken(pair.pair).name})
+										</wa-button>
+									</td>
 									<td>{pair.exchange_name ? pair.exchange_name : 'N/A'}</td>
 									<td>{formatCryptoPrice(pair.usd_price)}</td>
 									<td>{formatPercentage(pair.usd_price_24hr_percent_change)}</td>
