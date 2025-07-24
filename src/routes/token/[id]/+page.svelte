@@ -9,11 +9,11 @@
 	} from '$lib/utils/common.js';
 	import { page } from '$app/state';
 	import Performance from '$lib/components/panels/Performance.svelte';
-	import Liquidity from '$lib/components/panels/Liquidity.svelte';
 	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
 	import Token from '$lib/components/panels/Token.svelte';
-	import Health from '$lib/components/Health.svelte';
+	import Health from '$lib/components/panels/Health.svelte';
+	import '@awesome.me/webawesome/dist/components/checkbox/checkbox.js';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
 	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
 	import {
@@ -21,6 +21,8 @@
 		formatLargeNumber,
 		formatPercentage
 	} from '$lib/utils/formatting.svelte';
+
+	let active: boolean = $state(true);
 
 	const { data } = $props();
 
@@ -65,6 +67,14 @@
 		console.warn("Quote token with pair_token_type 'token1' not found:", pair);
 		return { symbol: 'N/A', name: 'N/A', logo: '' };
 	}
+
+	function filterPairs(pairs: Array<any>) {
+		let filteredPairs: Array<any> = pairs;
+		if (active) {
+			filteredPairs = filteredPairs.filter((pair) => !pair.inactive_pair);
+		}
+		return filteredPairs;
+	}
 </script>
 
 <svelte:head>
@@ -77,7 +87,9 @@
 
 {#if data.data && !data.error}
 	<Hero
+		address={data.data.token_address}
 		name={data.data.token_name}
+		chainId={data.data.chain_id}
 		symbol={data.data.token_symbol}
 		logo={data.data.token_logo}
 		usd={data.data.price_usd || null}
@@ -85,6 +97,7 @@
 		marketCap={data.data.market_cap || null}
 		fullyDilutedValuation={data.data.fully_diluted_valuation || null}
 		volumeChange={data.data.volume_change_usd || null}
+		type="token"
 	/>
 
 	<wa-tab-group>
@@ -122,6 +135,19 @@
 				<p role="alert">Loading pairs...</p>
 			{:then pairs}
 				<p role="alert">{pairs.page_size} pairs found</p>
+
+				<div>
+					<wa-checkbox
+						hint="Only show active pairs"
+						checked={active}
+						defaultChecked={true}
+						onchange={(e) => (active = e.target.checked)}
+						>Active
+					</wa-checkbox>
+				</div>
+
+				{JSON.stringify(pairs, null, 2)}
+
 				{#if pairs && pairs.pairs && pairs.pairs.length > 0}
 					<table>
 						<thead>
@@ -132,19 +158,30 @@
 								<th>24h Price Change</th>
 								<th>Liquidity (USD)</th>
 								<th>24h Volume (USD)</th>
-								<th>Status</th>
+								{#if !active}
+									<th>Status</th>
+								{/if}
 							</tr>
 						</thead>
 						<tbody>
-							{#each pairs.pairs as pair}
+							{#each filterPairs(pairs.pairs) as pair}
 								<tr>
-									<td>{pair.pair_label} ({getQuoteToken(pair.pair).name})</td>
+									<td>
+										<wa-button
+											appearance="plain"
+											href={`/pair/${pair.pair_address}?chain=${data.data.chain_id}`}
+										>
+											{pair.pair_label} ({getQuoteToken(pair.pair).name})
+										</wa-button>
+									</td>
 									<td>{pair.exchange_name ? pair.exchange_name : 'N/A'}</td>
 									<td>{formatCryptoPrice(pair.usd_price)}</td>
 									<td>{formatPercentage(pair.usd_price_24hr_percent_change)}</td>
 									<td>{formatLargeNumber(pair.liquidity_usd, undefined, true, '$')}</td>
 									<td>{formatLargeNumber(pair.volume_24h_usd, undefined, true, '$')}</td>
-									<td>{pair.inactive_pair ? 'Inactive' : 'Active'}</td>
+									{#if !active}
+										<td>{pair.inactive_pair ? 'Inactive' : 'Active'}</td>
+									{/if}
 								</tr>
 							{/each}
 						</tbody>

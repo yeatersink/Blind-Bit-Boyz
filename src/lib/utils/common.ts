@@ -11,6 +11,7 @@ export type IntervalKey =
 	| '1h'
 	| '4h'
 	| '12h'
+	| '24h'
 	| '1d'
 	| '1w'
 	| '1M';
