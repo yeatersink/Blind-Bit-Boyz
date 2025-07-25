@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '@awesome.me/webawesome/dist/components/select/select.js';
-	import Highcharts, { type Options } from 'highcharts/highstock';
+	import Highcharts, { sonification, type Options } from 'highcharts/highstock';
 	import { StockChart } from '@highcharts/svelte';
 	import Accessibility from 'highcharts/modules/accessibility';
 	import Exporting from 'highcharts/modules/exporting';
@@ -155,7 +155,14 @@
 						type: 'candlestick',
 						id: options.symbol,
 						name: options.name,
-						data: data
+						data: data,
+						sonification: {
+							enabled: true,
+							masterVolume: 0.5,
+							duration: 5000,
+							order: 'simultaneous',
+							showTooltip: false
+						}
 					},
 					...(currentOverlay === 'none'
 						? []
