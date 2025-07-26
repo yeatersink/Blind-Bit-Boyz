@@ -146,8 +146,6 @@
 					</wa-checkbox>
 				</div>
 
-				{JSON.stringify(pairs, null, 2)}
-
 				{#if pairs && pairs.pairs && pairs.pairs.length > 0}
 					<table>
 						<thead>
