@@ -1,9 +1,13 @@
 import { createClient } from '@sanity/client';
-import { SANITY_API_VERSION, SANITY_DATASET, SANITY_PROJECT_ID } from '$env/static/private';
-
 import type { SanityClient } from '@sanity/client';
 
+// Fix: Add quotes around string values
+const SANITY_API_VERSION = '2025-06-19';
+const SANITY_DATASET = 'production';
+const SANITY_PROJECT_ID = 'n9y8yjln';
+
 let sanityClient: SanityClient | null = null;
+
 if (!checkSanity()) {
 	try {
 		sanityClient = createClient({
@@ -86,11 +90,11 @@ export async function getAuthorBySlug(slug: string) {
 			name,
 			"slug": slug.current,
 			bio,
-email,
-"image": image.asset->{
-				_url
-	},
-"socials": socials[]->{
+			email,
+			"image": image.asset->{
+				url
+			},
+			"socials": socials[]->{
 				platform,
 				url
 			}
