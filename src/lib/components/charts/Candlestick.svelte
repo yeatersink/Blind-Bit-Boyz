@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { StockChart } from '@highcharts/svelte';
-	import Highcharts, { buildPriceChartOptions, speakNumber, speakTime } from './highcharts';
+	import Highcharts, {
+		buildPriceChartOptions,
+		hookChartCsvDownload,
+		speakNumber,
+		speakTime
+	} from './highcharts';
 	import { currencyList, type CurrencyKey } from '$lib/utils/common';
 	import type { Candle } from '$lib/utils/candles';
 	import type { ActiveIndicator } from './highcharts';
@@ -22,6 +27,7 @@
 		order: 'sequential' | 'simultaneous';
 		grouping: CandleGrouping | null;
 		onShowLast: (key: string) => void;
+		onCsvDownload: () => void;
 		chart?: Highcharts.Chart | null;
 	}
 
@@ -34,6 +40,7 @@
 		order,
 		grouping,
 		onShowLast,
+		onCsvDownload,
 		chart = $bindable(null)
 	}: Props = $props();
 
@@ -74,6 +81,7 @@
 
 	function rememberChart(instance: Highcharts.Chart) {
 		chart = instance;
+		hookChartCsvDownload(instance, onCsvDownload);
 		for (const series of instance.series) {
 			const id = String(series.options.id ?? '');
 			if (id !== 'price' && id !== 'volume' && !id.startsWith('ind-')) {

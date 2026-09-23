@@ -3,6 +3,7 @@ import { rangeButtons, type CandleGrouping } from '$lib/utils/timeWindow';
 import Accessibility from 'highcharts/modules/accessibility';
 import Exporting from 'highcharts/modules/exporting';
 import ExportData from 'highcharts/modules/export-data';
+import OfflineExporting from 'highcharts/modules/offline-exporting';
 import Sonification from 'highcharts/modules/sonification';
 import Annotations from 'highcharts/modules/annotations';
 import Indicators from 'highcharts/indicators/indicators-all';
@@ -30,6 +31,7 @@ if (typeof window !== 'undefined') {
 	Highcharts.setOptions({ time: { useUTC: false } });
 	applyModule(Exporting);
 	applyModule(ExportData);
+	applyModule(OfflineExporting);
 	applyModule(Accessibility);
 	applyModule(Sonification);
 	applyModule(Annotations);
@@ -148,6 +150,85 @@ function pitchMapping(mapTo: 'close' | 'y') {
 			max: 'c6'
 		}
 	};
+}
+
+type MenuChart = Highcharts.Chart & {
+	exportDivElements?: Array<HTMLElement | null | undefined>;
+	exportContextMenu?: HTMLElement & { hideMenu?: () => void };
+};
+
+function exportMenuItems(chart: MenuChart): HTMLElement[] {
+	return (chart.exportDivElements ?? []).filter(
+		(element): element is HTMLElement =>
+			!!element && element.tagName === 'LI' && element.classList.contains('highcharts-menu-item')
+	);
+}
+
+function focusExportMenu(chart: MenuChart) {
+	const items = exportMenuItems(chart);
+	if (!items.length) return;
+	items.forEach((element, index) => {
+		element.setAttribute('role', 'menuitem');
+		element.tabIndex = index === 0 ? 0 : -1;
+	});
+	items[0].focus();
+	const menu = chart.exportContextMenu;
+	if (!menu || menu.dataset.menuKeys === 'on') return;
+	menu.dataset.menuKeys = 'on';
+	menu.addEventListener('keydown', (event: KeyboardEvent) => {
+		const entries = exportMenuItems(chart);
+		const index = entries.indexOf(document.activeElement as HTMLElement);
+		const move = (step: number) => {
+			const next = entries[(Math.max(index, 0) + step + entries.length) % entries.length];
+			entries.forEach((element) => {
+				element.tabIndex = -1;
+			});
+			if (!next) return;
+			next.tabIndex = 0;
+			next.focus();
+		};
+		if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+			event.preventDefault();
+			move(1);
+		} else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+			event.preventDefault();
+			move(-1);
+		} else if (event.key === 'Home') {
+			event.preventDefault();
+			move(-Math.max(index, 0));
+		} else if (event.key === 'End') {
+			event.preventDefault();
+			move(entries.length - 1 - Math.max(index, 0));
+		} else if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			(document.activeElement as HTMLElement | null)?.click();
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			menu.hideMenu?.();
+		}
+	});
+}
+
+export function hookChartCsvDownload(chart: Highcharts.Chart, onCsv: () => void) {
+	const exporter = chart as Highcharts.Chart & {
+		downloadCSV?: () => void;
+		_csvHooked?: boolean;
+	};
+	if (exporter._csvHooked) return;
+	exporter._csvHooked = true;
+	const events = Highcharts as unknown as {
+		addEvent: (target: Highcharts.Chart, event: string, handler: () => void) => void;
+	};
+	events.addEvent(chart, 'exportMenuShown', () => {
+		queueMicrotask(() => focusExportMenu(chart as MenuChart));
+	});
+	if (typeof exporter.downloadCSV !== 'function') return;
+	const original = exporter.downloadCSV.bind(exporter);
+	exporter.downloadCSV = () => {
+		original();
+		onCsv();
+	};
+	exporter._csvHooked = true;
 }
 
 export function buildPriceChartOptions(args: {
@@ -320,6 +401,7 @@ export function buildPriceChartOptions(args: {
 				...(indicator.defaultParams ?? { period: 14 }),
 				...(indicator.needsVolume ? { volumeSeriesID: 'volume' } : {})
 			},
+			includeInDataExport: false,
 			sonification: {
 				enabled: !indicator.muted,
 				tracks: [
@@ -362,9 +444,50 @@ export function buildPriceChartOptions(args: {
 				}
 			}))
 		},
+		lang: {
+			contextButtonTitle: 'Chart menu',
+			accessibility: {
+				exporting: {
+					menuButtonLabel: 'Chart menu',
+					chartMenuLabel: 'Chart menu'
+				}
+			}
+		},
 		exporting: {
 			enabled: true,
-			filename: `${args.symbol || args.name || 'price'}-chart`
+			fallbackToExportServer: false,
+			filename: `${args.symbol || args.name || 'price'}-chart`,
+			csv: {
+				dateFormat: '%Y-%m-%d %H:%M:%S',
+				columnHeaderFormatter(
+					item: { coll?: string; name?: string } | null | undefined,
+					key?: string
+				) {
+					if (!item || item.coll === 'xAxis') return 'Date';
+					if (key === 'open') return 'Open';
+					if (key === 'high') return 'High';
+					if (key === 'low') return 'Low';
+					if (key === 'close') return 'Close';
+					return item.name === 'Volume' ? 'Volume' : item.name || 'Value';
+				}
+			},
+			buttons: {
+				contextButton: {
+					menuItems: [
+						'viewFullscreen',
+						'printChart',
+						'separator',
+						'downloadPNG',
+						'downloadJPEG',
+						'downloadPDF',
+						'downloadSVG',
+						'separator',
+						'downloadCSV',
+						'downloadXLS',
+						'viewData'
+					]
+				}
+			}
 		},
 		annotations: [],
 		title: { text: `${args.name} price chart` },

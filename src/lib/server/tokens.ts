@@ -300,6 +300,7 @@ export function normalizeMoralisSearch(
 		if (!tokenAddress) continue;
 		const chainKey = resolveAppChainKey(textField(item, 'chainId', 'chain_id')) ?? fallback;
 		const price = item.usdPrice ?? item.usd_price;
+		const volume = item.volume24h ?? item.volume_24h ?? item.totalVolume;
 		const score = item.securityScore ?? item.security_score;
 		const verified = item.isVerifiedContract ?? item.is_verified_contract;
 		result.push({
@@ -310,6 +311,7 @@ export function normalizeMoralisSearch(
 			chainKey,
 			chainId: chainKey,
 			priceUsd: typeof price === 'number' || typeof price === 'string' ? price : null,
+			volumeUsd: typeof volume === 'number' || typeof volume === 'string' ? volume : null,
 			verified: typeof verified === 'boolean' ? verified : null,
 			securityScore: typeof score === 'number' ? score : null
 		});

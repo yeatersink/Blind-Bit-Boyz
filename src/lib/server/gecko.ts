@@ -59,6 +59,31 @@ async function geckoFetch(path: string): Promise<Response> {
 	});
 }
 
+export async function readGeckoDocument(
+	path: string
+): Promise<{ body: unknown } | { error: string; status: number }> {
+	let response: Response;
+	try {
+		response = await geckoFetch(path);
+	} catch {
+		console.error('Gecko Terminal request failed');
+		return { error: 'Failed to reach Gecko Terminal.', status: 502 };
+	}
+	if (response.status === 429) {
+		return { error: GECKO_SEARCH_RATE_LIMIT, status: 429 };
+	}
+	if (response.status === 404) {
+		return { error: 'Data not available', status: 404 };
+	}
+	if (!response.ok) {
+		return {
+			error: 'Data not available',
+			status: response.status >= 500 ? 502 : response.status
+		};
+	}
+	return { body: await response.json() };
+}
+
 async function loadNetworkSlugs(): Promise<Set<string> | { error: string; status: number }> {
 	if (networkCache && Date.now() - networkCache.at < NETWORK_TTL_MS) {
 		return networkCache.slugs;
@@ -332,6 +357,7 @@ type GeckoResource = {
 		symbol?: string;
 		base_token_price_usd?: string | null;
 		price_usd?: string | null;
+		volume_usd?: { h24?: string | number };
 	};
 	relationships?: {
 		base_token?: { data?: { id?: string } | null };
@@ -399,6 +425,7 @@ function poolHit(
 		chainKey,
 		chainId: chainKey,
 		priceUsd: pool.attributes?.base_token_price_usd ?? base?.attributes?.price_usd ?? null,
+		volumeUsd: pool.attributes?.volume_usd?.h24 ?? null,
 		verified: null,
 		securityScore: null
 	};
@@ -471,6 +498,8 @@ export async function searchGecko(
 	if ('error' in pools && hits.length === 0) return pools;
 	if (!('error' in pools)) {
 		for (const pool of Array.isArray(pools.data) ? pools.data : []) {
+			const base = includedToken(pools, pool.relationships?.base_token?.data?.id);
+			pushHit(hits, seen, base ? tokenHit(base, chainKey) : null);
 			pushHit(hits, seen, poolHit(pool, pools, chainKey));
 		}
 	}

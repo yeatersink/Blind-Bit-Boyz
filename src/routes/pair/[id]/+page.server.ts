@@ -1,48 +1,52 @@
-// Accepts /pair/:id?chain=<app key, Moralis chain name, Gecko slug, or hex/decimal chain id>.
+// Accepts /pair/:id?chain=<app key>. Source comes from ?source= or the dataSource cookie.
 import { dev } from '$app/environment';
-import { getPairData, isApiError } from '$lib/server/tokens.js';
+import type { Cookies } from '@sveltejs/kit';
+import { loadPairPage } from '$lib/server/pageData';
 import { geckoNetworkFor, moralisChainFor, resolveAppChainKey } from '$lib/utils/chains';
+import type { DataSource } from '$lib/utils/searchResults';
 
-function pairRecord(value: unknown): Record<string, unknown> | null {
-	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-	const record = value as Record<string, unknown>;
-	const address = record.pairAddress ?? record.pair_address;
-	const name = record.tokenName ?? record.token_name ?? record.pairLabel ?? record.pair_label;
-	if (typeof address !== 'string' && typeof name !== 'string') return null;
-	return record;
+function requestedSource(url: URL, cookies: Cookies): DataSource {
+	const query = url.searchParams.get('source');
+	if (query === 'gecko' || query === 'moralis') return query;
+	return cookies.get('dataSource') === 'moralis' ? 'moralis' : 'gecko';
 }
 
-export const load = async ({ params, url }) => {
+export const load = async ({ params, url, cookies }) => {
 	const id = params.id;
 	const chain = url.searchParams.get('chain') ?? undefined;
 	const chainKey = resolveAppChainKey(chain) ?? null;
+	const source = requestedSource(url, cookies);
 	const mapped = {
 		id,
 		chain,
 		chainKey,
+		source,
 		geckoNetwork: geckoNetworkFor(chain) ?? null,
 		moralisChain: moralisChainFor(chain) ?? null,
-		adapter: 'moralis'
+		adapter: source
 	};
 	if (!id) {
-		return { data: null, error: 'Pair address is required', pairAddress: null, chainKey };
+		return {
+			overview: null,
+			error: 'Pair address is required',
+			pairAddress: null,
+			chainKey,
+			source
+		};
 	}
-
 	try {
-		const stats = await getPairData(id, chainKey ?? chain);
-		const record = pairRecord(stats);
-		if (isApiError(stats) || !record) {
-			const message = isApiError(stats)
-				? stats.error
-				: 'Pair stats are not available from Moralis. The chart can still load from Gecko Terminal.';
-			if (dev) console.log('pair load', { ...mapped, error: message });
-			return { pairAddress: id, chainKey, data: null, error: message };
-		}
-		if (dev) console.log('pair load', { ...mapped, error: null });
-		return { pairAddress: id, chainKey, data: record as any, error: null };
+		const overview = await loadPairPage(source, id, chainKey ?? chain);
+		if (dev) console.log('pair load', { ...mapped, error: overview.error });
+		return {
+			overview,
+			error: overview.error,
+			pairAddress: overview.pairAddress ?? id,
+			chainKey,
+			source
+		};
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to load pair';
+		const message = error instanceof Error ? error.message : 'Data not available';
 		if (dev) console.log('pair load', { ...mapped, error: message });
-		return { pairAddress: id, chainKey, data: null, error: message };
+		return { overview: null, error: message, pairAddress: id, chainKey, source };
 	}
 };

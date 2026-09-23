@@ -11,6 +11,7 @@ export type SearchHit = {
 	chainKey: string;
 	chainId: string;
 	priceUsd?: number | string | null;
+	volumeUsd?: number | string | null;
 	verified?: boolean | null;
 	securityScore?: number | null;
 };
@@ -31,4 +32,7 @@ export function readStoredDataSource(): DataSource {
 
 export function storeDataSource(source: DataSource) {
 	localStorage.setItem(DATA_SOURCE_STORAGE_KEY, source);
+	if (typeof document !== 'undefined') {
+		document.cookie = `dataSource=${source}; Path=/; SameSite=Lax; Max-Age=31536000`;
+	}
 }

@@ -61,10 +61,21 @@
 		return hit.type === 'pair' ? (hit.pairAddress ?? '') : (hit.tokenAddress ?? '');
 	}
 
-	function resultHref(hit: SearchHit): string {
+	function resultHref(hit: SearchHit): string | null {
 		const chainKey = hit.chainKey || hit.chainId;
-		const address = resultAddress(hit);
-		return `/${hit.type}/${address}?chain=${chainKey}`;
+		if (hit.type === 'pair' && hit.pairAddress) {
+			return `/pair/${hit.pairAddress}?chain=${chainKey}`;
+		}
+		if (hit.type === 'token' && hit.tokenAddress) {
+			return `/token/${hit.tokenAddress}?chain=${chainKey}`;
+		}
+		return null;
+	}
+
+	function volumeText(volume: SearchHit['volumeUsd']): string {
+		if (volume === null || volume === undefined || volume === '') return '';
+		const numeric = typeof volume === 'number' ? volume : Number(volume);
+		return Number.isFinite(numeric) ? formatCryptoPrice(numeric) : String(volume);
 	}
 
 	async function getSearchResults() {
@@ -107,6 +118,7 @@
 
 	onMount(() => {
 		dataSource = readStoredDataSource();
+		storeDataSource(dataSource);
 	});
 </script>
 
@@ -236,9 +248,15 @@
 						<li>
 							<wa-card>
 								<div slot="header" class="flex items-center justify-between">
-									<wa-button appearance="plain" href={resultHref(result)}>
-										<h3>{result.name} ({result.symbol || result.type})</h3>
-									</wa-button>
+									<h3>
+										{#if resultHref(result)}
+											<a href={resultHref(result)}>
+												{result.name}{result.symbol ? ` (${result.symbol})` : ''}
+											</a>
+										{:else}
+											{result.name}{result.symbol ? ` (${result.symbol})` : ''}
+										{/if}
+									</h3>
 									{#if resultAddress(result)}
 										<Bookmark
 											address={resultAddress(result)}
@@ -248,11 +266,14 @@
 										/>
 									{/if}
 								</div>
-								<p>{result.type === 'pair' ? 'Pool' : 'Token'}</p>
-								<p>{priceText(result.priceUsd)}</p>
+								<p>Chain: {chainLabel(result.chainKey || result.chainId)}</p>
+								<p>Price: {priceText(result.priceUsd)}</p>
+								{#if volumeText(result.volumeUsd)}
+									<p>Volume: {volumeText(result.volumeUsd)}</p>
+								{/if}
+								<p>{result.type === 'pair' ? 'Pair' : 'Token'}</p>
 								<p>Address: {resultAddress(result)}</p>
 								<wa-copy-button value={resultAddress(result)}></wa-copy-button>
-								<p>Chain: {chainLabel(result.chainKey || result.chainId)}</p>
 								<p>
 									Verified contract: {result.verified === null || result.verified === undefined
 										? 'n/a'

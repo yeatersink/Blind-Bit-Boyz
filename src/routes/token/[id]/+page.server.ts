@@ -1,65 +1,46 @@
-// Accepts /token/:id?chain=<app key, Moralis chain name, Gecko slug, or hex/decimal chain id>.
+// Accepts /token/:id?chain=<app key>. Source comes from ?source= or the dataSource cookie.
 import { dev } from '$app/environment';
-import { getTokenData, isApiError } from '$lib/server/tokens.js';
+import type { Cookies } from '@sveltejs/kit';
+import { loadTokenPage } from '$lib/server/pageData';
 import { geckoNetworkFor, moralisChainFor, resolveAppChainKey } from '$lib/utils/chains';
+import type { DataSource } from '$lib/utils/searchResults';
 
-function tokenRecord(value: unknown): Record<string, unknown> | null {
-	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-	const record = value as Record<string, unknown>;
-	const address = record.token_address ?? record.tokenAddress;
-	if (typeof address !== 'string' || !address.trim()) return null;
-	return record;
+function requestedSource(url: URL, cookies: Cookies): DataSource {
+	const query = url.searchParams.get('source');
+	if (query === 'gecko' || query === 'moralis') return query;
+	return cookies.get('dataSource') === 'moralis' ? 'moralis' : 'gecko';
 }
 
-export const load = async ({ params, url }) => {
+export const load = async ({ params, url, cookies }) => {
 	const id = params.id;
 	const chain = url.searchParams.get('chain') ?? undefined;
 	const chainKey = resolveAppChainKey(chain) ?? null;
+	const source = requestedSource(url, cookies);
 	const mapped = {
 		id,
 		chain,
 		chainKey,
+		source,
 		geckoNetwork: geckoNetworkFor(chain) ?? null,
 		moralisChain: moralisChainFor(chain) ?? null,
-		adapter: 'moralis'
+		adapter: source
 	};
 	if (!id) {
 		return {
-			data: null,
+			overview: null,
 			error: 'Token address is required',
 			tokenAddress: null,
 			chainKey,
-			sourceHint: null
+			source
 		};
 	}
-
 	try {
-		const data = await getTokenData(id, chainKey ?? chain);
-		const record = tokenRecord(data);
-		if (isApiError(data) || !record) {
-			const message = isApiError(data)
-				? data.error
-				: 'Data not available from Moralis. Open a pool from the pairs list, or switch to Gecko Terminal.';
-			if (dev) console.log('token load', { ...mapped, error: message });
-			return {
-				data: null,
-				error: message,
-				tokenAddress: id,
-				chainKey,
-				sourceHint: 'Gecko Terminal can still list pools for this token.'
-			};
-		}
-		if (dev) console.log('token load', { ...mapped, error: null });
-		return { data: record as any, tokenAddress: id, chainKey, error: null, sourceHint: null };
+		const overview = await loadTokenPage(source, id, chainKey ?? chain);
+		if (dev) console.log('token load', { ...mapped, error: overview.error });
+		return { overview, error: overview.error, tokenAddress: id, chainKey, source };
 	} catch (error) {
-		const message = error instanceof Error ? error.message : 'Failed to load token';
+		const message = error instanceof Error ? error.message : 'Data not available';
 		if (dev) console.log('token load', { ...mapped, error: message });
-		return {
-			data: null,
-			error: message,
-			tokenAddress: id,
-			chainKey,
-			sourceHint: 'Gecko Terminal can still list pools for this token.'
-		};
+		return { overview: null, error: message, tokenAddress: id, chainKey, source };
 	}
 };

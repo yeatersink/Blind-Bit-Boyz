@@ -285,6 +285,10 @@
 		return lines.join('\n');
 	}
 
+	function onMenuCsv() {
+		csvStatus = 'CSV download started.';
+	}
+
 	function downloadCsv() {
 		if (!chartIsLive(chart) || candles.length === 0) {
 			csvStatus = 'CSV download is unavailable.';
@@ -309,7 +313,7 @@
 			link.click();
 			URL.revokeObjectURL(url);
 		}
-		csvStatus = 'CSV download started';
+		csvStatus = 'CSV download started.';
 	}
 
 	function applyShowLast(key: string) {
@@ -455,6 +459,7 @@
 		void generateChart();
 	}}
 >
+	<h3>Data source</h3>
 	<div>
 		<label for="data-source">Data source</label>
 		<select id="data-source" value={dataSource} onchange={onSourceChange}>
@@ -462,17 +467,6 @@
 			<option value="moralis">Moralis</option>
 		</select>
 	</div>
-
-	<fieldset>
-		<legend>Chart Type</legend>
-		{#each Object.entries(chartType) as [key, value]}
-			<label>
-				<input type="radio" name="chart-type" value={key} bind:group={currentChartType} />
-				{value}
-			</label>
-		{/each}
-	</fieldset>
-
 	<div>
 		<label for="currency">Currency</label>
 		<select id="currency" bind:value={currentCurrency}>
@@ -481,75 +475,87 @@
 			{/each}
 		</select>
 	</div>
-	<fieldset>
-		<legend>Time range</legend>
-		<p id="chart-window-help">
-			Candle size is the width of each bar. Show last is how much history to load. Then press
-			Generate Chart.
-		</p>
-		<div>
-			<label for="candle-size">Candle size</label>
-			<select
-				id="candle-size"
-				name="candle-size"
-				aria-describedby="chart-window-help"
-				bind:value={candleSize}
-			>
-				{#each candleSizes as item}
-					{@const note = candleOptionNote(item.key, dataSource)}
-					<option value={item.key} disabled={note !== null}>
-						{item.label}{note ? ` (${note})` : ''}
-					</option>
-				{/each}
-			</select>
-		</div>
-		<div>
-			<label for="show-last">Show last</label>
-			<select
-				id="show-last"
-				name="show-last"
-				aria-describedby="chart-window-help"
-				value={showLast}
-				onchange={onShowLastChange}
-			>
-				{#each showLastOptions as item}
-					<option value={item.key}>{item.label}</option>
-				{/each}
-			</select>
-		</div>
-		<div>
-			<label for="chart-start">Start date and time</label>
-			<input
-				id="chart-start"
-				name="chart-start"
-				type="datetime-local"
-				step="60"
-				autocomplete="off"
-				aria-describedby="chart-window-help"
-				bind:value={currentStartDate}
-				oninput={() => {
-					historyNote = null;
-				}}
-			/>
-		</div>
-		<div>
-			<label for="chart-end">End date and time</label>
-			<input
-				id="chart-end"
-				name="chart-end"
-				type="datetime-local"
-				step="60"
-				autocomplete="off"
-				aria-describedby="chart-window-help"
-				bind:value={currentEndDate}
-				oninput={() => {
-					historyNote = null;
-				}}
-			/>
-		</div>
-	</fieldset>
+
+	<h3 id="chart-type-heading">Chart type</h3>
+	<div role="group" aria-labelledby="chart-type-heading">
+		{#each Object.entries(chartType) as [key, value]}
+			<label>
+				<input type="radio" name="chart-type" value={key} bind:group={currentChartType} />
+				{value}
+			</label>
+		{/each}
+	</div>
+
+	<p id="chart-window-help">
+		Candle size is the width of each bar. Show last is how much history to load. Then press Generate
+		Chart.
+	</p>
+	<h3>Candle size</h3>
+	<div>
+		<label for="candle-size">Candle size</label>
+		<select
+			id="candle-size"
+			name="candle-size"
+			aria-describedby="chart-window-help"
+			bind:value={candleSize}
+		>
+			{#each candleSizes as item}
+				{@const note = candleOptionNote(item.key, dataSource)}
+				<option value={item.key} disabled={note !== null}>
+					{item.label}{note ? ` (${note})` : ''}
+				</option>
+			{/each}
+		</select>
+	</div>
+	<h3>Show last</h3>
+	<div>
+		<label for="show-last">Show last</label>
+		<select
+			id="show-last"
+			name="show-last"
+			aria-describedby="chart-window-help"
+			value={showLast}
+			onchange={onShowLastChange}
+		>
+			{#each showLastOptions as item}
+				<option value={item.key}>{item.label}</option>
+			{/each}
+		</select>
+	</div>
+	<h3>Date range</h3>
+	<div>
+		<label for="chart-start">Start date and time</label>
+		<input
+			id="chart-start"
+			name="chart-start"
+			type="datetime-local"
+			step="60"
+			autocomplete="off"
+			aria-describedby="chart-window-help"
+			bind:value={currentStartDate}
+			oninput={() => {
+				historyNote = null;
+			}}
+		/>
+	</div>
+	<div>
+		<label for="chart-end">End date and time</label>
+		<input
+			id="chart-end"
+			name="chart-end"
+			type="datetime-local"
+			step="60"
+			autocomplete="off"
+			aria-describedby="chart-window-help"
+			bind:value={currentEndDate}
+			oninput={() => {
+				historyNote = null;
+			}}
+		/>
+	</div>
 	<button type="submit">Generate Chart</button>
 
+	<h3 id="indicators-heading">Indicators</h3>
 	<p>
 		Check indicators to add them. Each can have its own instrument. Tab to Play all or Play price
 		only. Arrow keys move in the chart.
@@ -585,6 +591,7 @@
 		{/each}
 	</fieldset>
 
+	<h3>Sonification</h3>
 	<div>
 		<label for="instrument-price">Price instrument</label>
 		<select
@@ -665,6 +672,7 @@
 	</button>
 </form>
 
+<h3>Chart status</h3>
 {#key statusMessage}
 	{#if statusMessage}
 		<p role="alert">{statusMessage}</p>
@@ -683,6 +691,7 @@
 	<p role="alert">{volumeAlert}</p>
 {/if}
 
+<h3>Price chart</h3>
 {#key chartLoadId}
 	{#if chartOptions && candles.length > 0 && renderedType === 'candlestick'}
 		<Candlestick
@@ -694,6 +703,7 @@
 			order={sonificationOrder}
 			grouping={renderedGrouping}
 			onShowLast={onRangeButton}
+			onCsvDownload={onMenuCsv}
 			bind:chart
 		/>
 	{:else if chartOptions && candles.length > 0 && renderedType === 'line'}
@@ -706,6 +716,7 @@
 			order={sonificationOrder}
 			grouping={renderedGrouping}
 			onShowLast={onRangeButton}
+			onCsvDownload={onMenuCsv}
 			bind:chart
 		/>
 	{:else}
