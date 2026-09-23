@@ -1,0 +1,976 @@
+Blind Bit Boyz project report
+Repository root: C:\Users\yeate\Documents\Blind-Bit-Boyz
+Report date: 2026-09-23
+This file is plain text. Headings are numbered. Each path is written in full, followed by what that file is for.
+
+1. Project identity
+
+1.1 Name and version
+
+The npm package name is blind-bit-boyz. The version is 0.0.1. The package is marked private and uses "type": "module".
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\package.json. This file is the root package manifest. It names the app, lists scripts, and lists dependencies.
+
+The human-facing name on the home page is The Blind Bit Boyz Crypto Initiative. The document title is "The Blind Bit Boyz Crypto Initiative".
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+page.svelte. This file is the home page.
+
+The readme title is "Blind Bit Boyz". The readme body says documentation will be added soon and that the project is being rebuilt.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\README.md. This file is the root readme.
+
+The Sanity studio package is also named blind-bit-boyz, with version 1.0.0, private true, and license UNLICENSED. The studio config title is "Blind Bit Boyz".
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\package.json. This file is the Sanity Studio package manifest.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.config.ts. This file is the Sanity Studio configuration. It exports the result of defineConfig.
+
+1.2 Stack
+
+The app is SvelteKit on Svelte 5 with Vite 6 and Tailwind CSS 4.
+
+Declared ranges in C:\Users\yeate\Documents\Blind-Bit-Boyz\package.json:
+Svelte ^5.36.16
+@sveltejs/kit ^2.26.0
+@sveltejs/vite-plugin-svelte ^5.1.1
+vite ^6.3.5
+tailwindcss ^4.1.11
+@tailwindcss/vite ^4.1.11
+@tailwindcss/forms ^0.5.10
+typescript ^5.8.3
+svelte-check ^4.3.0
+eslint ^9.31.0 with typescript-eslint, eslint-plugin-svelte, and eslint-config-prettier
+prettier ^3.6.2 with prettier-plugin-svelte and prettier-plugin-tailwindcss
+
+Runtime dependencies in the same file:
+@awesome.me/webawesome ^3.0.0-beta.3
+@fortawesome/fontawesome-free ^6.7.2
+@envisionly/envisiontech-core ^0.9.0
+@highcharts/svelte ^1.1.1
+highcharts ^11.4.8
+moralis ^2.27.2
+@moralisweb3/common-evm-utils ^2.27.2
+@sanity/client ^7.8.1
+@portabletext/svelte ^3.0.0
+
+SvelteKit config imports adapter from @sveltejs/adapter-vercel and sets kit.adapter to adapter() with no extra options. Preprocess is vitePreprocess().
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\svelte.config.js. This file is the SvelteKit configuration. It exports the config object as the default export.
+
+Vite registers two plugins: tailwindcss() from @tailwindcss/vite, then sveltekit() from @sveltejs/kit/vite. The file exports the result of defineConfig.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\vite.config.ts. This file is the Vite configuration.
+
+TypeScript extends ./.svelte-kit/tsconfig.json, with strict true, allowJs true, checkJs true, moduleResolution bundler, and the other compiler flags in that file. Path aliases are left to SvelteKit. The $lib alias is the SvelteKit default for src/lib.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\tsconfig.json. This file is the TypeScript configuration for the SvelteKit app.
+
+There is no tailwind.config.js in the repository. Tailwind 4 is configured from CSS.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.css. This file is the global stylesheet. It contains @import 'tailwindcss' and @plugin '@tailwindcss/forms'.
+
+Page components use Svelte 5 runes: $props, $state, $derived, $derived.by, and $effect.
+
+1.3 Package manager clues
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\package.json has no packageManager field and no engines field.
+
+Two lockfiles are present at the repo root.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\package-lock.json. This file is the npm lockfile. Its header says lockfileVersion 3, name blind-bit-boyz, version 0.0.1. Directory listing timestamp: 2026-09-23 11:29:57.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\bun.lock. This file is the Bun lockfile. The first lines say lockfileVersion 1 and a workspace named blind-bit-boyz. Directory listing timestamp: 2026-09-23 11:18:52. The rest of bun.lock was not read.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.npmrc. This file is the npm config. Its only line is engine-strict=true. Because package.json has no engines field, that flag has no engine range to enforce.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.prettierignore. This file tells Prettier to skip lockfiles. It lists package-lock.json, pnpm-lock.yaml, yarn.lock, bun.lock, and bun.lockb. pnpm-lock.yaml and yarn.lock are not in the root directory listing.
+
+package.json trustedDependencies lists @parcel/watcher, @tailwindcss/oxide, esbuild, keccak, and secp256k1. That field is how Bun decides which dependency install scripts may run.
+
+The studio directory has its own Bun lockfile and no package-lock.json in the directory listing.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\bun.lock. This file is the Sanity Studio Bun lockfile. It was not opened.
+
+node_modules exists at the repo root. studio\node_modules was not in the studio directory listing.
+
+1.4 Deploy target
+
+The SvelteKit adapter is @sveltejs/adapter-vercel, called as adapter() with default options.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\svelte.config.js. Described in section 1.2.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.vercelignore. This file tells Vercel what to leave out of the upload. Its only entry is the word studio, so the Sanity Studio tree is excluded from the Vercel deployment.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.gitignore. This file is the git ignore list. It ignores node_modules, .output, .vercel, .netlify, .wrangler, /.svelte-kit, /build, .DS_Store, Thumbs.db, .env, .env.*, with exceptions for .env.example and .env.test, plus Vite timestamp files.
+
+vercel.json: UNKNOWN. The file C:\Users\yeate\Documents\Blind-Bit-Boyz\vercel.json is not in the repository root listing. Adapter regions, runtime, and other Vercel project settings are not set in the files that were read.
+
+The Sanity studio is a separate app. Its CLI config sets studioHost to blind-bit-boyz, projectId n9y8yjln, and dataset production. Studio deploy is the studio script "sanity deploy", not the SvelteKit Vercel adapter.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.cli.ts. This file is the Sanity CLI config. It exports the result of defineCliConfig.
+
+2. How the app is started
+
+2.1 Root scripts
+
+All scripts live in C:\Users\yeate\Documents\Blind-Bit-Boyz\package.json.
+
+dev runs "vite dev". That starts the Vite development server with the SvelteKit plugin. This is the local app start command.
+
+build runs "vite build". That produces the production build using the Vercel adapter.
+
+preview runs "vite preview". That serves the output of vite build locally.
+
+prepare runs "svelte-kit sync || echo ''". That generates SvelteKit types, including .svelte-kit/tsconfig.json. The "|| echo ''" keeps the command from failing the install if sync fails. npm runs prepare after install.
+
+check runs "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json". That type-checks the Svelte and TypeScript sources.
+
+check:watch runs the same check command with --watch.
+
+format runs "prettier --write .". That rewrites files to match Prettier. Prettier settings are in C:\Users\yeate\Documents\Blind-Bit-Boyz\.prettierrc. This file is the Prettier config. It sets tabs, single quotes, no trailing commas, print width 100, and the Svelte and Tailwind plugins.
+
+lint runs "prettier --check . && eslint .". That checks formatting and then runs ESLint. ESLint config is C:\Users\yeate\Documents\Blind-Bit-Boyz\eslint.config.js. This file is the flat ESLint config. It exports the result of ts.config. It loads .gitignore through includeIgnoreFile, recommended JavaScript, TypeScript, and Svelte configs, Prettier compatibility, browser and node globals, and turns off no-undef. Svelte files use typescript-eslint parser with projectService and extraFileExtensions .svelte.
+
+There is no test script in the root package.json. No test directory was in the source listing.
+
+2.2 Studio scripts
+
+These scripts are in C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\package.json. They are not wired into the root package.json. The root dev script does not start the studio.
+
+dev runs "sanity dev". That starts the Sanity Studio dev server.
+
+start runs "sanity start".
+
+build runs "sanity build".
+
+deploy runs "sanity deploy".
+
+deploy-graphql runs "sanity graphql deploy".
+
+Studio dependencies are sanity ^3.99.0, @sanity/vision ^3.99.0, react ^19.1, react-dom ^19.1, and styled-components ^6.1.18. Dev dependencies include @sanity/eslint-config-studio, TypeScript, ESLint, and Prettier.
+
+2.3 What npm run dev needs
+
+The dev command is vite dev from the repository root, after dependencies are installed. node_modules is already present in this checkout.
+
+Moralis-backed server modules import a private environment variable:
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\moralis.ts imports MORALIS_API_KEY from $env/static/private.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\tokens.ts imports the same MORALIS_API_KEY.
+
+SvelteKit rejects a $env/static/private import when that variable is not defined. Checked locations, all absent:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env.example
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env.local
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env.development
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env.production
+
+.env.example is the file .gitignore would allow. It is missing. The only private env name used in source is MORALIS_API_KEY.
+
+The home page and root layout do not import the Moralis modules. Routes and API handlers that import src\lib\server\tokens.ts or src\lib\server\moralis.ts cannot run until MORALIS_API_KEY is set. Those routes are /search (through /api/search), /token/[id], /pair/[id], /api/pair/getCandleStickData, /api/pair/getPriceData, and /api/token/getPairs. This report did not start the dev server, so the exact moment Vite exits versus the first request was not observed.
+
+Sanity ids are hardcoded in source. They are not read from the environment. See section 6.
+
+3. Folder map
+
+3.1 Repository root
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\package.json. Root package manifest. Described in sections 1 and 2.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\package-lock.json. npm lockfile. Header was read. The rest was searched for esbuild, keccak, secp256k1, and Moralis-related packages.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\bun.lock. Bun lockfile. Only the opening lines were read.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\README.md. Short project readme.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\svelte.config.js. SvelteKit and Vercel adapter config.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\vite.config.ts. Vite plugin config.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\tsconfig.json. TypeScript config for the app.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\eslint.config.js. ESLint flat config for the app.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.gitignore. Git ignore rules, including env files.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.gitattributes. Git attributes. The only rule is that *.mp4 uses Git LFS. No .mp4 files appeared in the src or static listings.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.npmrc. npm config. engine-strict=true.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.prettierrc. Prettier config.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.prettierignore. Prettier ignore list for lockfiles.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.vercelignore. Excludes the studio directory from Vercel.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.vscode\settings.json. Editor settings. The only setting is cSpell.words for Highcharts, highstock, Moralis, and sonification.
+
+node_modules is present and was not treated as project source. A few package metadata files inside it were opened to identify native dependencies and the Envision button export. See section 10.
+
+3.2 src
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.html. The SvelteKit HTML shell. Sets lang="en", charset, viewport, favicon at %sveltekit.assets%/favicon.png, and %sveltekit.head%. The body has data-sveltekit-preload-data="hover" and Tailwind classes for a full-height column and light gray text. The body placeholder is %sveltekit.body%.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.css. Global CSS. Imports Tailwind and the forms plugin. No @theme block and no custom gold color.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.d.ts. SvelteKit ambient types. The App.Error, Locals, PageData, PageState, and Platform interfaces are left commented out. The file ends with export {} so it is a module.
+
+3.3 src\lib\components
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\DesktopNav.svelte. The header navigation. Reads navItems and marks the current link with aria-current="page".
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Chart.svelte. Chart controls and data loader for a trading pair. Fetches /api/pair/getCandleStickData and renders either a candlestick or a line chart.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Candlestick.svelte. Highcharts stock candlestick chart. Exports the types CandlestickData and CandlestickOptions. Enables Highcharts accessibility, sonification, exporting, export-data, annotations, and indicators.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Line.svelte. Highcharts stock line chart. Exports the types LineData and LineOptions. Enables the same Highcharts modules as the candlestick chart.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Hero.svelte. Summary card for a token or a pair. Shows name, symbol, logo, price, 24 hour price change, market cap, fully diluted valuation, and 24 hour volume change. Includes a bookmark button.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Token.svelte. Token info card. Shows address, copy button, symbol, chain name, and age in days.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Pair.svelte. Pair info card. Shows base token address, symbol, label, pair address, chain name, and age in days computed from createdAt.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Performance.svelte. Performance card. Builds an HTML table from price, volume, net volume, liquidity, holders, and experienced net buyers changes.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Health.svelte. Health card. Shows security score out of 100 and on-chain strength index.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Links.svelte. Social and web links card. Renders a Web Awesome button and icon for each non-empty link field.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Liquidity.svelte. Liquidity card. Accepts liquidityLockedInPercent and liquidityChangeUsd. No other project file imports it.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\SavedSearches\Bookmark.svelte. Toggle button that adds or removes a saved search through savedSearchService.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\SavedSearches\Saved.svelte. List of saved searches with a radio filter for all, pairs, or tokens.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\SavedSearches\Trash.svelte. Button that removes one saved search.
+
+3.4 src\lib\server
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\moralis.ts. Server-only Moralis startup. Exports moralisInitialized.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\sanity.ts. Server-only Sanity client and content queries. Exports getAllContent, getContentBySlug, and getAuthorBySlug.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\tokens.ts. Server-only Moralis HTTP helpers for tokens and pairs. Exports getTokenHistoricalPrice, getPairCandelstickData, getPairData, getPairPriceData, getTokenData, searchTokens, and getTokenPairs.
+
+The folder name server means SvelteKit will not import these modules into client bundles. Client pages call the app's own /api routes instead.
+
+3.5 src\lib\utils
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\chains.ts. Chain directory. Exports chains, chainList, getChainKeyByMoralisId, and getChainNameByMoralisId.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\common.ts. Shared chart and content types. Exports CurrencyKey, IntervalKey, currencyList, dataIntervalsList, ChartOverlayKey, chartOverlays, ChartOscillatorKey, chartOscillators, and formatStringList.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\formatting.svelte.ts. Number formatters. Exports formatCryptoPrice, formatLargeNumber, and formatPercentage. The .svelte.ts extension allows Svelte runes in a module. This file does not use runes. It uses Intl.NumberFormat.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\navManager.ts. Navigation data. Exports navItems.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\saved.svelte.ts. Browser saved-search state. Exports SearchType, SavedSearch, SavedSearchService, and the singleton savedSearchService.
+
+3.6 src\routes
+
+Route files are described one by one in section 4. There is no nested layout. There is no src\routes\+error.svelte. There is no src\routes\+layout.server.ts. There is no src\routes\+layout.ts. There is no src\hooks.server.ts, src\hooks.client.ts, or src\hooks.ts.
+
+3.7 static
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\static\bbb-logo.png. Logo image served at /bbb-logo.png. The root layout uses it. The image bytes were not opened.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\static\favicon.png. Favicon referenced from app.html. The image bytes were not opened.
+
+This report file is C:\Users\yeate\Documents\Blind-Bit-Boyz\static\PROJECT-REPORT.txt.
+
+3.8 studio
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\package.json. Studio package manifest and scripts.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\README.md. Default Sanity blogging-studio readme. It points at Sanity docs, a React/Next example, and the Sanity community. It does not describe Blind Bit Boyz product behavior.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.config.ts. Studio config. name default, title Blind Bit Boyz, projectId n9y8yjln, dataset production, plugins structureTool() and visionTool(), schema types from schemaTypes.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.cli.ts. CLI config. Same project id and dataset, autoUpdates true, studioHost blind-bit-boyz.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\tsconfig.json. Studio TypeScript config. Target ES2017, strict, JSX preserve, includes ts and tsx, excludes node_modules.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\eslint.config.mjs. Studio ESLint config. Spreads @sanity/eslint-config-studio.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\.gitignore. Studio git ignore. Ignores node_modules, dist, .sanity, logs, coverage, and local env files.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\index.ts. Schema barrel. Exports schemaTypes as the array [post, author, category, blockContent].
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\post.ts. Sanity document type post. Fields: title, slug, authors, categories, publishedAt, body.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\author.ts. Sanity document type author. Fields: name, slug, image, bio, email, socials.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\category.ts. Sanity document type category. Fields: title, description.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\blockContent.ts. Sanity array type blockContent. Portable Text blocks plus images.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\static\.gitkeep. Present in the directory listing. The file was not opened. The name marks an otherwise empty static directory.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\bun.lock. Studio Bun lockfile. Not opened.
+
+4. Routes and pages
+
+SvelteKit file routes under C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes. No +page.ts universal load files were found. No form actions (export const actions) were found. No +server.ts methods other than GET were found.
+
+4.1 URL /
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+page.svelte. The home page component. No +page.server.ts and no +page.ts.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+layout.svelte. The root layout wrapped around every page, including this one.
+
+What the user can do: read the welcome heading and the sentence about education and accessibility for blind users. Follow the partner link to https://envisionly.tech. Follow the partner link to https://x.com/yeatersink. Use the global header nav and the footer social buttons from the layout.
+
+The svelte:head title is "The Blind Bit Boyz Crypto Initiative". The meta description says the site is designed to bring accessibility to the crypto market for users who are blind. The meta author is "The Blind Bit Boyz".
+
+4.2 Layout on every page
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+layout.svelte. Root layout. Imports Web Awesome CSS, Font Awesome CSS, Web Awesome button and icon custom elements, app.css, and DesktopNav.
+
+What the user can do from the layout on every route:
+Use the skip link "Skip to main content", which points at #main.
+See the logo image /bbb-logo.png. The alt text describes a gold-to-gray circle, a white Bitcoin symbol drawn as a person with a black blindfold, a guide dog silhouette, and a white cane with a red tip.
+Use DesktopNav.
+Read the footer heading "Follow Us:" and open X (https://x.com/yeatersink) or GitHub (https://github.com/yeatersink).
+Use the final link "Back to main content", which also points at #main.
+
+The main element id is main. Page content is rendered with {@render children()}.
+
+4.3 URL /content
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\+page.server.ts. Server load. Exports load. Calls getAllContent from the Sanity module. On failure it logs and returns content as an empty array.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\+page.svelte. Content index page.
+
+What the user can do: if Sanity returns posts, see the heading "Our Content" and a list of posts. Each item links to /content/{slug} and shows the published date, author names joined by formatStringList, and category titles joined the same way. If the list is empty, see the heading "Coming Soon!" and a short stay-tuned paragraph. The document title is "Content".
+
+4.4 URL /content/[slug]
+
+The parameter name is slug.
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\[slug]\+page.server.ts. Server load. Exports load. Reads params.slug and calls getContentBySlug. On failure or a missing slug it returns post undefined.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\[slug]\+page.svelte. One post page. Renders the body with PortableText from @portabletext/svelte. No custom PortableText components are passed.
+
+What the user can do: read the post title, published date, author links to /authors/{author.slug}, category names, and the Portable Text body. If data.post is missing, see "Post Not Found" and the sentence that the post does not exist or has been removed. The document title is the post title, or "Post not found".
+
+4.5 URL /authors
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\+page.server.ts. Server load. Exports load. Calls getAllContent, the same post query used by /content. It does not query the author document type.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\+page.svelte. Page component. The markup matches the content index: title "Content", heading "Our Content", links to /content/{slug}, or "Coming Soon!" when the list is empty.
+
+What the user can do: the same post list as /content. This URL is not linked from navItems. There is no getAllAuthors export in the Sanity module.
+
+4.6 URL /authors/[slug]
+
+The parameter name is slug.
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\[slug]\+page.server.ts. Server load. Exports load. Calls getAuthorBySlug. On failure or a missing slug it returns author undefined.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\[slug]\+page.svelte. Author page.
+
+What the user can do: read the author name and the bio through PortableText. If email is present, use a mailto link. If socials is a non-empty array, open each social.url in a new tab. The visible link text is social.platform. If data.author is missing, see "Author Not Found". The document title is the author name, or "Author not found".
+
+The load query also requests image.asset.url. The page component does not render an image.
+
+4.7 URL /search
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\search\+page.svelte. Search page. There is no +page.server.ts. Search runs in the browser and then calls the app API.
+
+What the user can do:
+Read the heading "Search". The document title is "Search". The meta description is "Search for a token by its ID".
+Use a tab group. The first tab is "New". The second tab is "Saved" plus the saved count. The Saved tab is disabled when savedSearchService.count is 0.
+On the New tab, type a search string, choose a chain from chainList, and open Advanced.
+Advanced fields: limit from 1 to 50 (initial state 10), a Verified checkbox, a Boost Verified checkbox, and Sort By. Sort options are volume1hDesc (marked selected in the option list; the state initial value is also volume1hDesc), volume24hDesc, liquidityDesc, and marketCapDesc.
+Press the Search button. The page calls getSearchResults, which fetches /api/search with search, chain, limit, verified, boostVerified, and sortBy.
+If results.total is set, hear or read "{total} results found" on an element with role="alert".
+For each results.result entry, open a card with name and symbol, USD price, address, a copy button, chain name, whether the contract is verified, and security score out of 100. The name button links to /token/{tokenAddress}?chain={chainId}. A bookmark button saves the token.
+On error, see an Error heading and role="alert" text. While loading, see "Searching..." with role="alert".
+On the Saved tab, use the Saved component described in section 5.
+
+4.8 URL /token/[id]
+
+The parameter name is id. The page expects a token address. An optional query parameter is chain.
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.server.ts. Server load. Exports load. Reads params.id and url search param chain. Calls getTokenData. Returns { error } or { data }.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.svelte. Token detail page.
+
+What the user can do when data.data is present and data.error is absent:
+See a Hero card for type "token" with address, name, chain id, symbol, logo, USD price, percent change, market cap, fully diluted valuation, and volume change. Bookmark the token from the hero.
+Use tabs: Overview, Pairs, and Technical Analysis. The Technical Analysis tab is disabled.
+Overview shows Token, Performance, Health, and Links panels. The fields passed in are token_address, token_symbol, chain_id, token_age_in_days, price_percent_change_usd, volume_change_usd, net_volume_change_usd, liquidity_change_usd, holders_change, experienced_net_buyers_change, security_score, on_chain_strength_index, and links.
+Pairs calls getPairs in the browser. That fetches /api/token/getPairs?address={token_address}&chain={chain_id}. While waiting, "Loading pairs..." has role="alert". Then "{page_size} pairs found" has role="alert". A checkbox filters to active pairs (initial state active true, and the checkbox also sets defaultChecked). A table lists pair label and quote token name, exchange, current USD price, 24 hour price change, liquidity USD, and 24 hour volume USD. When the active filter is off, a Status column shows Inactive or Active. Each pair name links to /pair/{pair_address}?chain={chain_id}. The quote token is the pair array entry whose pair_token_type is "token1".
+The disabled Technical Analysis panel still contains a Line chart. onMount sets lineChartOptions from token_name and token_symbol. The series data in the template is the single point [{ x: 1, y: 1 }].
+If data is missing or data.error is set, the heading is "Data not available" and the text asks the user to check the token address and chain. The document title is token_name, or "Data not available".
+
+4.9 URL /pair/[id]
+
+The parameter name is id. The page expects a pair address. An optional query parameter is chain.
+
+Files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.server.ts. Server load. Exports load. Calls getPairData(id, chain). Returns { error } or { data }.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.svelte. Pair detail page.
+
+What the user can do when data.data is present and data.error is absent:
+See a Hero card for type "pair". Props passed are tokenName, tokenLogo, pairAddress, tokenSymbol, chain from the page URL, currentUsdPrice, pricePercentChange, and totalVolume.
+Read the base token address and press "Copy Address", which calls navigator.clipboard.writeText.
+Use tabs Overview and Technical Analysis. Both tabs are enabled.
+Overview shows the Pair panel (tokenAddress, tokenSymbol, pairLabel, pairAddress, chain from the URL, pairCreated). Then exchange name, exchange logo, exchange address with another Copy Address button, and exchangeUrl as text. Then USD price and native price. Then price percent change for the local list 5min, 1h, 4h, and 24h. Then total liquidity USD and liquidity percent change for those intervals. Then buys, sells, buyers, and sellers for those intervals. Then total volume, buy volume, and sell volume for those intervals.
+Technical Analysis shows a short instruction and the Chart component with pairAddress, tokenName, and tokenSymbol. Chart behavior is in section 5.
+If data is missing, the heading is "Data not available" and the text asks for a pair address and the correct chain. The document title is tokenName, or "Data not available".
+
+The page script imports Performance, Links, and Health and does not render them. It also imports onMount, dev, IntervalKey, dataIntervalsList, CurrencyKey, and currencyList and does not use those names. Liquidity.svelte is not imported here. Liquidity numbers on this page are printed inline.
+
+4.10 URL /api/search
+
+File: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\search\+server.ts. JSON GET handler. Exports GET.
+
+Query parameters: search (required), chain, verified ("true" or anything else when present), limit (default 10), sortBy, boostVerified.
+
+Behavior: if search is missing, status 400 and { error: "Search term is required" }. Otherwise calls searchTokens. If the helper returns an error field, the handler returns { error: "Failed to fetch search results" } through json() with no explicit status, so the status is the helper default 200. On success it returns { data: await data.json() }. A thrown error returns status 500 and the error message.
+
+Called from the search page in the browser. The Moralis API key stays on the server.
+
+4.11 URL /api/token/getPairs
+
+File: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\token\getPairs\+server.ts. JSON GET handler. Exports GET.
+
+Query parameters: address and chain, both required. Missing either one returns status 400 and { error: "Token address and chain are required" }. Calls getTokenPairs. An error field returns status 500. Success returns the pairs JSON.
+
+Called from the token page in the browser.
+
+4.12 URL /api/pair/getCandleStickData
+
+File: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\pair\getCandleStickData\+server.ts. GET handler. Exports GET. Uses new Response rather than the json() helper.
+
+Query parameters: address (required), chain, startDate, endDate, interval, currency. Missing address returns status 400 and { error: "Pair address is required" }. Calls getPairCandelstickData. An error field returns status 500. Success returns status 200 and JSON.
+
+Called from Chart.svelte in the browser.
+
+4.13 URL /api/pair/getPriceData
+
+File: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\pair\getPriceData\+server.ts. GET handler. Exports GET.
+
+The handler is the same sequence as getCandleStickData, including the import of getPairCandelstickData and the error text "Pair address is required". It does not call getPairPriceData. No project file fetches this URL. getPairPriceData in tokens.ts has an empty body.
+
+4.14 Routes named in comments and not implemented
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\navManager.ts comments out four links. No matching route files exist.
+
+/block_chain. UNKNOWN. The file C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\block_chain\+page.svelte is not in the tree.
+/wallet. UNKNOWN. The file C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\wallet\+page.svelte is not in the tree.
+/tools. UNKNOWN. The file C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\tools\+page.svelte is not in the tree.
+/liquidity. UNKNOWN. The file C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\liquidity\+page.svelte is not in the tree.
+
+5. App behavior
+
+5.1 What the product is
+
+The home page and its meta description describe a site that brings education and accessibility to the crypto market for people who are blind. The readme says the project is being rebuilt and that documentation is not written yet.
+
+The implemented product areas are:
+A short home page with partner credits.
+Educational posts and author pages loaded from Sanity.
+Token search against Moralis.
+Token detail with market stats, health, links, and liquidity pairs.
+Pair detail with exchange stats and Highcharts stock charts, including screen-reader text and sonification.
+Bookmarks stored in the browser.
+
+Partners named on the home page are Envisionly (https://envisionly.tech) and Yeatersink (https://x.com/yeatersink). The footer repeats Yeatersink on X and GitHub (https://github.com/yeatersink).
+
+5.2 Navigation
+
+navItems in navManager.ts, in order:
+Home Page, url /
+Instructions and Information, url /content
+Token Search and Analysis, url /search
+
+DesktopNav renders those three links in a nav element with aria-label="Global". The link whose url equals the current pathname gets aria-current="page" and the class active. DesktopNav reads the page through $page from $app/stores. Other pages read the page through $app/state.
+
+5.3 Chains the search form can select
+
+chains in chains.ts. Each entry has a display name, a native currency symbol, and a numeric chain id. chainList is that map turned into label and value pairs, sorted by label. The search form uses the short key as the option value.
+
+arb, Arbitrum One, ETH, 42161
+avax, Avalanche C-Chain, AVAX, 43114
+base, Base, ETH, 8453
+blast, Blast Mainnet, ETH, 81457
+bsc, BNB Smart Chain Mainnet, BNB, 56
+cro, Cronos Mainnet, CRO, 25
+eth, Ethereum Mainnet, ETH, 1
+ftm, Fantom Mainnet, FTM, 250
+glmr, Moonbeam, GLMR, 1284
+linea, Linea, ETH, 59144
+mantle, Mantle Mainnet, MNT, 5000
+matic, Polygon Mainnet, MATIC, 137
+movr, Moonriver, MOVR, 1285
+opbnb, opBNB Mainnet, BNB, 204
+optimism, Optimism, ETH, 10
+polygon_zkevm, Polygon zkEVM Mainnet, ETH, 1101
+pulse, PulseChain, PLS, 369
+xdai, Gnosis Chain, xDAI, 100
+zksync, zkSync Era Mainnet, ETH, 324
+
+getChainKeyByMoralisId and getChainNameByMoralisId parse the incoming string as base 16 and compare it to those numeric chain ids. Search result cards and the Token and Pair panels use that lookup to print a chain name.
+
+The Moralis request helpers default the chain query parameter to the string eth. Pages also forward whatever string is in the chain query parameter. Search result links put result.chainId into ?chain=. The same string is later sent to Moralis as the chain query value and is also parsed as hex for the display name. Whether a given Moralis response field is a short name or a hex id was not checked against the live API.
+
+5.4 Saved searches
+
+SavedSearchService keeps an object of SavedSearch records. A record has chainId, name, address, and type. SearchType is "token" or "pair". The storage key is savedSearches in localStorage. The constructor calls loadFromStorage. If localStorage is undefined, which covers server render, items stay empty. add, remove, and the count getter update $state fields and write JSON back to localStorage. The key is chainId plus a hyphen plus address.
+
+Bookmark toggles add and remove. The icon label is "Remove bookmark" or "Add bookmark". Trash calls remove. The icon label is "Delete search".
+
+Saved.svelte filters with a Web Awesome radio group labeled "View". Choices are All, Pairs, and Tokens. Each card links to /{type}/{address}?chain={chainId}, shows the address with a copy button, and shows the chain name from getChainNameByMoralisId. Empty states are "No saved searches found." and "You have no saved searches. Add a new search to get started."
+
+Hero places a Bookmark on token and pair pages. Search result cards place a Bookmark with type "token".
+
+5.5 Charts
+
+Chart.svelte state starts as candlestick, interval 1h, currency usd, start about 24 hours before now, and end now. Dates are datetime-local strings with the milliseconds trimmed.
+
+Controls: radio buttons for Candlestick or Line, a select of dataIntervalsList, start datetime, end datetime, currency select of USD or Native, and a Generate Chart button.
+
+getChartData fetches this URL shape:
+/api/pair/getCandleStickData?address={address}&chain={chain if present}&interval={currentInterval}&startDate={currentStartDate}&endDate={currentEndDate}&currency={currentCurrency}
+
+On success it reads candleStickData.result. Candlestick points use timestamp, open, high, low, and close. Line points use timestamp and close as y. The chart time caption uses the response Date header, or the current time if that header is missing.
+
+Changing chart type clears data and calls the matching generator. A $effect also calls changeChartType when its dependencies change. onMount calls changeChartType once as well.
+
+The Generate Chart click handler clears data and then calls generateCandleStickChart even when the selected type is line.
+
+Candlestick and Line charts each build Highcharts options with a title "{name} ({symbol}) Price" and a subtitle that includes the currency label and time. Both set accessibility.enabled, keyboard navigation, a point description, and a series description. The candlestick chart also sets announceNewData with a formatter that speaks date, open, high, low, and close. Candlestick sonification is set on the series (enabled, master volume 0.5, duration 5000, order simultaneous). Line sonification is set on the chart options, with pitch mapped from a3 to a7. Both render StockChart from @highcharts/svelte.
+
+Overlay and oscillator selects list the values from chartOverlays and chartOscillators. The overlay series is added to the Highcharts series array when the value is not "none". currentSeriesOscillator is computed and is not added to the series array. The select handlers set state from e.detail.value. The search page select handlers read e.target.value instead.
+
+Overlay values in common.ts: none, abands, bb, dema, ema, ikh, keltnerchannels, linearRegression, pivotpoints, pc, priceenvelopes, psar, sma, supertrend, tema, vbp, vwap, wma, zigzag. The entry with value vwap has the label "WMA (Weighted Moving Average)". The entry with value wma has the label "VWAP (Volume Weighted Average Price)".
+
+Oscillator values: none, apo, ad, aroon, aroonoscillator, atr, ao, cci, chaikin, cmf, disparityindex, cmo, dmi, dpo, linearRegressionAngle, linearRegressionIntercept, linearRegressionSlope, klinger, macd, mfi, momentum, natr, obv, ppo, roc, rsi, slowstochastic, stochastic, trix, williamsr.
+
+dataIntervalsList texts: 1 second, 10 seconds, 30 seconds, 1 minute, 5 minutes, 10 minutes, 30 minutes, 1 hour, 4 hours, 12 hours, 1 day, 1 week, 1 month. IntervalKey also includes "24h". dataIntervalsList has no "24h" entry. The pair page uses its own interval list "5min", "1h", "4h", "24h" when printing Moralis stat objects. That list is separate from dataIntervalsList.
+
+5.6 Content model the site expects
+
+Post fields used by the app: title, slug, authors (name, and on the detail page slug), categories (title), publishedAt, body.
+Author fields used by the app: name, slug, bio, email, socials (platform and url). image is requested and not shown.
+Category fields used by the app: title. The studio schema also has description. The app queries do not request description.
+
+formatStringList joins one name as itself, two names with " and ", and longer lists with commas and a final ", and ". An empty list returns the string "Unknown".
+
+5.7 Accessibility-related code
+
+Document language is en in app.html.
+
+Skip links: "Skip to main content" before the header, and "Back to main content" after the footer. Both use class sr-only and href #main. The main landmark id is main.
+
+The logo alt text is a long visual description, quoted in section 4.2.
+
+Navigation: aria-label="Global" and aria-current="page" on the active item. Link classes include focus: text color classes.
+
+Search, pair loading, and token pair loading use role="alert" for result counts, errors, and loading text.
+
+Web Awesome icons that were given a label attribute: X, GitHub, email, Bitbucket, Discord, Facebook, GitHub, Instagram, LinkedIn, Medium, Reddit, Telegram, TikTok, website, YouTube, Slack, X post, up arrow, down arrow, minus, bookmark, and trash. The TikTok icon name attribute is a single space.
+
+Copy controls: wa-copy-button on search results, saved searches, token info, and pair info. The pair page also has native buttons labeled "Copy Address" that call navigator.clipboard.writeText.
+
+Highcharts: Accessibility module, keyboardNavigation, chart descriptions, point descriptionFormatter, series descriptionFormatter, candlestick announceNewData, and the Sonification module. This is the chart path aimed at blind users.
+
+Price direction in Hero is red text with a downward arrow, green text with an upward arrow, or gray text with a minus icon. The number is also printed as text. Icon labels are "Downwards arrow", "Upwards arrow", and "No Change".
+
+Bookmark.svelte and Trash.svelte each contain the comments svelte-ignore a11y_click_events_have_key_events and svelte-ignore a11y_no_static_element_interactions above a wa-button.
+
+Performance.svelte and the token pairs panel use HTML tables with th cells. No caption element is in those templates.
+
+PortableText is used for post bodies and author bios. No custom component map is passed, so image blocks and link annotations use the library default.
+
+Color utility classes named gold, such as text-gold-500 and border-gold-500, appear in the layout, the home page, and DesktopNav. app.css does not define a gold palette. Tailwind's default palette does not include gold. Those class names are in the markup. A generated gold color was not found in the project CSS that was read.
+
+6. Data and APIs
+
+6.1 Sanity
+
+Caller files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\sanity.ts creates the client and runs the queries.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\+page.server.ts calls getAllContent during server load.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\[slug]\+page.server.ts calls getContentBySlug during server load.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\+page.server.ts calls getAllContent during server load.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\[slug]\+page.server.ts calls getAuthorBySlug during server load.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\[slug]\+page.svelte and C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\[slug]\+page.svelte render the result with PortableText. They do not call Sanity themselves.
+
+Client setup in sanity.ts:
+SANITY_API_VERSION is the string 2025-06-19.
+SANITY_DATASET is the string production.
+SANITY_PROJECT_ID is the string n9y8yjln.
+createClient is called with projectId, dataset, apiVersion, and useCdn true. No token is passed. The client is created when the module loads. checkSanity returns whether the module-level variable is already set. On first load it is null, so the client is created. Failures are logged.
+
+These three values are also in the studio config and CLI config, except the API version, which is only in sanity.ts.
+
+Queries:
+getAllContent fetches *[_type == "post"] and returns title, slug.current, authors[]-> name, categories[]-> title, and publishedAt.
+getContentBySlug fetches the first post whose slug.current matches. It adds author slug.current and body.
+getAuthorBySlug fetches the first author whose slug.current matches. It requests name, slug, bio, email, image.asset.url, and socials[]->{ platform, url }.
+
+The author schema defines socials as an array of inline objects, not as references. The GROQ projection uses the reference operator ->. The page expects social.platform and social.url.
+
+All three queries run on the server. A thrown error is caught by the load functions. Content indexes then show the Coming Soon empty state. Detail pages show not-found copy.
+
+The studio is the editor for this content. It is not imported by the SvelteKit app. Vision and the structure tool are studio plugins only.
+Source: C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.config.ts.
+
+Post validation in the schema: title required, 1 to 100 characters. Slug required and matched to lowercase letters, numbers, and hyphens. At least one author reference. At least one category reference. publishedAt required, initial value the current ISO time. body is blockContent.
+
+Author validation: name required, 1 to 50 characters. Slug required with the same pattern. Email required and validated as email, max 100. Each social needs a platform from twitter, linkedin, github, or website, and an absolute URL.
+
+Category validation: title required, 1 to 50 characters. description is optional text.
+
+blockContent allows styles normal, h2, h3, h4, and blockquote, decorators strong and em, URL annotations, and hotspot images.
+
+6.2 Moralis
+
+Caller files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\moralis.ts. Imports Moralis and MORALIS_API_KEY. connectToMoralis calls Moralis.start({ apiKey: MORALIS_API_KEY }). Success logs "Moralis initialized successfully" and returns true. Failure logs and returns false. The module then does export const moralisInitialized = await connectToMoralis(). This top-level await runs when the module is first imported.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\tokens.ts. Imports MORALIS_API_KEY, moralisInitialized, Moralis, EvmChain from @moralisweb3/common-evm-utils, and dev from $app/environment. This is the file that calls Moralis and the Moralis HTTPS API.
+
+Route callers:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.server.ts calls getTokenData.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.server.ts calls getPairData.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\search\+server.ts calls searchTokens.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\token\getPairs\+server.ts calls getTokenPairs.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\pair\getCandleStickData\+server.ts calls getPairCandelstickData.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\pair\getPriceData\+server.ts calls getPairCandelstickData.
+
+Browser callers, same-origin only:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\search\+page.svelte fetches /api/search.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.svelte fetches /api/token/getPairs.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Chart.svelte fetches /api/pair/getCandleStickData.
+
+No browser file imports moralis, @sanity/client, or $env/static/private. The API key is attached only in server fetch headers as X-API-Key.
+
+Endpoints built in tokens.ts, host https://deep-index.moralis.io:
+getPairCandelstickData: /api/v2.2/pairs/{address}/ohlcv with chain, timeframe, fromDate, toDate, and currency. Spaces are replaced with %20 and colons with %3A. Returns response.json() from inside the async function, so the caller receives parsed JSON. Requires moralisInitialized.
+getPairData: /api/v2.2/pairs/{address}/stats?chain={chain}. Does not check moralisInitialized before the request. In dev it logs the address, chain, and the Response object. Returns response.json().
+getTokenData: /api/v2.2/discovery/token?chain={chain}&token_address={address}. Requires moralisInitialized. Logs the Response object. Returns response.json().
+searchTokens: /api/v2.2/tokens/search with query, chains, isVerifiedContract, limit, sortBy, and boostVerifiedContracts. Requires moralisInitialized. Logs the URL. Returns the Response object itself, not parsed JSON. The API route then calls data.json().
+getTokenPairs: /api/v2.2/erc20/{tokenAddress}/pairs?chain={chainId}. Requires moralisInitialized. Returns await response.json().
+getTokenHistoricalPrice: uses the SDK method Moralis.EvmApi.token.getTokenPrice in a loop. Default address is 0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0. Default chain is EvmChain.ETHEREUM. The loop uses toBlock from 16323500 up to but not including 16323550, stepping by 10. It logs the collected array. No route calls this function.
+getPairPriceData: empty function body. No route calls this function. The price API route calls getPairCandelstickData instead.
+
+When moralisInitialized is false, the functions that check it return { error: "Moralis is not initialized" }. Fetch failures return a specific error string per function. getPairData still attempts the HTTPS call when startup failed, and it still sends MORALIS_API_KEY.
+
+The export name is getPairCandelstickData. The spelling omits the second e in candle. Call sites use that spelling.
+
+6.3 Highcharts
+
+Packages: highcharts and @highcharts/svelte, declared in package.json.
+
+Caller files:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Candlestick.svelte imports highcharts/highstock, StockChart from @highcharts/svelte, and the modules accessibility, exporting, export-data, sonification, annotations, and indicators/indicators-all.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Line.svelte imports the same set.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Chart.svelte does not import Highcharts directly. It renders Candlestick or Line.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.svelte renders Chart.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.svelte imports Line and renders it inside the disabled Technical Analysis panel with a placeholder point.
+
+Modules are registered inside onMount. Chart data comes from the app's pair OHLCV API, which is server-side Moralis. Highcharts is a browser render. No Highcharts cloud account or Highcharts URL appears in the source that was read.
+
+6.4 Font Awesome and Web Awesome
+
+Packages: @fortawesome/fontawesome-free and @awesome.me/webawesome.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+layout.svelte imports:
+@awesome.me/webawesome/dist/styles/webawesome.css
+@fortawesome/fontawesome-free/css/all.css
+@awesome.me/webawesome/dist/components/button/button.js
+@awesome.me/webawesome/dist/components/icon/icon.js
+
+Additional Web Awesome component modules are imported next to the components that use them:
+select, input, checkbox, details, button, divider, card, copy-button, icon, and tab-group in the search page.
+select in Candlestick.svelte and Line.svelte.
+card and copy-button in Pair.svelte and Token.svelte.
+card, divider, and Bookmark in Hero.svelte. Hero uses wa-icon and does not import icon.js itself. The layout imports icon.js.
+card in Health.svelte, Performance.svelte, Liquidity.svelte, and Links.svelte.
+button and icon in Links.svelte, Bookmark.svelte, and Trash.svelte.
+checkbox and tab-group in the token page.
+tab-group in the pair page.
+card, copy-button, and radio-group in Saved.svelte.
+
+Custom elements in the markup include wa-button, wa-icon, wa-tab-group, wa-tab, wa-tab-panel, wa-input, wa-select, wa-option, wa-checkbox, wa-details, wa-divider, wa-card, wa-copy-button, wa-radio-group, and wa-radio.
+
+No class names beginning with fa- were found in the project Svelte files that were read. Font Awesome is loaded as the icon font and family set that Web Awesome icons reference (family "brands" or "solid", names such as x-twitter, github, bookmark, trash, arrow-up, arrow-down).
+
+6.5 EnvisionTech
+
+Package: @envisionly/envisiontech-core ^0.9.0.
+
+The only source import is in C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\search\+page.svelte:
+import { EnvisionButton } from '@envisionly/envisiontech-core'
+
+EnvisionButton is not used in that file's markup. The search form uses wa-button.
+
+The installed package typings re-export a Svelte Button as EnvisionButton, along with EnvisionVideoPlayer, EnvisionIcon, EnvisionCheckbox, EnvisionInput, EnvisionLabel, EnvisionRadioGroup, EnvisionSelect, EnvisionCard, EnvisionDialog, EnvisionGrid, and EnvisionLink. That typings file was read at C:\Users\yeate\Documents\Blind-Bit-Boyz\node_modules\@envisionly\envisiontech-core\dist\index.d.ts. It is a dependency file, not project source. The package index also imports its own app.css. The app's app.css does not import the Envision stylesheet.
+
+The home page links to https://envisionly.tech and calls Envisionly a partner. That link is an anchor, not the EnvisionButton component.
+
+6.6 Environment variables and secrets pattern
+
+The only $env import in the repository is MORALIS_API_KEY from $env/static/private, in moralis.ts and tokens.ts.
+
+No process.env usage was found in the project source that was searched.
+
+No .env file is in the root. No .env.example file is in the root. .gitignore ignores .env and .env.* and un-ignores .env.example and .env.test. .env.test is also absent.
+
+Sanity project id n9y8yjln, dataset production, and API version 2025-06-19 are string constants in sanity.ts and in the studio config. They are not loaded from the environment. No Sanity token appears in the source. The client uses the CDN without a token, which is the public published-content pattern.
+
+The Moralis key is placed in the X-API-Key header on the server. It is not concatenated into the logged search URL. Server code does log full Response objects, the historical price array, and the search URL. Those logs go to the server console.
+
+7. State and architecture
+
+7.1 Stores and shared state
+
+There is no writable() or readable() store defined under src.
+
+savedSearchService in C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\saved.svelte.ts is a class instance using Svelte 5 $state. It is created when the module loads. It persists to localStorage under the key savedSearches. This is the only app-owned shared state.
+
+DesktopNav subscribes to the SvelteKit page store: import { page } from '$app/stores', then $page.url.pathname.
+
+These files import { page } from '$app/state':
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.svelte uses page.url.searchParams.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Chart.svelte uses page.url.searchParams.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.svelte imports page and does not read it.
+
+The search page imports { get } from 'svelte/store' and does not call get.
+
+No setContext or getContext calls were found in the files that were read.
+
+7.2 Layouts
+
+One layout: C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+layout.svelte. It wraps header, main, and footer around children. It has no load function. It does not read parent data.
+
+There is no +error.svelte. SvelteKit's default error presentation applies. UNKNOWN custom error UI, because that file is missing.
+
+7.3 Hooks
+
+src\hooks.server.ts: UNKNOWN. The file is not in the tree. There is no handle, auth gate, or custom fetch hook.
+src\hooks.client.ts: UNKNOWN. The file is not in the tree.
+src\hooks.ts: UNKNOWN. The file is not in the tree.
+
+7.4 Server load functions
+
+All of these export load and run only on the server because they import $lib/server modules.
+
+content\+page.server.ts load returns { content } from getAllContent, or { content: [] }.
+content\[slug]\+page.server.ts load returns { post } or { post: undefined }.
+authors\+page.server.ts load returns { content } from getAllContent, or { content: [] }.
+authors\[slug]\+page.server.ts load returns { author } or { author: undefined }.
+token\[id]\+page.server.ts load returns { data } from getTokenData, or { error }.
+pair\[id]\+page.server.ts load returns { data } from getPairData, or { error }.
+
+Search has no load function. Chart data is loaded in the browser after the pair page has rendered.
+
+7.5 Form actions
+
+No export const actions was found. No form element was found in the Svelte files that were read. Search, bookmarks, chart generation, and copy buttons use onclick or onchange handlers.
+
+7.6 Adapters and server versus client
+
+svelte.config.js sets the Vercel adapter with default options. .vercelignore excludes studio.
+
+Server work: Sanity GROQ, Moralis.start, and every deep-index.moralis.io request. The private API key is read with $env/static/private, which is available only on the server.
+
+Client work: search form, saved searches, token pair list fetch, chart option fetch, Highcharts rendering, clipboard, and tab state.
+
+API routes are thin GET wrappers around tokens.ts. They are the boundary the browser is allowed to call.
+
+app.d.ts does not add Locals, so there is no typed per-request user or session object.
+
+8. Styling and UI
+
+8.1 Tailwind
+
+Tailwind 4 is enabled by the Vite plugin in vite.config.ts and by @import 'tailwindcss' in app.css. The forms plugin is enabled with @plugin '@tailwindcss/forms'. There is no tailwind.config.js and no @theme block in app.css.
+
+Utility classes are used on the shell and on a few components: flex, min-h-screen, grid, container, spacing, borders, background colors gray and black, text sizes, sticky header, and responsive grid columns on search results and saved searches (1 column, then 2, 3, and 4). Content, author, token, and pair pages are mostly unstyled headings, paragraphs, lists, and tables.
+
+Gold utilities are written in class attributes on the layout, the home page, and DesktopNav: border-gold-500, text-gold-500, hover:border-gold-400, hover:text-gold-500, focus:border-gold-400, focus:text-gold-500, and active:text-gold-300. app.css does not define --color-gold-*. Those utilities have no matching theme entry in the CSS that was read.
+
+Hero uses text-red-500, text-green-500, and text-gray-500 for down, up, and unchanged values.
+
+8.2 Component pattern
+
+UI is hand-written Svelte 5 components. Props use $props() with inline types or a Props interface. Shared presentation is split into panels (Hero, Token, Pair, Performance, Health, Links, Liquidity) and saved-search controls (Bookmark, Saved, Trash). Charts are a parent controller plus two Highcharts wrappers.
+
+Web Awesome custom elements supply buttons, inputs, selects, checkboxes, tabs, cards, dividers, details, radio groups, copy buttons, and icons. The search page imports EnvisionButton and does not render it. The rest of the app does not import the Envision component set.
+
+Cards use the header slot and, in Hero, the media slot. Several panels render nothing when every prop is empty, because the outer if checks those props.
+
+8.3 Icons
+
+Icons are wa-icon elements. family is "brands" or "solid". Bookmark uses variant "solid" or "regular" instead of family. Names used: x-twitter, github, envelope, bitbucket, discord, facebook, instagram, linkedin, medium, reddit, telegram, a single space for TikTok, globe, youtube, slack, arrow-down, arrow-up, minus, bookmark, and trash.
+
+Font Awesome's full CSS is loaded globally so those icon names can resolve. The logo and token or exchange logos are img elements, not icons.
+
+9. Incomplete or broken areas
+
+Observations from the files. The dev server was not started. npm install was not run. Formatters and the type checker were not run.
+
+9.1 Missing environment example and missing key
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env.example is missing. .gitignore expects that filename to be committable.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.env is missing. MORALIS_API_KEY is required by the static private env import in moralis.ts and tokens.ts. Any request that loads those modules cannot call Moralis until that variable exists. The home page does not import them. Search, token, pair, and the four API routes do.
+
+9.2 Empty and unused functions
+
+getPairPriceData in tokens.ts has an empty body. Nothing calls it.
+
+The route /api/pair/getPriceData calls getPairCandelstickData. Its source matches the candlestick route. Nothing in the app fetches /api/pair/getPriceData.
+
+getTokenHistoricalPrice is never imported. It queries a fixed block window on Ethereum and logs the result.
+
+9.3 Pages that do not match their URL
+
+/authors loads posts through getAllContent and renders the same list as /content, including the title "Content" and links to /content/{slug}. There is no author index query.
+
+/authors/[slug] requests an image URL and does not render it. The socials GROQ uses -> on a field the schema defines as inline objects.
+
+The content and authors indexes show "Coming Soon!" when the post array is empty, including when the Sanity call throws and the load function substitutes [].
+
+Commented nav targets /block_chain, /wallet, /tools, and /liquidity have no route files.
+
+9.4 Components that are imported and not rendered, or never imported
+
+The pair page imports Performance, Links, and Health and does not place them in the template. Liquidity.svelte is never imported. Pair liquidity is printed as paragraphs instead.
+
+The token page imports dev, page, IntervalKey, dataIntervalsList, CurrencyKey, and currencyList and does not use them. Its Technical Analysis tab is disabled. The panel still mounts a line chart with the data [{ x: 1, y: 1 }].
+
+The search page imports goto from $app/navigation, onMount, get from svelte/store, and EnvisionButton. None of those names are used in the file.
+
+The pair page imports onMount, dev, and the interval and currency helpers and does not use them.
+
+9.5 Chart behavior in the source
+
+Chart.svelte's Generate Chart button calls generateCandleStickChart only.
+
+An $effect calls changeChartType, and onMount calls it too.
+
+The oscillator select updates currentOscillator. The oscillator series object is not pushed into the Highcharts series list. The overlay series is.
+
+Candlestick and line selects read e.detail.value. Search selects read e.target.value. Both are onchange handlers on wa-select. The report did not run the browser, so which property the installed Web Awesome beta actually sets was not observed.
+
+dataIntervalsList is annotated as Record of IntervalKey, and the object has no "24h" key even though IntervalKey includes "24h". That is a type mismatch visible in the source. vite dev does not type-check by itself. The check script runs svelte-check. The check script was not executed for this report.
+
+getPairCandelstickData declares startDate and endDate as Date. The candlestick and price API routes pass string or undefined from the query string. That is a type mismatch at the call. At runtime a provided query string is interpolated into the Moralis URL. A Date default, when the query param is omitted, becomes the Date object's ordinary string form inside the URL, after space and colon encoding.
+
+9.6 Other source observations
+
+searchTokens returns a Response on the success path and a plain object on the failure path. The API route calls data.json() only after checking data.error. HTTP error statuses from Moralis are not checked before data.json(). The failure response from the API route uses json() without a status argument when data.error is set.
+
+getPairData does not check moralisInitialized. The other Moralis helpers do.
+
+Token and pair chain labels call chains[getChainKeyByMoralisId(...)].name. getChainKeyByMoralisId can return undefined when the hex parse does not match a known chain. The templates do not guard that lookup. Search results do the same with chains[getChainKeyByMoralisId(result.chainId)].name.
+
+Links.svelte sets the TikTok wa-icon name to a single space.
+
+Hero reads usdChange["1d"] and then usdChange["24h"] for the 24 hour figure, and the same keys on volumeChange. The pair page's own interval list uses "24h", "5min", "1h", and "4h". Which key Moralis actually returns was not verified live.
+
+Several server functions console.log the fetch URL or the Response object.
+
+Author and post list rendering calls .map on authors and categories. The template assumes those arrays exist when a post is listed.
+
+9.7 Native dependency risk
+
+package.json trustedDependencies includes esbuild, keccak, and secp256k1.
+
+esbuild is the Vite transformer. It is present at node_modules\esbuild. A missing platform binary for esbuild would stop vite dev. The binary was not executed for this report.
+
+keccak and secp256k1 are not direct dependencies. package-lock.json shows them under ethereum-cryptography version 0.1.3, which is a dependency of ethereumjs-util. That package sits in the Moralis and EVM utility tree. Locked versions present in node_modules: keccak 3.0.4 and secp256k1 4.0.5.
+
+Both packages declare an install script "node-gyp-build || exit 0" and "gypfile": true. The "|| exit 0" means a failed native compile does not fail npm install by itself. node_modules already contains prebuilds for keccak (darwin-x64, linux-x64, win32-x64) and secp256k1 (darwin-arm64, linux-x64, win32-x64). Neither package has a build directory in this checkout. On this Windows x64 tree, a matching prebuild file is present, so a from-source compile is not required for those two packages to load here. Other CPU or libc targets are not all covered by the prebuild folders that were listed. This report did not import the native modules.
+
+Bun uses trustedDependencies to decide whether those install scripts may run. npm runs install scripts unless ignore-scripts is set. .npmrc does not set ignore-scripts.
+
+9.8 Studio install
+
+studio\package.json is a separate package. studio\node_modules was not in the directory listing. The root command npm run dev does not start Sanity Studio. Running the studio dev script needs an install inside C:\Users\yeate\Documents\Blind-Bit-Boyz\studio. That gap does not, by itself, stop the SvelteKit dev script.
+
+9.9 Documentation and tests
+
+The root readme says documentation will be added soon. The studio readme is the upstream Sanity blog template text.
+
+There is no test script in the root package.json and no test directory in the source listing.
+
+10. File inventory
+
+Each line is a project file that was read, then its purpose. Partial reads are marked.
+
+C:\Users\yeate\Documents\Blind-Bit-Boyz\package.json — Root package name, version 0.0.1, scripts, and dependencies.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\package-lock.json — npm lockfile. Header and dependency entries for esbuild, keccak, secp256k1, and ethereum-cryptography were read. The full file was not read line by line.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\bun.lock — Bun lockfile. Only the opening lines were read.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\README.md — Short readme stating that docs are coming and the app is being rebuilt.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\svelte.config.js — SvelteKit config using the Vercel adapter and vitePreprocess.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\vite.config.ts — Vite config enabling Tailwind and SvelteKit.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\tsconfig.json — TypeScript config extending the SvelteKit generated config.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\eslint.config.js — Flat ESLint config for TypeScript and Svelte.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.gitignore — Ignore rules for build output, env files, and dependencies.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.gitattributes — Git LFS rule for mp4 files.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.npmrc — Sets engine-strict=true.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.prettierrc — Prettier formatting options and plugins.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.prettierignore — Skips package manager lockfiles.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.vercelignore — Excludes the studio directory from Vercel.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\.vscode\settings.json — Spell-check dictionary for project terms.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.html — HTML document shell, language, favicon, and body placeholder.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.css — Tailwind import and forms plugin.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\app.d.ts — Empty SvelteKit App type placeholders.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+layout.svelte — Global header, skip links, nav, main, and footer.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\+page.svelte — Home page copy and partner links.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\+page.server.ts — Server load of all Sanity posts.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\+page.svelte — Post index or the Coming Soon message.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\[slug]\+page.server.ts — Server load of one post by slug.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\content\[slug]\+page.svelte — Post detail rendered with PortableText.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\+page.server.ts — Server load of all Sanity posts for the authors URL.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\+page.svelte — Same post-list UI as the content index.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\[slug]\+page.server.ts — Server load of one author by slug.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\authors\[slug]\+page.svelte — Author name, bio, email, and social links.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\search\+page.svelte — Token search form, results, and saved-search tab.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.server.ts — Server load of one token from Moralis.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\token\[id]\+page.svelte — Token overview, pairs table, and disabled chart tab.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.server.ts — Server load of one pair from Moralis.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\pair\[id]\+page.svelte — Pair stats and the chart panel.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\search\+server.ts — GET /api/search proxy to Moralis token search.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\token\getPairs\+server.ts — GET /api/token/getPairs proxy.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\pair\getCandleStickData\+server.ts — GET OHLCV proxy for charts.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\routes\api\pair\getPriceData\+server.ts — GET handler that also calls the OHLCV helper.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\moralis.ts — Starts the Moralis SDK with the private API key.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\sanity.ts — Sanity client and post and author queries.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\server\tokens.ts — Moralis token, pair, search, and OHLCV helpers.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\chains.ts — Supported chain names, ids, and hex lookup helpers.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\common.ts — Currencies, intervals, chart indicators, and list joining.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\formatting.svelte.ts — Price, large-number, and percent formatters.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\navManager.ts — The three live nav links and four commented links.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\utils\saved.svelte.ts — localStorage bookmark service.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\DesktopNav.svelte — Header link list with the current page marked.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Chart.svelte — Chart controls and OHLCV fetch.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Candlestick.svelte — Accessible Highcharts candlestick chart.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\charts\Line.svelte — Accessible Highcharts line chart.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Hero.svelte — Name, price, and bookmark summary card.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Token.svelte — Token address, chain, and age card.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Pair.svelte — Pair address, chain, and age card.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Performance.svelte — Multi-interval performance table.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Health.svelte — Security score and on-chain strength card.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Links.svelte — Token social and website icon buttons.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\panels\Liquidity.svelte — Unused liquidity card.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\SavedSearches\Bookmark.svelte — Add or remove a bookmark.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\SavedSearches\Saved.svelte — Filterable list of bookmarks.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\src\lib\components\SavedSearches\Trash.svelte — Delete one bookmark.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\package.json — Sanity Studio scripts and dependencies, version 1.0.0.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\README.md — Upstream Sanity studio readme.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.config.ts — Studio title, project id, dataset, and schema.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\sanity.cli.ts — Studio CLI project id, dataset, and host.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\tsconfig.json — Studio TypeScript config.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\eslint.config.mjs — Studio ESLint config.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\.gitignore — Studio ignore rules.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\index.ts — Exports the schema type array.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\post.ts — Post document schema.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\author.ts — Author document schema.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\category.ts — Category document schema.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\schemaTypes\blockContent.ts — Portable Text schema.
+
+Dependency files opened only to identify packages, not part of the app source:
+C:\Users\yeate\Documents\Blind-Bit-Boyz\node_modules\keccak\package.json — Confirms keccak 3.0.4 and its node-gyp-build install script.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\node_modules\secp256k1\package.json — Confirms secp256k1 4.0.5 and its node-gyp-build install script.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\node_modules\@envisionly\envisiontech-core\package.json — Package metadata for version 0.9.0. The opening of the file was read.
+C:\Users\yeate\Documents\Blind-Bit-Boyz\node_modules\@envisionly\envisiontech-core\dist\index.d.ts — Shows EnvisionButton is a re-export of the package Button component.
+
+Listed and not opened: C:\Users\yeate\Documents\Blind-Bit-Boyz\static\bbb-logo.png, C:\Users\yeate\Documents\Blind-Bit-Boyz\static\favicon.png, C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\static\.gitkeep, and C:\Users\yeate\Documents\Blind-Bit-Boyz\studio\bun.lock.
+
+End of report.
