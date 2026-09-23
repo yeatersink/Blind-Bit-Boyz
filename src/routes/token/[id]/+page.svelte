@@ -1,13 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { dev } from '$app/environment';
-	import {
-		type IntervalKey,
-		dataIntervalsList,
-		type CurrencyKey,
-		currencyList
-	} from '$lib/utils/common.js';
-	import { page } from '$app/state';
 	import Performance from '$lib/components/panels/Performance.svelte';
 	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
@@ -15,35 +6,34 @@
 	import Health from '$lib/components/panels/Health.svelte';
 	import '@awesome.me/webawesome/dist/components/checkbox/checkbox.js';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
-	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
 	import {
 		formatCryptoPrice,
 		formatLargeNumber,
 		formatPercentage
 	} from '$lib/utils/formatting.svelte';
+	import { readStoredDataSource } from '$lib/utils/searchResults';
 
 	let active: boolean = $state(true);
 
 	const { data } = $props();
 
-	let lineChartOptions: LineOptions | undefined = $state(undefined);
-
-	onMount(() => {
-		lineChartOptions = {
-			name: data.data.token_name,
-			symbol: data.data.token_symbol,
-			currency: 'usd',
-			time: new Date().toISOString()
-		};
-	});
-
 	async function getPairs(tokenAddress: string, chainId: string) {
-		const response = await fetch(`/api/token/getPairs?address=${tokenAddress}&chain=${chainId}`);
+		const source = readStoredDataSource();
+		const params = new URLSearchParams({
+			address: tokenAddress,
+			chain: chainId,
+			source
+		});
+		const response = await fetch(`/api/token/getPairs?${params}`);
+		const body = await response.json().catch(() => null);
 		if (!response.ok) {
-			throw new Error('Failed to fetch pairs');
+			return {
+				error: body?.error || 'Failed to fetch pairs',
+				pairs: [],
+				page_size: 0
+			};
 		}
-		console.log('Pairs response:', response);
-		return response.json();
+		return body;
 	}
 
 	function getQuoteToken(pair: Array<any>) {
@@ -131,17 +121,23 @@
 		</wa-tab-panel>
 		<wa-tab-panel name="pairs">
 			<h2>Token Pairs</h2>
-			{#await getPairs(data.data.token_address, data.data.chain_id)}
+			{#await getPairs(data.tokenAddress ?? '', data.chainKey ?? '')}
 				<p role="alert">Loading pairs...</p>
 			{:then pairs}
-				<p role="alert">{pairs.page_size} pairs found</p>
+				{#if pairs.error}
+					<p role="alert">{pairs.error}</p>
+				{/if}
+				<p role="alert">{pairs.page_size ?? 0} pairs found</p>
 
 				<div>
 					<wa-checkbox
 						hint="Only show active pairs"
 						checked={active}
 						defaultChecked={true}
-						onchange={(e) => (active = e.target.checked)}
+						onchange={(event: Event) => {
+							const target = event.currentTarget as { checked?: boolean } | null;
+							active = !!target?.checked;
+						}}
 						>Active
 					</wa-checkbox>
 				</div>
@@ -167,7 +163,7 @@
 									<td>
 										<wa-button
 											appearance="plain"
-											href={`/pair/${pair.pair_address}?chain=${data.data.chain_id}`}
+											href={`/pair/${pair.pair_address}?chain=${data.chainKey ?? ''}`}
 										>
 											{pair.pair_label} ({getQuoteToken(pair.pair).name})
 										</wa-button>
@@ -192,15 +188,42 @@
 			{/await}
 		</wa-tab-panel>
 		<wa-tab-panel name="technical-analysis">
-			{#if lineChartOptions}
-				<Line data={[{ x: 1, y: 1 }]} options={lineChartOptions} />
-			{/if}
+			<p>Open a pair to view candlestick and line charts.</p>
 		</wa-tab-panel>
 	</wa-tab-group>
 {:else}
 	<h1>Data not available</h1>
-	<p>
-		Data for that token is not available. Please make sure you entered a token address and selected
-		the correct chain.
+	<p role="alert">
+		{data.error ??
+			'Data for that token is not available. Please make sure you entered a token address and selected the correct chain.'}
 	</p>
+	{#if data.sourceHint}
+		<p>{data.sourceHint}</p>
+	{/if}
+	{#if data.tokenAddress && data.chainKey}
+		<h2>Token Pairs</h2>
+		{#await getPairs(data.tokenAddress, data.chainKey)}
+			<p role="alert">Loading pairs...</p>
+		{:then pairs}
+			{#if pairs.error}
+				<p role="alert">{pairs.error}</p>
+			{/if}
+			<p role="alert">{pairs.page_size ?? 0} pairs found</p>
+			{#if pairs.pairs && pairs.pairs.length > 0}
+				<ul>
+					{#each pairs.pairs as pair}
+						<li>
+							<a href={`/pair/${pair.pair_address}?chain=${data.chainKey}`}>
+								{pair.pair_label} ({getQuoteToken(pair.pair).name})
+							</a>
+						</li>
+					{/each}
+				</ul>
+			{:else if !pairs.error}
+				<p>No pairs found for this token.</p>
+			{/if}
+		{:catch error}
+			<p role="alert">Error loading pairs: {error.message}</p>
+		{/await}
+	{/if}
 {/if}

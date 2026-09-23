@@ -1,29 +1,26 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { dev } from '$app/environment';
 	import Chart from '$lib/components/charts/Chart.svelte';
-	import {
-		type IntervalKey,
-		dataIntervalsList,
-		type CurrencyKey,
-		currencyList
-	} from '$lib/utils/common.js';
 	import { page } from '$app/state';
-	import Performance from '$lib/components/panels/Performance.svelte';
-	import Links from '$lib/components/panels/Links.svelte';
 	import Hero from '$lib/components/panels/Hero.svelte';
-	import Health from '$lib/components/panels/Health.svelte';
 	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
 	import Pair from '$lib/components/panels/Pair.svelte';
 
 	let intervalsList: Array<string> = ['5min', '1h', '4h', '24h'];
 
 	const { data } = $props();
+
+	function intervalValue(group: unknown, interval: string) {
+		if (!group || typeof group !== 'object') return 'n/a';
+		const value = (group as Record<string, unknown>)[interval];
+		return value === undefined || value === null ? 'n/a' : value;
+	}
 </script>
 
 <svelte:head>
-	{#if data && !data.error}
+	{#if data.data && !data.error}
 		<title>{data.data.tokenName}</title>
+	{:else if data.pairAddress}
+		<title>{data.pairAddress}</title>
 	{:else}
 		<title>Data not available</title>
 	{/if}
@@ -35,9 +32,11 @@
 		logo={data.data.tokenLogo}
 		address={data.data.pairAddress}
 		symbol={data.data.tokenSymbol}
-		chainId={page.url.searchParams.get('chain')}
+		chainId={page.url.searchParams.get('chain') ?? ''}
 		usd={data.data.currentUsdPrice}
 		usdChange={data.data.pricePercentChange}
+		marketCap={null}
+		fullyDilutedValuation={null}
 		volumeChange={data.data.totalVolume}
 		type="pair"
 	/>
@@ -75,8 +74,8 @@
 			{#if data.data.pricePercentChange}
 				<h3>Price Change</h3>
 				{#each intervalsList as interval}
-					{#if data.data.pricePercentChange[interval]}
-						<p>{interval}: {data.data.pricePercentChange[interval]}%</p>
+					{#if intervalValue(data.data.pricePercentChange, interval) !== 'n/a'}
+						<p>{interval}: {intervalValue(data.data.pricePercentChange, interval)}%</p>
 					{/if}
 				{/each}
 			{/if}
@@ -86,46 +85,46 @@
 
 			<h3>Liquidity Change</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.liquidityPercentChange[interval]}%</p>
+				<p>{interval}: {intervalValue(data.data.liquidityPercentChange, interval)}%</p>
 			{/each}
 
 			<h2>Transactions</h2>
 
 			<h3>Buys</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.buys[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.buys, interval)}</p>
 			{/each}
 
 			<h3>Sells</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.sells[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.sells, interval)}</p>
 			{/each}
 
 			<h3>buyers</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.buyers[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.buyers, interval)}</p>
 			{/each}
 
 			<h3>sellers</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.sellers[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.sellers, interval)}</p>
 			{/each}
 
 			<h2>Volume</h2>
 
 			<h3>Total Volume</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.totalVolume[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.totalVolume, interval)}</p>
 			{/each}
 
 			<h3>Buy Volume</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.buyVolume[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.buyVolume, interval)}</p>
 			{/each}
 
 			<h3>Sell Volume</h3>
 			{#each intervalsList as interval}
-				<p>{interval}: {data.data.sellVolume[interval]}</p>
+				<p>{interval}: {intervalValue(data.data.sellVolume, interval)}</p>
 			{/each}
 		</wa-tab-panel>
 
@@ -136,9 +135,16 @@
 				address={data.data.pairAddress}
 				name={data.data.tokenName}
 				symbol={data.data.tokenSymbol}
+				createdAt={data.data.pairCreated ?? null}
 			/>
 		</wa-tab-panel>
 	</wa-tab-group>
+{:else if data.pairAddress}
+	<h1>Pair stats unavailable</h1>
+	<p role="alert">{data.error}</p>
+	<h2>Technical Analysis</h2>
+	<p>You can change any of the below options to change the data displayed in the charts.</p>
+	<Chart address={data.pairAddress} name={data.pairAddress} symbol="Pair" />
 {:else}
 	<h1>Data not available</h1>
 	<p>
