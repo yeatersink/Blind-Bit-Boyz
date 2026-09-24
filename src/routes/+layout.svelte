@@ -5,7 +5,6 @@
 	import '@awesome.me/webawesome/dist/components/icon/icon.js';
 	import '../app.css';
 	import DesktopNav from '$lib/components/DesktopNav.svelte';
-	import OfficialFooter from '$lib/components/story/OfficialFooter.svelte';
 	import { page } from '$app/stores';
 
 	let { children } = $props();
@@ -26,27 +25,74 @@
 	</div>
 </header>
 
-{#if isStory}
-	{@render children()}
-{:else}
-	<main id="main" class="flex-grow bg-gray-900 text-gray-100" tabindex="-1">
+<div class="relative z-10 flex min-h-0 flex-grow flex-col">
+	{#if isStory}
 		{@render children()}
-	</main>
-{/if}
+	{:else}
+		<main id="main" class="flex-grow bg-gray-900 text-gray-100" tabindex="-1">
+			{@render children()}
+		</main>
+	{/if}
+</div>
 
-{#if isStory}
-	<OfficialFooter />
-{:else}
-	<footer class="border-gold-500 border-t bg-black py-8 text-gray-400">
-		<h2 class="mb-4 text-xl font-semibold text-gray-200">Follow Us:</h2>
-		<wa-button appearance="plain" href="https://x.com/yeatersink">
-			<wa-icon family="brands" name="x-twitter" label="X"></wa-icon>
-		</wa-button>
-		<wa-button appearance="plain" href="https://github.com/yeatersink">
-			<wa-icon family="brands" name="github" label="GitHub"></wa-icon>
-		</wa-button>
-	</footer>
-{/if}
+<footer class="border-gold-500 relative z-0 border-t bg-black py-10 text-gray-100">
+	<div class="mx-auto max-w-5xl px-6">
+		<div>
+			<h2 class="text-xl font-semibold text-gray-100">Social Media Links to Follow</h2>
+			<ul class="mt-4 list-none space-y-3 pl-0">
+				<li>
+					<a
+						class="story-link"
+						href="https://x.com/yeatersink"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<i class="fa-brands fa-x-twitter mr-2" aria-hidden="true"></i>
+						X (Blind Bit Boys)
+						<span class="sr-only">(opens in a new tab)</span>
+					</a>
+				</li>
+				<li>
+					<a
+						class="story-link"
+						href="https://x.com/LibertySwapFi"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<i class="fa-brands fa-x-twitter mr-2" aria-hidden="true"></i>
+						X (Liberty Swap)
+						<span class="sr-only">(opens in a new tab)</span>
+					</a>
+				</li>
+				<li>
+					<a
+						class="story-link"
+						href="https://x.com/zkxwallet"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<i class="fa-brands fa-x-twitter mr-2" aria-hidden="true"></i>
+						X (ZKX Wallet)
+						<span class="sr-only">(opens in a new tab)</span>
+					</a>
+				</li>
+				<li>
+					<a
+						class="story-link"
+						href="https://github.com/yeatersink"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						<i class="fa-brands fa-github mr-2" aria-hidden="true"></i>
+						GitHub
+						<span class="sr-only">(opens in a new tab)</span>
+					</a>
+				</li>
+			</ul>
+			<p class="mt-6 text-gray-200">Educational site. Not financial advice.</p>
+		</div>
+	</div>
+</footer>
 {#if !isStory}
 	<a class="skip-link" href="#main">Back to main content</a>
 {/if}
