@@ -5,11 +5,16 @@
 	import '@awesome.me/webawesome/dist/components/icon/icon.js';
 	import '../app.css';
 	import DesktopNav from '$lib/components/DesktopNav.svelte';
+	import OfficialFooter from '$lib/components/story/OfficialFooter.svelte';
+	import { page } from '$app/stores';
 
 	let { children } = $props();
+	let isStory = $derived($page.url.pathname === '/');
 </script>
 
-<a class="sr-only" href="#main">Skip to main content</a>
+<a class="skip-link" href={isStory ? '#story' : '#main'}>
+	{isStory ? 'Skip to story' : 'Skip to main content'}
+</a>
 <header class="border-gold-500 sticky top-0 z-50 border-b bg-black text-gray-100 shadow-lg">
 	<div class="container mx-auto flex items-center justify-between px-6 py-4">
 		<img
@@ -21,17 +26,27 @@
 	</div>
 </header>
 
-<main id="main" class="flex-grow bg-gray-900 text-gray-100">
+{#if isStory}
 	{@render children()}
-</main>
+{:else}
+	<main id="main" class="flex-grow bg-gray-900 text-gray-100" tabindex="-1">
+		{@render children()}
+	</main>
+{/if}
 
-<footer class="border-gold-500 border-t bg-black py-8 text-gray-400">
-	<h2 class="mb-4 text-xl font-semibold text-gray-200">Follow Us:</h2>
-	<wa-button appearance="plain" href="https://x.com/yeatersink">
-		<wa-icon family="brands" name="x-twitter" label="X"></wa-icon>
-	</wa-button>
-	<wa-button appearance="plain" href="https://github.com/yeatersink">
-		<wa-icon family="brands" name="github" label="GitHub"></wa-icon>
-	</wa-button>
-</footer>
-<a class="sr-only" href="#main">Back to main content</a>
+{#if isStory}
+	<OfficialFooter />
+{:else}
+	<footer class="border-gold-500 border-t bg-black py-8 text-gray-400">
+		<h2 class="mb-4 text-xl font-semibold text-gray-200">Follow Us:</h2>
+		<wa-button appearance="plain" href="https://x.com/yeatersink">
+			<wa-icon family="brands" name="x-twitter" label="X"></wa-icon>
+		</wa-button>
+		<wa-button appearance="plain" href="https://github.com/yeatersink">
+			<wa-icon family="brands" name="github" label="GitHub"></wa-icon>
+		</wa-button>
+	</footer>
+{/if}
+{#if !isStory}
+	<a class="skip-link" href="#main">Back to main content</a>
+{/if}

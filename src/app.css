@@ -1,2 +1,138 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
+
+@theme {
+	--color-gold-300: #f0d78c;
+	--color-gold-400: #e6c35c;
+	--color-gold-500: #d4af37;
+	--color-gold-600: #b8922a;
+}
+
+.skip-link {
+	position: absolute;
+	left: 1rem;
+	top: 1rem;
+	z-index: 80;
+	width: 1px;
+	height: 1px;
+	padding: 0.6rem 1rem;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	background: #000;
+	color: #f0d78c;
+	font-weight: 700;
+	text-decoration: none;
+	border: 2px solid #d4af37;
+}
+
+.skip-link:focus {
+	width: auto;
+	height: auto;
+	overflow: visible;
+	clip-path: none;
+}
+
+.story-link {
+	color: #e6c35c;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.22em;
+}
+
+.story-link:visited {
+	color: #f0d78c;
+}
+
+.story-link:hover {
+	color: #f0d78c;
+}
+
+.story-link:focus-visible {
+	outline: 2px solid #e6c35c;
+	outline-offset: 3px;
+}
+
+.story-cta {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.75rem;
+	padding: 0.55rem 1.1rem;
+	border: 2px solid #d4af37;
+	background: #d4af37;
+	color: #14120b;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.story-cta:hover {
+	background: #e6c35c;
+}
+
+.story-cta:focus-visible {
+	outline: 2px solid #fff;
+	outline-offset: 3px;
+}
+
+.story-cta-secondary {
+	background: transparent;
+	color: #f0d78c;
+}
+
+.story-cta-secondary:hover {
+	background: rgb(212 175 55 / 0.14);
+}
+
+.chapter-rule {
+	height: 1px;
+	flex: 1 1 auto;
+	transform-origin: left center;
+	background: #d4af37;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+
+	@supports (animation-timeline: view()) {
+		.chapter-rule {
+			animation: chapter-rule-in linear both;
+			animation-timeline: view();
+			animation-range: entry 0% entry 35%;
+		}
+
+		.year-mark {
+			animation: year-drift linear both;
+			animation-timeline: view();
+			animation-range: cover 0% cover 100%;
+		}
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+}
+
+@keyframes chapter-rule-in {
+	from {
+		transform: scaleX(0);
+	}
+
+	to {
+		transform: scaleX(1);
+	}
+}
+
+@keyframes year-drift {
+	from {
+		translate: 0 0.75rem;
+	}
+
+	to {
+		translate: 0 -0.75rem;
+	}
+}
