@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '@awesome.me/webawesome/dist/components/card/card.js';
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
-	import { chains, getChainKeyByMoralisId } from '$lib/utils/chains';
+	import { chainLabel } from '$lib/utils/chains';
 
 	let {
 		baseTokenAddress,
@@ -15,7 +15,7 @@
 		symbol: string;
 		label: string;
 		pairAddress: string;
-		chainHexId: string;
+		chainHexId: string | null;
 		createdAt: string;
 	} = $props();
 
@@ -50,7 +50,7 @@
 			<wa-copy-button value={pairAddress}></wa-copy-button>
 		{/if}
 		{#if chainHexId}
-			<p>Chain: {chains[getChainKeyByMoralisId(chainHexId)].name || chainHexId}</p>
+			<p>Chain: {chainLabel(chainHexId)}</p>
 		{/if}
 		{#if ageInDays}
 			<p>Age: {ageInDays} days</p>

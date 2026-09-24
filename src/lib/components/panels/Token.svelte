@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '@awesome.me/webawesome/dist/components/card/card.js';
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
-	import { chains, getChainKeyByMoralisId } from '$lib/utils/chains';
+	import { chainLabel } from '$lib/utils/chains';
 
 	let {
 		address,
@@ -24,7 +24,7 @@
 			<p>Symbol: {symbol}</p>
 		{/if}
 		{#if chainHexId}
-			<p>Chain: {chains[getChainKeyByMoralisId(chainHexId)].name || chainHexId}</p>
+			<p>Chain: {chainLabel(chainHexId)}</p>
 		{/if}
 		{#if ageInDays}
 			<p>Age: {ageInDays} days</p>

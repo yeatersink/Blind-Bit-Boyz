@@ -1,23 +1,52 @@
-import { getPairData } from '$lib/server/tokens.js';
+// Accepts /pair/:id?chain=<app key>. Source comes from ?source= or the dataSource cookie.
+import { dev } from '$app/environment';
+import type { Cookies } from '@sveltejs/kit';
+import { loadPairPage } from '$lib/server/pageData';
+import { geckoNetworkFor, moralisChainFor, resolveAppChainKey } from '$lib/utils/chains';
+import type { DataSource } from '$lib/utils/searchResults';
 
-export const load = async ({ params, url }) => {
+function requestedSource(url: URL, cookies: Cookies): DataSource {
+	const query = url.searchParams.get('source');
+	if (query === 'gecko' || query === 'moralis') return query;
+	return cookies.get('dataSource') === 'moralis' ? 'moralis' : 'gecko';
+}
+
+export const load = async ({ params, url, cookies }) => {
 	const id = params.id;
 	const chain = url.searchParams.get('chain') ?? undefined;
+	const chainKey = resolveAppChainKey(chain) ?? null;
+	const source = requestedSource(url, cookies);
+	const mapped = {
+		id,
+		chain,
+		chainKey,
+		source,
+		geckoNetwork: geckoNetworkFor(chain) ?? null,
+		moralisChain: moralisChainFor(chain) ?? null,
+		adapter: source
+	};
 	if (!id) {
 		return {
-			error: 'Pair address is required'
+			overview: null,
+			error: 'Pair address is required',
+			pairAddress: null,
+			chainKey,
+			source
 		};
 	}
-
-	const data = await getPairData(id, chain);
-
-	if (data.error) {
+	try {
+		const overview = await loadPairPage(source, id, chainKey ?? chain);
+		if (dev) console.log('pair load', { ...mapped, error: overview.error });
 		return {
-			error: data.error
+			overview,
+			error: overview.error,
+			pairAddress: overview.pairAddress ?? id,
+			chainKey,
+			source
 		};
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Data not available';
+		if (dev) console.log('pair load', { ...mapped, error: message });
+		return { overview: null, error: message, pairAddress: id, chainKey, source };
 	}
-
-	return {
-		data
-	};
 };
