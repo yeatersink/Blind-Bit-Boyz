@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import AccessTabs from '$lib/components/AccessTabs.svelte';
 	import Saved from '$lib/components/SavedSearches/Saved.svelte';
 	import Bookmark from '$lib/components/SavedSearches/Bookmark.svelte';
-	import { savedSearchService } from '$lib/utils/saved.svelte';
 	import { chainLabel, chainList } from '$lib/utils/chains';
 	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
 	import {
@@ -21,9 +21,8 @@
 	import '@awesome.me/webawesome/dist/components/card/card.js';
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
 	import '@awesome.me/webawesome/dist/components/icon/icon.js';
-	import '@awesome.me/webawesome/dist/components/tab-group/tab-group.js';
-
 	let loading = $state(false);
+	let section = $state('new');
 	let search = $state('');
 	let chain = $state('eth');
 	let dataSource = $state<DataSource>('gecko');
@@ -120,6 +119,41 @@
 		dataSource = readStoredDataSource();
 		storeDataSource(dataSource);
 	});
+
+	function focusIn(root: ParentNode | null, selector: string): HTMLElement | null {
+		const node = root?.querySelector(selector);
+		return node instanceof HTMLElement ? node : null;
+	}
+
+	async function enterSection(id: string) {
+		section = id;
+		await tick();
+		const panel = document.getElementById(`panel-${id}`);
+		panel?.focus();
+		if (id === 'new') {
+			document.getElementById('search-query')?.focus();
+			return;
+		}
+		const radio = focusIn(
+			panel,
+			'input[name="bookmark-filter"]:checked, input[name="bookmark-filter"]'
+		);
+		if (radio) {
+			radio.focus();
+			return;
+		}
+		const bookmark = focusIn(panel, 'h3 a, wa-button[href]');
+		if (bookmark) {
+			bookmark.focus();
+			return;
+		}
+		const empty = document.getElementById('bookmark-empty');
+		if (empty) {
+			empty.focus();
+			return;
+		}
+		panel?.focus();
+	}
 </script>
 
 <svelte:head>
@@ -132,13 +166,24 @@
 
 <h1>Search</h1>
 
-<wa-tab-group>
-	<wa-tab panel="new">New</wa-tab>
-	<wa-tab disabled={!savedSearchService.count} panel="saved"
-		>Saved ({savedSearchService.count})</wa-tab
-	>
+<AccessTabs
+	label="New Search and Bookmarked Tokens"
+	bind:active={section}
+	onEnter={enterSection}
+	tabs={[
+		{ id: 'new', label: 'New Search' },
+		{ id: 'saved', label: 'Bookmarked Tokens' }
+	]}
+/>
 
-	<wa-tab-panel name="new">
+<div
+	role="tabpanel"
+	id="panel-new"
+	aria-labelledby="tab-new"
+	tabindex="-1"
+	hidden={section !== 'new'}
+>
+	<h2>New Search</h2>
 		<form
 			novalidate
 			onsubmit={(event) => {
@@ -300,8 +345,15 @@
 			<wa-divider></wa-divider>
 			<p role="alert">Searching...</p>
 		{/if}
-	</wa-tab-panel>
-	<wa-tab-panel name="saved">
-		<Saved />
-	</wa-tab-panel>
-</wa-tab-group>
+</div>
+
+<div
+	role="tabpanel"
+	id="panel-saved"
+	aria-labelledby="tab-saved"
+	tabindex="-1"
+	hidden={section !== 'saved'}
+>
+	<h2>Bookmarked Tokens</h2>
+	<Saved />
+</div>

@@ -31,7 +31,62 @@ function applyModule(mod: unknown) {
 
 if (typeof window !== 'undefined') {
 	// datetime-local uses the browser's local clock. Keep axis labels on that same clock.
-	Highcharts.setOptions({ time: { useUTC: false } });
+	Highcharts.setOptions({
+		time: { useUTC: false },
+		chart: {
+			backgroundColor: '#111827',
+			style: { color: '#f3f4f6' }
+		},
+		title: { style: { color: '#f3f4f6' } },
+		subtitle: { style: { color: '#d1d5db' } },
+		xAxis: {
+			lineColor: '#d4af37',
+			tickColor: '#d4af37',
+			labels: { style: { color: '#f3f4f6' } }
+		},
+		yAxis: {
+			gridLineColor: '#374151',
+			labels: { style: { color: '#f3f4f6' } },
+			title: { style: { color: '#f3f4f6' } }
+		},
+		legend: {
+			itemStyle: { color: '#f3f4f6' },
+			itemHoverStyle: { color: '#f0d78c' }
+		},
+		tooltip: {
+			backgroundColor: '#1f2937',
+			borderColor: '#d4af37',
+			style: { color: '#f3f4f6' }
+		},
+		navigator: {
+			outlineColor: '#d4af37',
+			maskFill: 'rgba(212, 175, 55, 0.2)',
+			series: { color: '#e6c35c' }
+		},
+		rangeSelector: {
+			labelStyle: { color: '#f3f4f6' },
+			inputStyle: { color: '#f3f4f6', backgroundColor: '#1f2937' },
+			buttonTheme: {
+				fill: '#1f2937',
+				stroke: '#d4af37',
+				style: { color: '#f3f4f6' },
+				states: {
+					hover: { fill: '#d4af37', style: { color: '#14120b' } },
+					select: { fill: '#d4af37', style: { color: '#14120b' } }
+				}
+			}
+		},
+		plotOptions: {
+			series: { color: '#e6c35c' },
+			candlestick: {
+				color: '#f3f4f6',
+				upColor: '#d4af37',
+				lineColor: '#f3f4f6',
+				upLineColor: '#f0d78c'
+			},
+			ohlc: { color: '#f3f4f6', upColor: '#d4af37' }
+		}
+	});
 	applyModule(Exporting);
 	applyModule(ExportData);
 	applyModule(OfflineExporting);
@@ -318,6 +373,7 @@ export function buildPriceChartOptions(args: {
 					}
 				: {}),
 			labels: {
+				style: { color: '#f3f4f6' },
 				formatter(this: Highcharts.AxisLabelsFormatterContextObject) {
 					const value = typeof this.value === 'number' ? this.value : Number(this.value);
 					return Number.isFinite(value) ? formatCryptoPrice(value) : String(this.value);
@@ -459,7 +515,11 @@ export function buildPriceChartOptions(args: {
 	}
 
 	return {
-		chart: { height: 560 },
+		chart: {
+			height: 560,
+			backgroundColor: '#111827',
+			style: { color: '#f3f4f6' }
+		},
 		time: { useUTC: false },
 		navigator: { enabled: true },
 		plotOptions: {
@@ -535,7 +595,12 @@ export function buildPriceChartOptions(args: {
 		annotations: [],
 		title: { text: `${args.name} price chart` },
 		subtitle: { text: `Price in ${args.currencyText} as of ${args.time}` },
-		xAxis: { type: 'datetime' },
+		xAxis: {
+			type: 'datetime',
+			lineColor: '#d4af37',
+			tickColor: '#d4af37',
+			labels: { style: { color: '#f3f4f6' } }
+		},
 		yAxis,
 		tooltip: {
 			formatter(this: Highcharts.TooltipFormatterContextObject) {

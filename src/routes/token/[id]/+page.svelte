@@ -34,7 +34,7 @@
 	bind:active={tab}
 	tabs={[
 		{ id: 'overview', label: 'Overview' },
-		{ id: 'pairs', label: 'Pairs' },
+		{ id: 'pairs', label: 'Paired Tokens' },
 		{ id: 'technical-analysis', label: 'Technical Analysis' }
 	]}
 />
@@ -65,7 +65,7 @@
 </div>
 
 <div role="tabpanel" id="panel-pairs" aria-labelledby="tab-pairs" hidden={tab !== 'pairs'}>
-	<h2>Pairs</h2>
+	<h2>Paired Tokens</h2>
 	<label>
 		<input type="checkbox" bind:checked={activeOnly} />
 		Only show active pairs

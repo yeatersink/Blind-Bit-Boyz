@@ -4,18 +4,17 @@
 	import { onMount } from 'svelte';
 	import '@awesome.me/webawesome/dist/components/card/card.js';
 	import '@awesome.me/webawesome/dist/components/copy-button/copy-button.js';
-	import '@awesome.me/webawesome/dist/components/radio-group/radio-group.js';
 	import { savedSearchService, type SavedSearch, type SearchType } from '$lib/utils/saved.svelte';
 	import Bookmark from './Bookmark.svelte';
 	import Trash from './Trash.svelte';
 
 	type TypeIndex = SearchType | 'all';
-	let currentType: TypeIndex = $state('all');
-	let types: Record<TypeIndex, string> = {
-		all: 'All',
-		pair: 'Pairs',
-		token: 'Tokens'
-	};
+	let currentType = $state<TypeIndex>('all');
+	const filters: { value: TypeIndex; label: string }[] = [
+		{ value: 'all', label: 'All' },
+		{ value: 'token', label: 'Tokens' },
+		{ value: 'pair', label: 'Pairs' }
+	];
 	let filteredSearches: SavedSearch[] = $derived.by(() => {
 		return savedSearchService.list().filter(filterByType);
 	});
@@ -24,23 +23,31 @@
 		if (currentType === 'all') return true;
 		return search.type === currentType;
 	}
+
+	function chooseFilter(event: Event) {
+		const value = (event.currentTarget as HTMLInputElement).value;
+		if (value === 'all' || value === 'token' || value === 'pair') currentType = value;
+	}
 </script>
 
 {#if savedSearchService.count > 0}
-	<wa-radio-group
-		label="View"
-		hint="Select what type of search you want to view."
-		orientation="horizontal"
-		value={currentType}
-		defaultValue={currentType}
-		onchange={(e: any) => {
-			currentType = e.target.value as TypeIndex;
-		}}
-	>
-		{#each Object.entries(types) as [type, label]}
-			<wa-radio appearance="button" value={type}>{label}</wa-radio>
-		{/each}
-	</wa-radio-group>
+	<fieldset class="bookmark-filter">
+		<legend>Show</legend>
+		<div class="bookmark-options">
+			{#each filters as filter (filter.value)}
+				<label class="bookmark-option">
+					<input
+						type="radio"
+						name="bookmark-filter"
+						value={filter.value}
+						checked={currentType === filter.value}
+						onchange={chooseFilter}
+					/>
+					<span>{filter.label}</span>
+				</label>
+			{/each}
+		</div>
+	</fieldset>
 
 	{#if filteredSearches.length > 0}
 		<ul class="mx-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -68,5 +75,64 @@
 		<p>No saved searches found.</p>
 	{/if}
 {:else}
-	<p>You have no saved searches. Add a new search to get started.</p>
+	<p id="bookmark-empty" tabindex="-1">You have no saved searches. Add a new search to get started.</p>
 {/if}
+
+<style>
+	.bookmark-filter {
+		margin: 0 0 1.25rem;
+		padding: 0;
+		border: 0;
+		min-inline-size: 0;
+	}
+
+	.bookmark-filter legend {
+		margin: 0 0 0.35rem;
+		padding: 0;
+		color: #f3f4f6;
+		font-weight: 700;
+	}
+
+	.bookmark-options {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem 1.25rem;
+		align-items: center;
+		position: static;
+	}
+
+	.bookmark-option {
+		display: inline-flex;
+		align-items: center;
+		position: static;
+		width: auto;
+		min-height: 2.5rem;
+		margin: 0;
+		color: #f3f4f6;
+	}
+
+	.bookmark-option input {
+		position: static;
+		flex: 0 0 auto;
+		width: 1.15rem;
+		height: 1.15rem;
+		margin: 0;
+		appearance: auto;
+		accent-color: #d4af37;
+	}
+
+	.bookmark-option span {
+		margin-inline-start: 0.35rem;
+		color: #f3f4f6;
+	}
+
+	.bookmark-option input:focus-visible {
+		outline: 2px solid #e6c35c;
+		outline-offset: 2px;
+	}
+
+	#bookmark-empty:focus {
+		outline: 2px solid #e6c35c;
+		outline-offset: 2px;
+	}
+</style>

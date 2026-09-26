@@ -31,7 +31,7 @@
 			The default page is Overview: name, ticker, price, liquidity, volume, the contract address, and
 			the pair address.
 		</li>
-		<li>Use the Pairs tab for pools.</li>
+		<li>Use the Paired Tokens tab for pools.</li>
 		<li>Use the Technical Analysis tab for charts.</li>
 	</ol>
 	<p>

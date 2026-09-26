@@ -137,10 +137,46 @@
 	}
 }
 
+.learn-stage {
+	position: relative;
+	min-height: calc(100dvh - 9rem);
+	isolation: isolate;
+}
+
+.learn-photo::before,
+.learn-photo::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.learn-photo::before {
+	z-index: 0;
+	background-image: var(--learn-photo);
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	filter: grayscale(0.45) contrast(0.9);
+}
+
+.learn-photo::after {
+	z-index: 1;
+	background: linear-gradient(rgba(17, 24, 39, 0.72), rgba(0, 0, 0, 0.78));
+}
+
 .learn-shell {
+	position: relative;
+	z-index: 2;
 	width: min(46rem, 100%);
 	margin-inline: auto;
 	padding: 2.5rem 1.5rem 4rem;
+}
+
+.learn-photo .learn-shell {
+	background: rgb(209 213 219 / 0.28);
+	border: 1px solid rgb(212 175 55 / 0.45);
+	backdrop-filter: blur(2px);
 }
 
 .learn-shell nav[aria-label='Learn'] ul,
@@ -238,4 +274,87 @@
 .learn-shell th {
 	color: #f0d78c;
 	font-weight: 700;
+}
+
+:root {
+	color-scheme: dark;
+	--wa-color-surface-default: #111827;
+	--wa-color-surface-raised: #1f2937;
+	--wa-color-surface-lowered: #000000;
+	--wa-color-text-normal: #f3f4f6;
+	--wa-color-text-quiet: #d1d5db;
+	--wa-color-text-link: #e6c35c;
+	--wa-color-focus: #e6c35c;
+	--wa-form-control-label-color: #f3f4f6;
+	--wa-form-control-value-color: #f3f4f6;
+	--wa-form-control-background-color: #1f2937;
+	--wa-form-control-border-color: #d4af37;
+}
+
+html,
+body {
+	background: #000;
+	color: #f3f4f6;
+}
+
+main label,
+main legend,
+main p,
+main li,
+main h1,
+main h2,
+main h3,
+main select,
+main option,
+main button,
+main input,
+main textarea,
+fieldset legend {
+	color: #f3f4f6;
+}
+
+main input[type='text'],
+main input[type='search'],
+main input[type='datetime-local'],
+main select,
+main textarea {
+	background: #1f2937;
+	color: #f3f4f6;
+	border: 1px solid #d4af37;
+}
+
+main input[type='checkbox'],
+main input[type='radio'] {
+	accent-color: #d4af37;
+}
+
+main button[type='submit'],
+main button[type='button'] {
+	background: #d4af37;
+	color: #14120b;
+	border: 2px solid #d4af37;
+}
+
+main button:disabled {
+	opacity: 0.55;
+}
+
+main a {
+	color: #e6c35c;
+}
+
+main :focus-visible {
+	outline: 2px solid #e6c35c;
+	outline-offset: 2px;
+}
+
+.highcharts-contextmenu,
+.highcharts-menu {
+	background: #1f2937;
+	color: #f3f4f6;
+	border-color: #d4af37;
+}
+
+.highcharts-menu-item {
+	color: #f3f4f6;
 }

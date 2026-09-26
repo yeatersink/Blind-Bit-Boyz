@@ -94,6 +94,27 @@ export const storyChapters = [
 export type StoryChapter = (typeof storyChapters)[number];
 export type StorySlug = StoryChapter['slug'];
 
+const learnPhotos: Partial<Record<StorySlug, string>> = {
+	bitcoin: '/chapter-01-more-info.jpg',
+	ethereum: '/chapter-02-more-info.jpg',
+	'smart-contracts': '/chapter-03-more-info.jpg',
+	chains: '/chapter-04-more-info.jpg',
+	wallets: '/chapter-06-more-info.jpg',
+	custody: '/chapter-07-more-info.jpg',
+	dex: '/chapter-08-more-info.jpg',
+	bridges: '/chapter-09-more-info.jpg',
+	yield: '/chapter-10-more-info.jpg',
+	explorers: '/chapter-12-more-info.jpg',
+	privacy: '/chapter-13-more-info.jpg',
+	policy: '/chapter-14-more-info.jpg',
+	about: '/chapter-15-more-info.jpg'
+};
+
+export function learnPhoto(slug: string | undefined): string | null {
+	if (!slug || !(slug in learnPhotos)) return null;
+	return learnPhotos[slug as StorySlug] ?? null;
+}
+
 export function chapterNeighbors(slug: StorySlug) {
 	const index = storyChapters.findIndex((chapter) => chapter.slug === slug);
 	const current = storyChapters[index];
