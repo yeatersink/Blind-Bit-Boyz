@@ -416,7 +416,7 @@ url: `${pair.id}?dataProvider=${currentDataProvider}`,
         
             <li>2. Select if you want to search for a Token or a Pool.</li>
         
-            <li>3. Type the Name, tikker, or the contract address of the token you want to search for.<li>
+            <li>3. Type the Name, tikker, or the contract address of the token you want to search for.</li>
         
             <li>4. The results will load...It may take a few seconds, but they will eventually get there.  You can click on the Token that you are looking for to get the data pertaining to that token.</li>
             <li>5. Once the Results have populated, you can click on the Token that you are searching for to get the data pertaining to that token.</li>
@@ -437,15 +437,15 @@ url: `${pair.id}?dataProvider=${currentDataProvider}`,
   </div>
   
   <div class="controls">
-    <button on:click={rewind}>⏪</button>
-    <button on:click={togglePlay}>
+    <button onclick={rewind}>⏪</button>
+    <button onclick={togglePlay}>
       {#if isPlaying}
         ⏸️
       {:else}
         ▶️
       {/if}
     </button>
-    <button on:click={fastForward}>⏩</button>
+    <button onclick={fastForward}>⏩</button>
   </div>
   
   <style>
@@ -501,7 +501,10 @@ url: `${pair.id}?dataProvider=${currentDataProvider}`,
         <h1 class="mb-4 text-3xl font-bold uppercase text-gold-500">Coin Search</h1>
         <form
             class="flex flex-col items-center gap-4 text-left"
-            on:submit|preventDefault={searchCryptocurrencies}
+            onsubmit={(event) => {
+                event.preventDefault();
+                searchCryptocurrencies();
+            }}
         >
             <div class="flex flex-col items-center gap-2">
                 <label for="provider">Choose Your Data Provider</label>
@@ -625,61 +628,4 @@ url: `${pair.id}?dataProvider=${currentDataProvider}`,
             </section>
         {/if}
     </div>
-<<<<<<< Updated upstream
-
-    {#if status == 'done'}
-        <section class="flex flex-col gap-4">
-            {#if results.length > 0}
-                <div>
-                    <label for="sorting">Sort by:</label>
-                    <select
-                        id="sorting"
-                        class="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-gray-200 hover:border-gray-400 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
-                        bind:value={currentSortingOption}
-                        onchange={sortResults}
-                    >
-                        {#each sortingOptions as option}
-                            <option value={option.value}>{option.name}</option>
-                        {/each}
-                    </select>
-                </div>
-                <div role="separator" class="border-t border-gray-600"></div>
-                <ul class="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-4">
-                    {#each results as result}
-                        <li class="rounded-md bg-gray-800 p-4">
-                            <a
-                                class="visited:text-gold-400 hover:text-gold-500 focus:text-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-500"
-                                href={`/coins/${result.url}`}
-                                target="_blank"
-                            >
-                                <h3 class="text-xl font-semibold">
-                                    {result.name}: {result.price ? '$' + result.price : 'Price not available'}
-                                </h3>
-                            </a>
-                            <p>{result.symbol}</p>
-                            <div class="flex items-center justify-between">
-                                <p>{result.address}</p>
-                                <button
-                                    class="rounded-md bg-gold-500 px-6 py-2 text-black hover:bg-gold-600 focus:ring-2 focus:ring-gold-500"
-                                    onclick={() => navigator.clipboard.writeText(result.address)}
-                                    aria-label={`Copy ${result.name} address`}
-                                    ><span class="fa-solid fa-copy"></span></button
-                                >
-                            </div>
-                        </li>
-                    {/each}
-                </ul>
-            {:else}
-                <p>No results found</p>
-            {/if}
-        </section>
-    {/if}
-</div> --> -->
-
-
-=======
-    
-</section>    
-    
-    
->>>>>>> Stashed changes
+</section>

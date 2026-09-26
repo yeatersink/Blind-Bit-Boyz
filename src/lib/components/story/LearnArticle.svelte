@@ -4,33 +4,39 @@
 
 	let { slug, children }: { slug: StorySlug; children: Snippet } = $props();
 
-	const { current, prev, next } = chapterNeighbors(slug);
+	const neighbors = $derived(chapterNeighbors(slug));
 </script>
 
 <svelte:head>
-	<title>{current.title} — Blind Bit Boys</title>
+	<title>{neighbors.current.title} — Blind Bit Boys</title>
 	<meta
 		name="description"
-		content="{current.title}. A Blind Bit Boys learn page. Education, not financial advice. As of September 2026."
+		content="{neighbors.current.title}. A Blind Bit Boys learn page. Education, not financial advice. As of September 2026."
 	/>
 </svelte:head>
 
 <article>
-	<h1>{current.title}</h1>
+	<h1>{neighbors.current.title}</h1>
 	{@render children()}
 	<nav aria-label="This chapter">
 		<p>
-			<a class="story-link" href="/#{current.id}">Back to {current.label} on the story</a>
+			<a class="story-link" href="/#{neighbors.current.id}"
+				>Back to {neighbors.current.label} on the story</a
+			>
 		</p>
 		<ul>
-			{#if prev}
+			{#if neighbors.prev}
 				<li>
-					<a class="story-link" href="/learn/{prev.slug}">Previous: {prev.title}</a>
+					<a class="story-link" href="/learn/{neighbors.prev.slug}"
+						>Previous: {neighbors.prev.title}</a
+					>
 				</li>
 			{/if}
-			{#if next}
+			{#if neighbors.next}
 				<li>
-					<a class="story-link" href="/learn/{next.slug}">Next: {next.title}</a>
+					<a class="story-link" href="/learn/{neighbors.next.slug}"
+						>Next: {neighbors.next.title}</a
+					>
 				</li>
 			{/if}
 		</ul>
