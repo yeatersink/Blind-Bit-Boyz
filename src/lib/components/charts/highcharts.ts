@@ -8,6 +8,8 @@ import OfflineExporting from 'highcharts/modules/offline-exporting';
 import Sonification from 'highcharts/modules/sonification';
 import Annotations from 'highcharts/modules/annotations';
 import Indicators from 'highcharts/indicators/indicators-all';
+import HollowCandlestick from 'highcharts/modules/hollowcandlestick';
+import HeikinAshi from 'highcharts/modules/heikinashi';
 
 // The browser build is the Highcharts object. A Node/Vite SSR import is the factory,
 // because the UMD wrapper only constructs Highcharts when `document` exists.
@@ -37,6 +39,26 @@ if (typeof window !== 'undefined') {
 	applyModule(Sonification);
 	applyModule(Annotations);
 	applyModule(Indicators);
+	applyModule(HollowCandlestick);
+	applyModule(HeikinAshi);
+}
+
+export const priceChartTypes = [
+	{ value: 'candlestick', label: 'Candlestick', ohlc: true },
+	{ value: 'ohlc', label: 'OHLC bars', ohlc: true },
+	{ value: 'hollowcandlestick', label: 'Hollow candlestick', ohlc: true },
+	{ value: 'heikinashi', label: 'Heikin-Ashi', ohlc: true },
+	{ value: 'line', label: 'Line (close)', ohlc: false },
+	{ value: 'spline', label: 'Spline (close)', ohlc: false },
+	{ value: 'area', label: 'Area (close)', ohlc: false },
+	{ value: 'areaspline', label: 'Area spline (close)', ohlc: false },
+	{ value: 'column', label: 'Column (close)', ohlc: false }
+] as const;
+
+export type PriceChartType = (typeof priceChartTypes)[number]['value'];
+
+export function priceChartUsesOhlc(type: string): boolean {
+	return priceChartTypes.some((item) => item.value === type && item.ohlc);
 }
 
 export function speakNumber(value: number | null | undefined): string {
@@ -249,7 +271,7 @@ function microPriceExtent(
 }
 
 export function buildPriceChartOptions(args: {
-	seriesType: 'candlestick' | 'line';
+	seriesType: PriceChartType;
 	candles: Array<{
 		timestamp: number;
 		open: number;
@@ -344,23 +366,24 @@ export function buildPriceChartOptions(args: {
 		yAxis.push({ visible: false, height: 0, top: '100%' });
 	}
 
+	const ohlc = priceChartUsesOhlc(args.seriesType);
 	const groupingOptions: Highcharts.DataGroupingOptionsObject = args.grouping
 		? {
 				enabled: true,
 				forced: true,
-				approximation: args.seriesType === 'candlestick' ? 'ohlc' : 'average',
+				approximation: ohlc ? 'ohlc' : 'average',
 				units: [[args.grouping.unit, [args.grouping.count]]]
 			}
 		: { enabled: false };
 
 	const series: Highcharts.SeriesOptionsType[] = [
-		args.seriesType === 'candlestick'
-			? {
-					type: 'candlestick',
-					id: 'price',
-					name: `${args.name} price`,
-					dataGrouping: groupingOptions,
-					data: args.candles.map(
+		{
+			type: args.seriesType,
+			id: 'price',
+			name: `${args.name} price`,
+			dataGrouping: groupingOptions,
+			data: ohlc
+				? args.candles.map(
 						(candle) =>
 							[candle.timestamp, candle.open, candle.high, candle.low, candle.close] as [
 								number,
@@ -369,35 +392,19 @@ export function buildPriceChartOptions(args: {
 								number,
 								number
 							]
-					),
-					sonification: {
-						enabled: true,
-						tracks: [
-							{
-								type: 'instrument',
-								instrument: args.priceInstrument,
-								mapping: pitchMapping('close')
-							}
-						]
+					)
+				: args.candles.map((candle) => ({ x: candle.timestamp, y: candle.close })),
+			sonification: {
+				enabled: true,
+				tracks: [
+					{
+						type: 'instrument',
+						instrument: args.priceInstrument,
+						mapping: pitchMapping(ohlc ? 'close' : 'y')
 					}
-				}
-			: {
-					type: 'line',
-					id: 'price',
-					name: `${args.name} price`,
-					dataGrouping: groupingOptions,
-					data: args.candles.map((candle) => ({ x: candle.timestamp, y: candle.close })),
-					sonification: {
-						enabled: true,
-						tracks: [
-							{
-								type: 'instrument',
-								instrument: args.priceInstrument,
-								mapping: pitchMapping('y')
-							}
-						]
-					}
-				}
+				]
+			}
+		} as Highcharts.SeriesOptionsType
 	];
 
 	if (needsVolumeSeries) {

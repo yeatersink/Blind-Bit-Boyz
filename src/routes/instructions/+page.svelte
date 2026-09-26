@@ -76,8 +76,7 @@
 		</li>
 		<li>
 			The chart’s hamburger control is named Chart menu. It includes print, image downloads, and
-			Download CSV. A Download CSV button is also on the form, above the chart. Use whichever your
-			keyboard reaches.
+			Download CSV.
 		</li>
 	</ol>
 

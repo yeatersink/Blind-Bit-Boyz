@@ -23,26 +23,26 @@
 	} from '$lib/utils/timeWindow';
 	import { readStoredDataSource, storeDataSource } from '$lib/utils/searchResults';
 	import type Highcharts from 'highcharts/highstock';
-	import { sonificationInstruments, type ActiveIndicator } from '$lib/components/charts/highcharts';
+	import {
+		priceChartTypes,
+		sonificationInstruments,
+		type ActiveIndicator,
+		type PriceChartType
+	} from '$lib/components/charts/highcharts';
 	import Candlestick, { type CandlestickOptions } from '$lib/components/charts/Candlestick.svelte';
-	import Line, { type LineOptions } from '$lib/components/charts/Line.svelte';
 
-	type ChartKeyType = 'candlestick' | 'line';
 	type SonificationOrder = 'sequential' | 'simultaneous';
 
 	const durations = [
 		{ value: 3000, label: '3 seconds' },
 		{ value: 5000, label: '5 seconds' },
 		{ value: 10000, label: '10 seconds' },
-		{ value: 20000, label: '20 seconds' }
+		{ value: 20000, label: '20 seconds' },
+		{ value: 30000, label: '30 seconds' }
 	];
 
-	let chartType: Record<ChartKeyType, string> = {
-		candlestick: 'Candlestick',
-		line: 'Line'
-	};
 	const initialNow = new Date();
-	let currentChartType: ChartKeyType = $state('candlestick');
+	let currentChartType: PriceChartType = $state('candlestick');
 	let candleSize: CandleSizeKey = $state('1h');
 	let showLast: ShowLastKey = $state('1d');
 	let currentStartDate = $state(
@@ -60,10 +60,10 @@
 	const AUDIO_PREFS_KEY = 'chartIndicatorAudio';
 	let duration = $state('5000');
 	let sonificationOrder: SonificationOrder = $state('sequential');
-	let renderedType: ChartKeyType | null = $state(null);
+	let renderedType: PriceChartType | null = $state(null);
 	let renderedSource: ChartDataSource | null = $state(null);
 	let candles: Candle[] = $state([]);
-	let chartOptions: CandlestickOptions | LineOptions | undefined = $state(undefined);
+	let chartOptions: CandlestickOptions | undefined = $state(undefined);
 	let statusMessage = $state('Loading chart…');
 	let audioStatus = $state('');
 	let csvStatus = $state('');
@@ -260,6 +260,16 @@
 			audioStatus = `${label} is not on the chart yet.`;
 			return;
 		}
+		chart.update(
+			{
+				sonification: {
+					enabled: true,
+					duration: Number(duration),
+					order: sonificationOrder
+				}
+			} as Highcharts.Options,
+			false
+		);
 		audioPlaying = true;
 		audioStatus = `Playing ${label} with ${instrumentName}.`;
 		series.sonify(() => {
@@ -268,52 +278,18 @@
 		});
 	}
 
-	function csvText(rows: Candle[]): string {
-		const lines = ['Date,Open,High,Low,Close,Volume'];
-		for (const candle of rows) {
-			lines.push(
-				[
-					new Date(candle.timestamp).toISOString(),
-					candle.open,
-					candle.high,
-					candle.low,
-					candle.close,
-					candle.volume ?? ''
-				].join(',')
-			);
-		}
-		return lines.join('\n');
-	}
-
 	function onMenuCsv() {
 		csvStatus = 'CSV download started.';
 	}
 
-	function downloadCsv() {
-		if (!chartIsLive(chart) || candles.length === 0) {
-			csvStatus = 'CSV download is unavailable.';
-			return;
-		}
-		const csv = csvText(candles);
-		const exporter = chart as Highcharts.Chart & {
-			downloadCSV?: () => void;
-			getCSV?: (useLocalDecimalPoint?: boolean) => string;
-		};
-		if (typeof exporter.downloadCSV === 'function' && typeof exporter.getCSV === 'function') {
-			const original = exporter.getCSV.bind(exporter);
-			exporter.getCSV = () => csv;
-			exporter.downloadCSV();
-			exporter.getCSV = original;
-		} else {
-			const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement('a');
-			link.href = url;
-			link.download = `${symbol || name || 'price'}-chart.csv`;
-			link.click();
-			URL.revokeObjectURL(url);
-		}
-		csvStatus = 'CSV download started.';
+	function onChartTypeChange(event: Event) {
+		const value = (event.currentTarget as HTMLSelectElement).value;
+		if (!priceChartTypes.some((item) => item.value === value)) return;
+		currentChartType = value as PriceChartType;
+		if (!chartOptions || candles.length === 0) return;
+		stopAudio(false);
+		renderedType = currentChartType;
+		chartLoadId += 1;
 	}
 
 	function applyShowLast(key: string) {
@@ -477,13 +453,13 @@
 	</div>
 
 	<h3 id="chart-type-heading">Chart type</h3>
-	<div role="group" aria-labelledby="chart-type-heading">
-		{#each Object.entries(chartType) as [key, value]}
-			<label>
-				<input type="radio" name="chart-type" value={key} bind:group={currentChartType} />
-				{value}
-			</label>
-		{/each}
+	<div>
+		<label for="chart-type">Chart type</label>
+		<select id="chart-type" value={currentChartType} onchange={onChartTypeChange}>
+			{#each priceChartTypes as item}
+				<option value={item.value}>{item.label}</option>
+			{/each}
+		</select>
 	</div>
 
 	<p id="chart-window-help">
@@ -663,13 +639,6 @@
 			Play {indicator.label} only
 		</button>
 	{/each}
-	<button
-		type="button"
-		disabled={!chartIsLive(chart) || candles.length === 0}
-		onclick={downloadCsv}
-	>
-		Download CSV
-	</button>
 </form>
 
 <h3>Chart status</h3>
@@ -693,22 +662,10 @@
 
 <h3>Price chart</h3>
 {#key chartLoadId}
-	{#if chartOptions && candles.length > 0 && renderedType === 'candlestick'}
+	{#if chartOptions && candles.length > 0 && renderedType}
 		<Candlestick
 			{candles}
-			options={chartOptions}
-			indicators={activeIndicators}
-			{priceInstrument}
-			duration={Number(duration)}
-			order={sonificationOrder}
-			grouping={renderedGrouping}
-			onShowLast={onRangeButton}
-			onCsvDownload={onMenuCsv}
-			bind:chart
-		/>
-	{:else if chartOptions && candles.length > 0 && renderedType === 'line'}
-		<Line
-			{candles}
+			seriesType={renderedType}
 			options={chartOptions}
 			indicators={activeIndicators}
 			{priceInstrument}
