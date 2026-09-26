@@ -34,11 +34,22 @@
 	type SonificationOrder = 'sequential' | 'simultaneous';
 
 	const durations = [
+		{ value: 1000, label: '1 second' },
+		{ value: 2000, label: '2 seconds' },
 		{ value: 3000, label: '3 seconds' },
+		{ value: 4000, label: '4 seconds' },
 		{ value: 5000, label: '5 seconds' },
+		{ value: 6000, label: '6 seconds (Highcharts default)' },
+		{ value: 8000, label: '8 seconds' },
 		{ value: 10000, label: '10 seconds' },
+		{ value: 12000, label: '12 seconds' },
+		{ value: 15000, label: '15 seconds' },
 		{ value: 20000, label: '20 seconds' },
-		{ value: 30000, label: '30 seconds' }
+		{ value: 30000, label: '30 seconds' },
+		{ value: 45000, label: '45 seconds' },
+		{ value: 60000, label: '1 minute' },
+		{ value: 90000, label: '1 minute 30 seconds' },
+		{ value: 120000, label: '2 minutes' }
 	];
 
 	const initialNow = new Date();
