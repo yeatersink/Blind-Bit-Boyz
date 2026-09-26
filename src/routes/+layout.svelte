@@ -1,5 +1,4 @@
 <script lang="ts">
-	import '@awesome.me/webawesome/dist/styles/webawesome.css';
 	import '@fortawesome/fontawesome-free/css/all.css';
 	import '@awesome.me/webawesome/dist/components/button/button.js';
 	import '@awesome.me/webawesome/dist/components/icon/icon.js';
