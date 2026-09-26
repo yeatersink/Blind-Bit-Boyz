@@ -3,6 +3,10 @@
 	import { storyChapters } from '$lib/story/chapters';
 
 	let current = $state('');
+	let chaptersOpen = $state(false);
+	let mobile = $state(false);
+	let chapterButton = $state<HTMLButtonElement | null>(null);
+	let storyNavEl = $state<HTMLElement | null>(null);
 
 	onMount(() => {
 		const nodes = document.querySelectorAll<HTMLElement>('main#story section[id]');
@@ -16,9 +20,64 @@
 			{ rootMargin: '-25% 0px -55% 0px', threshold: [0.1, 0.25, 0.5] }
 		);
 		nodes.forEach((node) => observer.observe(node));
-		return () => observer.disconnect();
+
+		const desktopQuery = window.matchMedia('(min-width: 64rem)');
+		const sync = () => {
+			mobile = !desktopQuery.matches;
+			if (!mobile) chaptersOpen = false;
+		};
+		sync();
+		desktopQuery.addEventListener('change', sync);
+
+		return () => {
+			observer.disconnect();
+			desktopQuery.removeEventListener('change', sync);
+		};
 	});
+
+	function onKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape' || !chaptersOpen) return;
+		event.preventDefault();
+		chaptersOpen = false;
+		chapterButton?.focus();
+	}
+
+	function onPointerDown(event: PointerEvent) {
+		if (!chaptersOpen) return;
+		const target = event.target;
+		if (!(target instanceof Node)) return;
+		if (storyNavEl?.contains(target)) return;
+		chaptersOpen = false;
+	}
+
+	function chooseChapter(event: MouseEvent) {
+		if (!chaptersOpen) return;
+		if (
+			event.metaKey ||
+			event.ctrlKey ||
+			event.shiftKey ||
+			event.altKey ||
+			event.button !== 0
+		) {
+			return;
+		}
+		const link = event.currentTarget;
+		if (!(link instanceof HTMLAnchorElement)) return;
+		event.preventDefault();
+		const id = link.hash.slice(1);
+		const target = document.getElementById(id);
+		const root = document.documentElement;
+		const previous = root.style.scrollBehavior;
+		root.style.scrollBehavior = 'auto';
+		target?.scrollIntoView({ block: 'start' });
+		if (location.hash !== `#${id}`) history.pushState(null, '', `#${id}`);
+		root.style.scrollBehavior = previous;
+		chaptersOpen = false;
+		chapterButton?.focus({ preventScroll: true });
+	}
 </script>
+
+<svelte:window onkeydown={onKeydown} onpointerdown={onPointerDown} />
 
 <svelte:head>
 	<title>Blind Bit Boys</title>
@@ -29,20 +88,28 @@
 </svelte:head>
 
 <div class="flex flex-grow flex-col bg-black text-gray-100 lg:flex-row">
-	<nav class="story-nav" aria-label="On this page">
-		<p class="text-gold-400 px-4 pt-4 text-xs font-semibold tracking-[0.18em] uppercase lg:px-5">
+	<nav class="story-nav" aria-label="On this page" bind:this={storyNavEl}>
+		<button
+			bind:this={chapterButton}
+			class="story-nav-toggle"
+			type="button"
+			aria-expanded={chaptersOpen}
+			aria-controls="story-chapter-list"
+			onclick={() => (chaptersOpen = !chaptersOpen)}
+		>
 			On this page
-		</p>
-		<ul class="flex flex-wrap gap-1 px-2 py-3 lg:flex-col lg:flex-nowrap lg:px-3">
+			<span class="story-nav-chevron" aria-hidden="true"></span>
+		</button>
+		<p class="story-nav-label">On this page</p>
+		<ul id="story-chapter-list" class:is-open={chaptersOpen} inert={mobile && !chaptersOpen}>
 			{#each storyChapters as chapter (chapter.id)}
 				<li>
 					<a
 						href="#{chapter.id}"
 						aria-current={current === chapter.id ? 'location' : undefined}
+						onclick={chooseChapter}
 					>
-						<span class="text-gold-400 block text-xs font-semibold tracking-[0.14em] uppercase">
-							{chapter.label}
-						</span>
+						<span class="chapter-nav-kicker">{chapter.label}</span>
 						<span class="chapter-nav-title">{chapter.title}</span>
 					</a>
 				</li>
@@ -832,7 +899,7 @@
 <style>
 	.story-nav {
 		position: sticky;
-		top: 8.25rem;
+		top: var(--site-header-offset);
 		z-index: 40;
 		align-self: start;
 		width: 100%;
@@ -840,54 +907,142 @@
 		border-bottom: 1px solid rgb(212 175 55 / 0.45);
 	}
 
-	.chapter-nav-title {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
+	.story-nav-toggle {
+		display: flex;
+		width: 100%;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		min-height: 2.75rem;
+		margin: 0;
+		padding: 0.55rem 1rem;
 		border: 0;
+		background: #000;
+		color: #e6c35c;
+		font-family: inherit;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		line-height: 1.2;
+		text-align: left;
+		text-transform: uppercase;
+		cursor: pointer;
 	}
 
-	.story-nav a {
+	.story-nav-toggle:hover {
+		color: #f0d78c;
+	}
+
+	.story-nav-toggle:focus-visible {
+		outline: 2px solid #e6c35c;
+		outline-offset: -2px;
+	}
+
+	.story-nav-chevron {
+		width: 0.5rem;
+		height: 0.5rem;
+		flex: 0 0 auto;
+		border-right: 2px solid currentColor;
+		border-bottom: 2px solid currentColor;
+		transform: translateY(-0.15rem) rotate(45deg);
+	}
+
+	.story-nav-toggle[aria-expanded='true'] .story-nav-chevron {
+		transform: translateY(0.15rem) rotate(225deg);
+	}
+
+	.story-nav-label {
+		display: none;
+		margin: 0;
+		color: #e6c35c;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+	}
+
+	.story-nav ul {
+		display: none;
+		margin: 0;
+		padding: 0.25rem 0 0.5rem;
+		list-style: none;
+	}
+
+	.story-nav ul.is-open {
+		position: absolute;
+		z-index: 30;
+		top: 100%;
+		right: 0;
+		left: 0;
+		display: block;
+		max-height: min(60dvh, 26rem);
+		overflow: auto;
+		border-bottom: 1px solid rgb(212 175 55 / 0.45);
+		background: #000;
+	}
+
+	.chapter-nav-kicker {
+		display: block;
+		color: #e6c35c;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+	}
+
+	.chapter-nav-title {
+		display: block;
+		margin-top: 0.15rem;
+		color: #f3f4f6;
+		font-size: 0.875rem;
+		font-weight: 500;
+		line-height: 1.35;
+	}
+
+	.story-nav a,
+	.story-nav a:visited {
 		position: relative;
 		display: block;
 		border-left: 3px solid transparent;
-		padding: 0.45rem 0.75rem;
+		padding: 0.65rem 1rem;
+		color: #e6c35c;
 		text-decoration: none;
 	}
 
 	.story-nav a:hover {
 		border-left-color: #e6c35c;
+		background: rgb(212 175 55 / 0.08);
 	}
 
 	.story-nav a:focus-visible {
 		outline: 2px solid #e6c35c;
-		outline-offset: 2px;
+		outline-offset: -2px;
 	}
 
 	.story-nav a[aria-current='location'] {
 		border-left-color: #d4af37;
+		background: rgb(212 175 55 / 0.1);
 		font-weight: 700;
-		background: rgb(212 175 55 / 0.08);
+	}
+
+	main#story {
+		scroll-margin-top: calc(var(--story-nav-toggle) + 0.5rem);
 	}
 
 	.story-hero,
 	.story-chapter {
 		position: relative;
 		min-height: 100dvh;
-		padding: 4.5rem 1.5rem 5rem;
-		scroll-margin-top: 18rem;
+		padding: 2.5rem 1.25rem 3.5rem;
+		scroll-margin-top: calc(var(--story-nav-toggle) + 0.5rem);
 	}
 
 	.story-hero {
 		display: flex;
 		max-width: 46rem;
+		min-height: calc(100dvh - var(--site-header-offset) - var(--story-nav-toggle));
 		flex-direction: column;
-		justify-content: center;
+		justify-content: flex-start;
 		margin-inline: auto;
 	}
 
@@ -1013,33 +1168,46 @@
 		list-style: none;
 	}
 
-	@media (min-width: 1024px) {
+	@media (min-width: 64rem) {
+		.story-nav-toggle {
+			display: none;
+		}
+
+		.story-nav-label {
+			display: block;
+			padding: 3rem 1.25rem 0.35rem;
+		}
+
 		.story-nav {
 			width: 18rem;
-			max-height: calc(100dvh - 8.5rem);
+			max-height: calc(100dvh - var(--site-header-offset));
 			overflow: auto;
 			border-right: 1px solid rgb(212 175 55 / 0.45);
 			border-bottom: 0;
 		}
 
-		.chapter-nav-title {
+		.story-nav ul,
+		.story-nav ul.is-open {
 			position: static;
 			display: block;
-			width: auto;
-			height: auto;
-			margin: 0.15rem 0 0;
+			max-height: none;
 			overflow: visible;
-			clip: auto;
-			font-size: 0.875rem;
-			line-height: 1.35;
-			white-space: normal;
-			color: #f5f5f4;
+			border: 0;
+			background: transparent;
+		}
+
+		main#story {
+			scroll-margin-top: 0.75rem;
 		}
 
 		.story-hero,
 		.story-chapter {
-			padding-inline: 3rem;
-			scroll-margin-top: 8.5rem;
+			padding: 3rem 3rem 4rem;
+			scroll-margin-top: 0.75rem;
+		}
+
+		.story-hero {
+			min-height: calc(100dvh - var(--site-header-offset));
 		}
 	}
 </style>

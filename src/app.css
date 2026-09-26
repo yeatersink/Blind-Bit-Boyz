@@ -139,7 +139,7 @@
 
 .learn-stage {
 	position: relative;
-	min-height: calc(100dvh - 9rem);
+	min-height: calc(100dvh - var(--site-header-offset));
 	isolation: isolate;
 }
 
@@ -278,6 +278,8 @@
 
 :root {
 	color-scheme: dark;
+	--site-header-offset: calc(4.5rem + 1px);
+	--story-nav-toggle: calc(2.75rem + 1px);
 	--wa-color-surface-default: #111827;
 	--wa-color-surface-raised: #1f2937;
 	--wa-color-surface-lowered: #000000;
@@ -289,6 +291,28 @@
 	--wa-form-control-value-color: #f3f4f6;
 	--wa-form-control-background-color: #1f2937;
 	--wa-form-control-border-color: #d4af37;
+}
+
+@media (min-width: 40rem) {
+	:root {
+		--site-header-offset: calc(5rem + 1px);
+	}
+}
+
+@media (min-width: 48rem) {
+	:root {
+		--site-header-offset: calc(6rem + 1px);
+	}
+}
+
+@media (min-width: 64rem) {
+	:root {
+		--site-header-offset: calc(7rem + 1px);
+	}
+}
+
+html {
+	scroll-padding-top: var(--site-header-offset);
 }
 
 html,

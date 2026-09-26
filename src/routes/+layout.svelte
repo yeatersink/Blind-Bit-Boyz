@@ -14,10 +14,12 @@
 	{isStory ? 'Skip to story' : 'Skip to main content'}
 </a>
 <header class="border-gold-500 sticky top-0 z-50 border-b bg-black text-gray-100 shadow-lg">
-	<div class="container mx-auto flex items-center justify-between px-6 py-4">
+	<div
+		class="container mx-auto flex flex-nowrap items-center justify-between gap-3 px-4 py-3 md:gap-6 md:px-6 md:py-4"
+	>
 		<img
 			src="/bbb-logo.png"
-			class="h-24 w-auto"
+			class="block h-12 w-auto shrink-0 sm:h-14 md:h-16 lg:h-20"
 			alt="The Bitcoin symbol is white and placed in the center of a circular background that transitions from gold in the middle to a gray border. The symbol is depicted as a person with a black blindfold, extending an arm to touch a black silhouette of a guide dog on the left. The other arm is holding a white cane with a red tip on the right."
 		/>
 		<DesktopNav />
