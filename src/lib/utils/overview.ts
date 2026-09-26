@@ -1,3 +1,4 @@
+import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
 import type { DataSource } from '$lib/utils/searchResults';
 
 export type OverviewRow = { label: string; value: string };
@@ -48,6 +49,23 @@ export function usdText(value: unknown): string {
 	const numeric = saneNumber(value);
 	if (numeric === null) return 'n/a';
 	return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(numeric);
+}
+
+export function priceText(value: unknown): string {
+	if (value === '' || (typeof value === 'string' && value.trim() === '')) return 'n/a';
+	const numeric = saneNumber(value);
+	if (numeric === null) return 'n/a';
+	return formatCryptoPrice(numeric);
+}
+
+export function firstPrice(...values: unknown[]): unknown {
+	for (const value of values) {
+		if (value === '' || value === null || value === undefined) continue;
+		if (typeof value === 'string' && value.trim() === '') continue;
+		const numeric = saneNumber(value);
+		if (numeric !== null) return numeric;
+	}
+	return null;
 }
 
 export function ageText(value: unknown): string {

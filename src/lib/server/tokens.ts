@@ -277,6 +277,16 @@ export async function searchTokens(
 	return { data: result.body };
 }
 
+function firstFiniteNumber(...values: unknown[]): number | null {
+	for (const value of values) {
+		if (value === '' || value === null || value === undefined) continue;
+		if (typeof value === 'string' && value.trim() === '') continue;
+		const numeric = Number(value);
+		if (Number.isFinite(numeric)) return numeric;
+	}
+	return null;
+}
+
 function textField(record: Record<string, unknown>, ...keys: string[]): string {
 	for (const key of keys) {
 		const value = record[key];
@@ -299,7 +309,7 @@ export function normalizeMoralisSearch(
 		const tokenAddress = textField(item, 'tokenAddress', 'token_address', 'address');
 		if (!tokenAddress) continue;
 		const chainKey = resolveAppChainKey(textField(item, 'chainId', 'chain_id')) ?? fallback;
-		const price = item.usdPrice ?? item.usd_price;
+		const price = firstFiniteNumber(item.usdPrice, item.priceUsd, item.usd_price);
 		const volume = item.volume24h ?? item.volume_24h ?? item.totalVolume;
 		const score = item.securityScore ?? item.security_score;
 		const verified = item.isVerifiedContract ?? item.is_verified_contract;
@@ -310,7 +320,7 @@ export function normalizeMoralisSearch(
 			tokenAddress,
 			chainKey,
 			chainId: chainKey,
-			priceUsd: typeof price === 'number' || typeof price === 'string' ? price : null,
+			priceUsd: price,
 			volumeUsd: typeof volume === 'number' || typeof volume === 'string' ? volume : null,
 			verified: typeof verified === 'boolean' ? verified : null,
 			securityScore: typeof score === 'number' ? score : null

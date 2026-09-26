@@ -1,4 +1,5 @@
 import HighchartsImport from 'highcharts/highstock';
+import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
 import { rangeButtons, type CandleGrouping } from '$lib/utils/timeWindow';
 import Accessibility from 'highcharts/modules/accessibility';
 import Exporting from 'highcharts/modules/exporting';
@@ -40,7 +41,7 @@ if (typeof window !== 'undefined') {
 
 export function speakNumber(value: number | null | undefined): string {
 	if (typeof value !== 'number' || !Number.isFinite(value)) return 'unavailable';
-	return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(value);
+	return formatCryptoPrice(value);
 }
 
 export function speakTime(value: number): string {
@@ -231,6 +232,22 @@ export function hookChartCsvDownload(chart: Highcharts.Chart, onCsv: () => void)
 	exporter._csvHooked = true;
 }
 
+function microPriceExtent(
+	candles: Array<{ open: number; high: number; low: number; close: number }>
+): { min: number; max: number } | null {
+	if (!candles.length) return null;
+	let lowestLow = Infinity;
+	let highestHigh = -Infinity;
+	for (const candle of candles) {
+		const values = [candle.open, candle.high, candle.low, candle.close];
+		if (values.some((value) => !Number.isFinite(value) || value <= 0)) return null;
+		lowestLow = Math.min(lowestLow, candle.low);
+		highestHigh = Math.max(highestHigh, candle.high);
+	}
+	if (!(highestHigh < 0.01)) return null;
+	return { min: lowestLow * 0.98, max: highestHigh * 1.02 };
+}
+
 export function buildPriceChartOptions(args: {
 	seriesType: 'candlestick' | 'line';
 	candles: Array<{
@@ -264,8 +281,27 @@ export function buildPriceChartOptions(args: {
 				: oscillators.length === 2
 					? '48%'
 					: '55%';
+	const priceExtent = microPriceExtent(args.candles);
 	const yAxis: Highcharts.YAxisOptions[] = [
-		{ title: { text: 'Price' }, height: priceHeight, lineWidth: 1 }
+		{
+			title: { text: 'Price' },
+			height: priceHeight,
+			lineWidth: 1,
+			...(priceExtent
+				? {
+						min: priceExtent.min,
+						max: priceExtent.max,
+						startOnTick: false,
+						endOnTick: false
+					}
+				: {}),
+			labels: {
+				formatter(this: Highcharts.AxisLabelsFormatterContextObject) {
+					const value = typeof this.value === 'number' ? this.value : Number(this.value);
+					return Number.isFinite(value) ? formatCryptoPrice(value) : String(this.value);
+				}
+			}
+		}
 	];
 	if (oscillators.length === 1) {
 		yAxis.push({
@@ -494,6 +530,34 @@ export function buildPriceChartOptions(args: {
 		subtitle: { text: `Price in ${args.currencyText} as of ${args.time}` },
 		xAxis: { type: 'datetime' },
 		yAxis,
+		tooltip: {
+			formatter(this: Highcharts.TooltipFormatterContextObject) {
+				const point = this.point as Highcharts.Point & {
+					open?: number;
+					high?: number;
+					low?: number;
+					close?: number;
+				};
+				const stamp =
+					typeof point.x === 'number' ? Highcharts.dateFormat('%Y-%m-%d %H:%M', point.x) : '';
+				if (
+					typeof point.open === 'number' &&
+					typeof point.high === 'number' &&
+					typeof point.low === 'number' &&
+					typeof point.close === 'number'
+				) {
+					return [
+						stamp,
+						`Open: ${formatCryptoPrice(point.open)}`,
+						`High: ${formatCryptoPrice(point.high)}`,
+						`Low: ${formatCryptoPrice(point.low)}`,
+						`Close: ${formatCryptoPrice(point.close)}`
+					].join('<br/>');
+				}
+				const price = typeof point.y === 'number' ? point.y : Number.NaN;
+				return `${stamp}<br/>Price: ${formatCryptoPrice(price)}`;
+			}
+		},
 		accessibility: {
 			enabled: true,
 			description: `${args.name} price chart`,

@@ -16,21 +16,21 @@ export function formatCryptoPrice(
 		return 'N/A';
 	}
 
+	if (price !== 0 && Math.abs(price) < 0.01) {
+		return new Intl.NumberFormat(locale, {
+			style: 'currency',
+			currency,
+			minimumSignificantDigits: 4,
+			maximumSignificantDigits: 6
+		}).format(price);
+	}
+
 	let minimumFractionDigits: number;
 	let maximumFractionDigits: number;
 
 	if (price === 0) {
 		minimumFractionDigits = 2;
 		maximumFractionDigits = 2;
-	} else if (Math.abs(price) < 0.00000001) {
-		minimumFractionDigits = 8;
-		maximumFractionDigits = 12;
-	} else if (Math.abs(price) < 0.00001) {
-		minimumFractionDigits = 6;
-		maximumFractionDigits = 8;
-	} else if (Math.abs(price) < 0.01) {
-		minimumFractionDigits = 4;
-		maximumFractionDigits = 6;
 	} else if (Math.abs(price) < 1) {
 		minimumFractionDigits = 2;
 		maximumFractionDigits = 4;

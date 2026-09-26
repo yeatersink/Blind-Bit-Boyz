@@ -25,8 +25,7 @@ const ohlcvCache = new Map<string, CacheEntry>();
 let networkCache: { at: number; slugs: Set<string> } | null = null;
 
 export type GeckoCandleResult =
-	| { candles: Candle[]; warning?: string }
-	| { error: string; status: number };
+	{ candles: Candle[]; warning?: string } | { error: string; status: number };
 
 export function knownGeckoSlugList(): string[] {
 	return [...GECKO_SLUGS].sort();
@@ -357,6 +356,7 @@ type GeckoResource = {
 		symbol?: string;
 		base_token_price_usd?: string | null;
 		price_usd?: string | null;
+		token_price_usd?: string | null;
 		volume_usd?: { h24?: string | number };
 	};
 	relationships?: {
@@ -392,7 +392,32 @@ function pushHit(hits: SearchHit[], seen: Set<string>, hit: SearchHit | null) {
 	hits.push(hit);
 }
 
-function tokenHit(resource: GeckoResource, chainKey: string): SearchHit | null {
+function firstFiniteNumber(...values: unknown[]): number | null {
+	for (const value of values) {
+		if (value === '' || value === null || value === undefined) continue;
+		if (typeof value === 'string' && value.trim() === '') continue;
+		const numeric = Number(value);
+		if (Number.isFinite(numeric)) return numeric;
+	}
+	return null;
+}
+
+function poolTokenPrice(pool: GeckoResource, base: GeckoResource | undefined): number | null {
+	return firstFiniteNumber(
+		pool.attributes?.base_token_price_usd,
+		base?.attributes?.price_usd,
+		base?.attributes?.token_price_usd
+	);
+}
+
+function tokenHit(
+	resource: GeckoResource,
+	chainKey: string,
+	priceUsd: number | null = firstFiniteNumber(
+		resource.attributes?.price_usd,
+		resource.attributes?.token_price_usd
+	)
+): SearchHit | null {
 	const address = resource.attributes?.address;
 	if (!address) return null;
 	return {
@@ -402,7 +427,7 @@ function tokenHit(resource: GeckoResource, chainKey: string): SearchHit | null {
 		tokenAddress: address,
 		chainKey,
 		chainId: chainKey,
-		priceUsd: resource.attributes?.price_usd ?? null,
+		priceUsd,
 		verified: null,
 		securityScore: null
 	};
@@ -424,7 +449,7 @@ function poolHit(
 		pairAddress,
 		chainKey,
 		chainId: chainKey,
-		priceUsd: pool.attributes?.base_token_price_usd ?? base?.attributes?.price_usd ?? null,
+		priceUsd: poolTokenPrice(pool, base),
 		volumeUsd: pool.attributes?.volume_usd?.h24 ?? null,
 		verified: null,
 		securityScore: null
@@ -477,13 +502,21 @@ export async function searchGecko(
 		);
 		if ('error' in token) return token;
 		const tokenData = Array.isArray(token.data) ? token.data[0] : token.data;
-		pushHit(hits, seen, tokenData ? tokenHit(tokenData, chainKey) : null);
 
 		const pools = await readGecko(
 			`/networks/${encodeURIComponent(network)}/tokens/${encodeURIComponent(address)}/pools?page=1&include=base_token`
 		);
 		if ('error' in pools) return pools;
-		for (const pool of Array.isArray(pools.data) ? pools.data : []) {
+		const poolRows = Array.isArray(pools.data) ? pools.data : [];
+		let addressHit = tokenData ? tokenHit(tokenData, chainKey) : null;
+		if (addressHit && addressHit.priceUsd === null && poolRows[0]) {
+			addressHit = {
+				...addressHit,
+				priceUsd: firstFiniteNumber(poolRows[0].attributes?.base_token_price_usd)
+			};
+		}
+		pushHit(hits, seen, addressHit);
+		for (const pool of poolRows) {
 			pushHit(hits, seen, poolHit(pool, pools, chainKey));
 		}
 	}
@@ -499,7 +532,7 @@ export async function searchGecko(
 	if (!('error' in pools)) {
 		for (const pool of Array.isArray(pools.data) ? pools.data : []) {
 			const base = includedToken(pools, pool.relationships?.base_token?.data?.id);
-			pushHit(hits, seen, base ? tokenHit(base, chainKey) : null);
+			pushHit(hits, seen, base ? tokenHit(base, chainKey, poolTokenPrice(pool, base)) : null);
 			pushHit(hits, seen, poolHit(pool, pools, chainKey));
 		}
 	}

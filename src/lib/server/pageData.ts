@@ -4,6 +4,8 @@ import { chainLabel, geckoNetworkFor, resolveAppChainKey } from '$lib/utils/chai
 import {
 	ageText,
 	displayValue,
+	firstPrice,
+	priceText,
 	saneNumber,
 	usdText,
 	type OverviewPool,
@@ -70,6 +72,12 @@ function row(label: string, value: unknown): OverviewRow {
 	return { label, value: displayValue(value) };
 }
 
+function firstPoolBasePrice(body: RecordValue | null): unknown {
+	const rows = Array.isArray(body?.data) ? body.data : [];
+	const pool = asRecord(rows[0]);
+	return asRecord(pool?.attributes)?.base_token_price_usd;
+}
+
 function volumeRows(volume: RecordValue | null, prefix: string): OverviewRow[] {
 	if (!volume) return [];
 	const order = ['m5', 'm15', 'm30', 'h1', 'h6', 'h24', '1h', '24h', '1d', '1w'];
@@ -133,7 +141,7 @@ function geckoPools(body: RecordValue | null, chainKey: string): OverviewPool[] 
 			name: text(attributes, 'name') || 'Unknown pool',
 			pairAddress: address,
 			chainKey,
-			priceUsd: usdText(attributes?.base_token_price_usd),
+			priceUsd: priceText(attributes?.base_token_price_usd),
 			liquidityUsd: usdText(attributes?.reserve_in_usd),
 			volume24hUsd: usdText(volume?.h24),
 			dex: includedName(body, relationshipId(pool, 'dex')) || 'Gecko Terminal',
@@ -170,7 +178,7 @@ export async function loadGeckoToken(address: string, chainKey: string): Promise
 		row('Name', name),
 		row('Symbol', symbol),
 		row('Chain', chainLabel(chainKey)),
-		row('Price (USD)', usdText(attributes?.price_usd ?? primary?.priceUsd)),
+		row('Price (USD)', priceText(firstPrice(attributes?.price_usd, firstPoolBasePrice(poolsBody)))),
 		row('24h change', primary?.change24h ?? ''),
 		row('Liquidity', primary?.liquidityUsd ?? 'n/a'),
 		row('FDV', usdText(attributes?.fdv_usd)),
@@ -238,7 +246,7 @@ export async function loadGeckoPair(address: string, chainKey: string): Promise<
 		row('Base token', baseName),
 		row('Quote token', quoteName),
 		row('Chain', chainLabel(chainKey)),
-		row('Price (USD)', usdText(attributes.base_token_price_usd)),
+		row('Price (USD)', priceText(attributes.base_token_price_usd)),
 		row('24h change', change?.h24 === undefined ? '' : `${change.h24}%`),
 		row('Liquidity', usdText(attributes.reserve_in_usd)),
 		row('FDV', usdText(attributes.fdv_usd)),
@@ -304,7 +312,7 @@ function moralisPools(body: unknown, chainKey: string): OverviewPool[] {
 			name: text(pool, 'pair_label', 'pairLabel') || 'Unknown pool',
 			pairAddress: address,
 			chainKey,
-			priceUsd: usdText(pool.usd_price ?? pool.usdPrice),
+			priceUsd: priceText(firstPrice(pool.usd_price, pool.usdPrice)),
 			liquidityUsd: usdText(pool.liquidity_usd ?? pool.liquidityUsd),
 			volume24hUsd: usdText(pool.volume_24h_usd ?? pool.volume24hUsd),
 			dex: text(pool, 'exchange_name', 'exchangeName') || 'n/a',
@@ -350,7 +358,7 @@ export async function loadMoralisToken(address: string, chainKey: string): Promi
 		row('Name', name),
 		row('Symbol', symbol),
 		row('Chain', chainLabel(text(token, 'chain_id', 'chainId') || chainKey)),
-		row('Price (USD)', usdText(token.price_usd ?? token.usdPrice ?? token.priceUsd)),
+		row('Price (USD)', priceText(firstPrice(token.price_usd, token.usdPrice, token.priceUsd))),
 		row('24h change', change?.['24h'] ?? change?.['1d'] ?? ''),
 		row(
 			'Liquidity',
@@ -415,7 +423,7 @@ export async function loadMoralisPair(address: string, chainKey: string): Promis
 		row('Base token', text(pair, 'tokenName', 'token_name')),
 		row('Quote token', text(pair, 'pairLabel', 'pair_label')),
 		row('Chain', chainLabel(chainKey)),
-		row('Price (USD)', usdText(pair.currentUsdPrice ?? pair.current_usd_price)),
+		row('Price (USD)', priceText(firstPrice(pair.currentUsdPrice, pair.current_usd_price))),
 		row('Native price', pair.currentNativePrice ?? pair.current_native_price),
 		row('Liquidity', usdText(pair.totalLiquidityUsd ?? pair.total_liquidity_usd)),
 		row('Volume', 'see intervals'),
