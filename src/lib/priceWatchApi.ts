@@ -1,3 +1,5 @@
+import { isMoversSendSeconds, MOVERS_SEND_OPTIONS } from './price-watch-types';
+
 export const PRICE_WATCH_API = 'https://api.blindbitboys.com';
 
 export const PRICE_WATCH_TOKEN_KEY = 'bbb_pricewatch_token';
@@ -125,9 +127,6 @@ export type RankingRow = {
 	meets_liquidity_floor: boolean | null;
 };
 
-/** Off is 0. These are the only values stored in movers_alert_every. */
-export const MOVERS_ALERT_SECONDS = [0, 15, 30, 45, 60, 120, 180] as const;
-
 /** Off is 0. The shortest on value is 900. These are the only values stored in board_alert_every. */
 export const BOARD_ALERT_SECONDS = [0, 900, 1800, 3600, 21600, 43200, 86400] as const;
 
@@ -139,16 +138,6 @@ export const BOARD_WINDOW_CHOICES = [
 	{ value: '12h', label: '12 hours' },
 	{ value: '24h', label: '24 hours' }
 ] as const satisfies readonly { value: BoardWindow; label: string }[];
-
-export const FAST_HORSE_INTERVALS = [
-	{ value: '0', seconds: 0, label: 'Off' },
-	{ value: '15', seconds: 15, label: 'Every 15 seconds' },
-	{ value: '30', seconds: 30, label: 'Every 30 seconds' },
-	{ value: '45', seconds: 45, label: 'Every 45 seconds' },
-	{ value: '60', seconds: 60, label: 'Every 1 minute' },
-	{ value: '120', seconds: 120, label: 'Every 2 minutes' },
-	{ value: '180', seconds: 180, label: 'Every 3 minutes' }
-] as const;
 
 export const SLOW_HORSE_INTERVALS = [
 	{ value: '0', seconds: 0, label: 'Off' },
@@ -418,7 +407,10 @@ function asUser(value: unknown): PriceWatchUser | null {
 		telegram_id: String(telegramId),
 		username: typeof value.username === 'string' ? value.username : null,
 		first_name: typeof value.first_name === 'string' ? value.first_name : null,
-		movers_alert_every: alertSeconds(value.movers_alert_every, MOVERS_ALERT_SECONDS),
+		movers_alert_every: alertSeconds(
+			value.movers_alert_every,
+			MOVERS_SEND_OPTIONS.map((item) => item.seconds)
+		),
 		board_alert_every: alertSeconds(value.board_alert_every, BOARD_ALERT_SECONDS),
 		board_alert_window: asBoardWindow(value.board_alert_window),
 		movers_alert_last_sent: asTimestamp(value.movers_alert_last_sent),
@@ -695,26 +687,10 @@ function tokenAddressFrom(value: Record<string, unknown>): string | null {
 	return null;
 }
 
-function quoteSymbolFrom(value: Record<string, unknown>, symbol: string, name: string): string {
-	for (const key of ['quote_symbol', 'token1_symbol', 'quote']) {
-		const text = asText(value[key]).trim();
-		if (text) return text;
-	}
-	const parts = name
-		.split(/\s*\/\s*/)
-		.map((part) => part.trim())
-		.filter(Boolean);
-	if (parts.length < 2) return '';
-	const quote = parts[parts.length - 1];
-	if (!quote || quote.toLowerCase() === symbol.trim().toLowerCase()) return '';
-	return quote;
-}
-
 function asRanking(value: unknown, index: number): RankingRow | null {
 	if (!isRecord(value)) return null;
 	const symbol = asText(value.symbol).trim();
 	const name = asText(value.name).trim();
-	if (!symbol || !name) return null;
 	const rank = asNumberOrNull(value.rank);
 	const pairAddress = asText(value.pair_address);
 	const floor = value.meets_liquidity_floor;
@@ -723,7 +699,7 @@ function asRanking(value: unknown, index: number): RankingRow | null {
 		rank: rank === null ? null : rank,
 		symbol,
 		name,
-		quote_symbol: quoteSymbolFrom(value, symbol, name),
+		quote_symbol: asText(value.quote_symbol).trim(),
 		price_change_pct: asNumberOrNull(value.price_change_pct),
 		price_usd: asText(value.price_usd),
 		liquidity_usd: asText(value.liquidity_usd),
@@ -755,25 +731,12 @@ export async function getBestBoard(): Promise<RankingRow[]> {
 		.slice(0, 10);
 }
 
-const MIN_GAIN_PCT = 1;
-const MIN_LIQUIDITY_USD = 1000;
 const TOP_POOLS = 10;
 
-/** Pools up at least 1 percent, with at least $1,000 liquidity. A missing change is left off. */
-export function topGainers(rows: RankingRow[]): RankingRow[] {
+function topTen(rows: RankingRow[]): RankingRow[] {
 	return rows
-		.filter((row) => {
-			const change = row.price_change_pct;
-			if (change === null || !Number.isFinite(change) || change < MIN_GAIN_PCT) return false;
-			if (row.meets_liquidity_floor === false) return false;
-			if (!row.liquidity_usd.trim()) return false;
-			const liquidity = Number(row.liquidity_usd);
-			return Number.isFinite(liquidity) && liquidity >= MIN_LIQUIDITY_USD;
-		})
+		.slice()
 		.sort((left, right) => {
-			const leftChange = left.price_change_pct ?? 0;
-			const rightChange = right.price_change_pct ?? 0;
-			if (rightChange !== leftChange) return rightChange - leftChange;
 			if (left.rank === null && right.rank === null) return 0;
 			if (left.rank === null) return 1;
 			if (right.rank === null) return -1;
@@ -782,16 +745,14 @@ export function topGainers(rows: RankingRow[]): RankingRow[] {
 		.slice(0, TOP_POOLS);
 }
 
-/** Fast movers. Window 10 is the same list when the movers window has no rows. */
+/** GET /rankings?window=movers. An API error is returned to that list. */
 export async function getFastHorses(): Promise<RankingRow[]> {
-	const movers = await getRankings('movers');
-	const rows = movers.length > 0 ? movers : await getRankings('10');
-	return topGainers(rows);
+	return topTen(await getRankings('movers'));
 }
 
-/** Stable board for one saved time frame. The window value is board_alert_window. */
+/** GET /rankings?window= for 15m, 30m, 1h, 6h, 12h, or 24h. */
 export async function getSlowHorses(window: BoardWindow): Promise<RankingRow[]> {
-	return topGainers(await getRankings(window));
+	return topTen(await getRankings(window));
 }
 
 export type ScheduleSave = {
@@ -836,7 +797,7 @@ export function mergeScheduleUser(
 
 /** Writes movers_alert_every only. It does not send board fields or last-sent fields. */
 export async function saveMoversAlertEvery(token: string, seconds: number): Promise<ScheduleSave> {
-	if (!MOVERS_ALERT_SECONDS.includes(seconds as (typeof MOVERS_ALERT_SECONDS)[number])) {
+	if (!isMoversSendSeconds(seconds)) {
 		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
 	}
 	const json = await request('/me', 'PATCH', token, { movers_alert_every: seconds });

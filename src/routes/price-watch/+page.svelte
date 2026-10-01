@@ -14,7 +14,6 @@
 		DOWN_THRESHOLD_HINT,
 		emptyThresholds,
 		BOARD_WINDOW_CHOICES,
-		FAST_HORSE_INTERVALS,
 		SLOW_HORSE_INTERVALS,
 		getChains,
 		getFastHorses,
@@ -48,6 +47,7 @@
 		type TelegramWidgetAuth,
 		type ThresholdKey
 	} from '$lib/priceWatchApi';
+	import { MOVERS_SEND_OPTIONS } from '$lib/price-watch-types';
 
 	let { data } = $props();
 
@@ -113,7 +113,8 @@
 	let listStatus = $state('');
 
 	let watchlistOpen = $state(false);
-	let horseList = $state<'fast' | 'slow'>('fast');
+	let fastOpen = $state(true);
+	let slowOpen = $state(false);
 	let fastRows = $state<RankingRow[] | null>(null);
 	let slowRows = $state<RankingRow[] | null>(null);
 	let fastError = $state('');
@@ -124,7 +125,8 @@
 	let draftReturnId = 'search-heading';
 	let fastSeq = 0;
 	let slowSeq = 0;
-	let horseTimer: ReturnType<typeof setInterval> | null = null;
+	let fastTimer: ReturnType<typeof setInterval> | null = null;
+	let slowTimer: ReturnType<typeof setInterval> | null = null;
 	let fastEvery = $state('0');
 	let slowEvery = $state('0');
 	let boardWindow = $state<BoardWindow>('15m');
@@ -349,16 +351,16 @@
 		const symbol = row.symbol.trim();
 		const quote = row.quote_symbol.trim();
 		if (symbol && quote) return `${symbol}/${quote}`;
-		const name = row.name.trim();
-		if (name.includes('/')) return name.replace(/\s*\/\s*/g, '/');
-		return name || symbol;
+		if (symbol) return symbol;
+		return row.name.trim();
 	}
 
-	function gainSentence(value: number | null, frame: string): string {
-		if (value === null || !Number.isFinite(value) || value < 1) return '';
+	function gainText(value: number | null, frame: string): string {
+		if (value === null || !Number.isFinite(value)) {
+			return frame ? `Gain: not available ${frame}.` : 'Gain: not available.';
+		}
 		const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
-		if (!amount || amount === '0') return '';
-		return `Up ${amount}% ${frame}.`;
+		return frame ? `Gain: ${amount}% ${frame}.` : `Gain: ${amount}%.`;
 	}
 
 	function horseItemId(list: 'fast' | 'slow', row: RankingRow, index: number): string {
@@ -367,7 +369,7 @@
 	}
 
 	function fastAnnouncement(seconds: number): string {
-		const choice = FAST_HORSE_INTERVALS.find((item) => item.seconds === seconds);
+		const choice = MOVERS_SEND_OPTIONS.find((item) => item.seconds === seconds);
 		if (!choice || seconds === 0) return 'Fast Horses set to off.';
 		const phrase = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
 		return `Fast Horses set to ${phrase}.`;
@@ -392,7 +394,7 @@
 	}
 
 	function showHorseSchedule(next: PriceWatchUser) {
-		fastEvery = FAST_HORSE_INTERVALS.some((item) => item.seconds === next.movers_alert_every)
+		fastEvery = MOVERS_SEND_OPTIONS.some((item) => item.seconds === next.movers_alert_every)
 			? String(next.movers_alert_every)
 			: '0';
 		slowEvery = SLOW_HORSE_INTERVALS.some((item) => item.seconds === next.board_alert_every)
@@ -444,7 +446,7 @@
 		signInError = message;
 		const previousWindow = boardWindow;
 		clearHorseSchedule();
-		if (previousWindow !== '15m') void loadSlow('15m', true);
+		if (slowOpen && previousWindow !== '15m') void loadSlow('15m', true);
 	}
 
 	function clearWidget() {
@@ -494,20 +496,22 @@
 	}
 
 	async function loadFast() {
+		if (!fastOpen) return;
 		const seq = ++fastSeq;
 		try {
 			const rows = await getFastHorses();
-			if (seq !== fastSeq) return;
+			if (seq !== fastSeq || !fastOpen) return;
 			fastRows = rows;
 			fastError = '';
 			fastUpdated = clockText(new Date());
 		} catch (error) {
-			if (seq !== fastSeq) return;
+			if (seq !== fastSeq || !fastOpen) return;
 			fastError = publicErrorMessage(error, null);
 		}
 	}
 
 	async function loadSlow(window: BoardWindow = boardWindow, reset = false) {
+		if (!slowOpen) return;
 		const seq = ++slowSeq;
 		if (reset) {
 			slowRows = null;
@@ -515,31 +519,65 @@
 		}
 		try {
 			const rows = await getSlowHorses(window);
-			if (seq !== slowSeq || window !== boardWindow) return;
+			if (seq !== slowSeq || window !== boardWindow || !slowOpen) return;
 			slowRows = rows;
 			slowShownWindow = window;
 			slowError = '';
 			slowUpdated = clockText(new Date());
 		} catch (error) {
-			if (seq !== slowSeq || window !== boardWindow) return;
+			if (seq !== slowSeq || window !== boardWindow || !slowOpen) return;
 			slowError = publicErrorMessage(error, null);
 		}
 	}
 
-	function startHorseRefresh() {
-		if (horseTimer) clearInterval(horseTimer);
-		horseTimer = setInterval(() => {
+	function stopFastRefresh() {
+		fastSeq += 1;
+		if (fastTimer) clearInterval(fastTimer);
+		fastTimer = null;
+	}
+
+	function stopSlowRefresh() {
+		slowSeq += 1;
+		if (slowTimer) clearInterval(slowTimer);
+		slowTimer = null;
+	}
+
+	function startFastRefresh() {
+		stopFastRefresh();
+		const first = loadFast();
+		fastTimer = setInterval(() => {
 			void loadFast();
+		}, HORSE_REFRESH_MS);
+		return first;
+	}
+
+	function startSlowRefresh() {
+		stopSlowRefresh();
+		const first = loadSlow();
+		slowTimer = setInterval(() => {
 			void loadSlow();
 		}, HORSE_REFRESH_MS);
+		return first;
 	}
 
-	function showFastHorses() {
-		horseList = 'fast';
+	function toggleFastHorses() {
+		if (fastOpen) {
+			fastOpen = false;
+			stopFastRefresh();
+			return;
+		}
+		fastOpen = true;
+		void startFastRefresh();
 	}
 
-	function showSlowHorses() {
-		horseList = 'slow';
+	function toggleSlowHorses() {
+		if (slowOpen) {
+			slowOpen = false;
+			stopSlowRefresh();
+			return;
+		}
+		slowOpen = true;
+		void startSlowRefresh();
 	}
 
 	function chooseSlowWindow(event: Event) {
@@ -583,7 +621,10 @@
 			selectedChainIds = me.chains.map((chain) => chain.chain_id);
 			showHorseSchedule(me.user);
 			await loadWatches();
-			if (me.user.board_alert_window !== previousWindow || slowRows === null) {
+			if (
+				slowOpen &&
+				(me.user.board_alert_window !== previousWindow || slowRows === null)
+			) {
 				await loadSlow(me.user.board_alert_window, me.user.board_alert_window !== previousWindow);
 			}
 		} catch (error) {
@@ -606,15 +647,13 @@
 			return;
 		}
 		health = 'up';
-		startHorseRefresh();
 		const stored = readStoredToken();
-		const jobs: Promise<void>[] = [loadChains(), loadFast()];
+		const jobs: Promise<void>[] = [loadChains()];
+		if (fastOpen) jobs.push(startFastRefresh());
 		if (stored) {
 			restoring = true;
 			token = stored;
 			jobs.push(loadAccount());
-		} else {
-			jobs.push(loadSlow());
 		}
 		await Promise.all(jobs);
 		restoring = false;
@@ -702,7 +741,7 @@
 		watchError = '';
 		const previousWindow = boardWindow;
 		clearHorseSchedule();
-		if (previousWindow !== '15m') void loadSlow('15m', true);
+		if (slowOpen && previousWindow !== '15m') void loadSlow('15m', true);
 		await tick();
 		await syncWidget();
 		await focusId('sign-in-heading');
@@ -888,17 +927,18 @@
 	}
 
 	function watchRanking(row: RankingRow, list: 'fast' | 'slow', index: number) {
-		const title = pairTitle(row);
+		const sides = symbolsFromText(row.name, row.symbol);
+		const quote = row.quote_symbol.trim() || sides.quoteSymbol;
 		draftReturnId = horseItemId(list, row, index);
 		draft = {
 			id: null,
 			chainId: watchChainId(),
 			pairAddress: row.pair_address,
 			tokenAddress: row.token_address,
-			name: title,
-			symbol: row.symbol,
-			baseSymbol: row.symbol,
-			quoteSymbol: row.quote_symbol
+			name: row.name.trim() || pairTitle(row),
+			symbol: row.symbol.trim() || sides.symbol,
+			baseSymbol: row.symbol.trim() || sides.symbol,
+			quoteSymbol: quote
 		};
 		thresholdValues = emptyThresholds();
 		thresholdErrors = {};
@@ -1087,7 +1127,7 @@
 		event.preventDefault();
 		fastSaveError = '';
 		fastSaveStatus = '';
-		const choice = FAST_HORSE_INTERVALS.find((item) => item.value === fastEvery);
+		const choice = MOVERS_SEND_OPTIONS.find((item) => item.value === fastEvery);
 		if (!choice) {
 			fastSaveError = 'Choose a schedule from the list.';
 			await focusId('fast-horses-save-error');
@@ -1098,12 +1138,16 @@
 			await focusId('fast-horses-save-error');
 			return;
 		}
+		const current = user;
 		savingFast = true;
 		try {
 			const saved = await saveMoversAlertEvery(token, choice.seconds);
-			user = mergeScheduleUser(user, saved.user, saved.record);
-			showHorseSchedule(user);
-			fastSaveStatus = fastAnnouncement(user.movers_alert_every);
+			const nextUser = mergeScheduleUser(current, saved.user, saved.record);
+			user = nextUser;
+			fastEvery = MOVERS_SEND_OPTIONS.some((item) => item.seconds === nextUser.movers_alert_every)
+				? String(nextUser.movers_alert_every)
+				: '0';
+			fastSaveStatus = fastAnnouncement(nextUser.movers_alert_every);
 			await focusId('fast-horses-save-status');
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
@@ -1139,14 +1183,19 @@
 			await focusId('slow-horses-save-error');
 			return;
 		}
+		const current = user;
 		savingSlow = true;
 		try {
 			const saved = await saveBoardAlert(token, boardWindow, choice.seconds);
-			user = mergeScheduleUser(user, saved.user, saved.record);
-			const windowChanged = slowShownWindow !== user.board_alert_window;
-			showHorseSchedule(user);
-			if (windowChanged) await loadSlow(user.board_alert_window, true);
-			slowSaveStatus = slowAnnouncement(user.board_alert_window, user.board_alert_every);
+			const nextUser = mergeScheduleUser(current, saved.user, saved.record);
+			user = nextUser;
+			const windowChanged = slowShownWindow !== nextUser.board_alert_window;
+			slowEvery = SLOW_HORSE_INTERVALS.some((item) => item.seconds === nextUser.board_alert_every)
+				? String(nextUser.board_alert_every)
+				: '0';
+			boardWindow = nextUser.board_alert_window;
+			if (slowOpen && windowChanged) await loadSlow(nextUser.board_alert_window, true);
+			slowSaveStatus = slowAnnouncement(nextUser.board_alert_window, nextUser.board_alert_every);
 			await focusId('slow-horses-save-status');
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
@@ -1168,8 +1217,8 @@
 			await syncWidget();
 		})();
 		return () => {
-			if (horseTimer) clearInterval(horseTimer);
-			horseTimer = null;
+			stopFastRefresh();
+			stopSlowRefresh();
 			clearWidget();
 			if (toastTimer) clearTimeout(toastTimer);
 		};
@@ -1587,61 +1636,62 @@
 					type="button"
 					id="fast-horses-button"
 					class="horse-toggle"
-					aria-pressed={horseList === 'fast' ? 'true' : 'false'}
-					aria-controls="fast-horses-panel"
-					onclick={showFastHorses}
+					aria-pressed={fastOpen ? 'true' : 'false'}
+					aria-controls={fastOpen ? 'fast-horses-panel' : undefined}
+					onclick={toggleFastHorses}
 				>
-					Fast Horses{#if horseList === 'fast'}<span> (selected)</span>{/if}
+					Fast Horses{#if fastOpen}<span> (selected)</span>{/if}
 				</button>
 				<button
 					type="button"
 					id="slow-horses-button"
 					class="horse-toggle"
-					aria-pressed={horseList === 'slow' ? 'true' : 'false'}
-					aria-controls="slow-horses-panel"
-					onclick={showSlowHorses}
+					aria-pressed={slowOpen ? 'true' : 'false'}
+					aria-controls={slowOpen ? 'slow-horses-panel' : undefined}
+					onclick={toggleSlowHorses}
 				>
-					Slow Horses{#if horseList === 'slow'}<span> (selected)</span>{/if}
+					Slow Horses{#if slowOpen}<span> (selected)</span>{/if}
 				</button>
 			</div>
 
+			{#if fastOpen}
 			<div
 				id="fast-horses-panel"
 				class="horse-panel"
 				role="region"
 				aria-labelledby="fast-horses-heading"
-				hidden={horseList !== 'fast'}
 			>
 				<h3 id="fast-horses-heading">Fast Horses</h3>
 				<p>
-					The top 10 pools up at least 1 percent in about the last 15 to 30 seconds, with at least
-					$1,000 of liquidity.
+					Fast Horses are tokens that move quickly. They go up and down, and a token is often on
+					this list for only a short time. Choose how often to send this list to your Telegram.
 				</p>
 				{#if fastError}
 					<p id="fast-horses-error" role="alert" tabindex="-1">{fastError}</p>
-				{/if}
-				{#if fastRows === null && !fastError}
+				{:else if fastRows === null}
 					<p role="status">Loading Fast Horses.</p>
-				{:else if fastRows && fastRows.length === 0}
-					<p>No pool has cleared a 1 percent gain in the last 15 to 30 seconds.</p>
-				{:else if fastRows}
+				{:else if fastRows.length === 0}
+					<p>No tokens are on this list right now.</p>
+				{:else}
 					<ol class="horse-list">
 						{#each fastRows as row, index (`fast:${row.pair_address || row.id}:${index}`)}
-							{@const gain = gainSentence(row.price_change_pct, 'in the last 15 to 30 seconds')}
-							{#if gain}
-								<li class="wrap">
-									<p id={horseItemId('fast', row, index)} tabindex="-1">Rank: {index + 1}</p>
-									<p>{pairTitle(row)}</p>
-									<p>{gain}</p>
-									<p>USD price: {usdText(row.price_usd)}</p>
-									<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
-									{#if row.pair_address}
-										<button type="button" onclick={() => watchRanking(row, 'fast', index)}>
-											Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
-										</button>
-									{/if}
-								</li>
-							{/if}
+							<li class="wrap">
+								<p id={horseItemId('fast', row, index)} tabindex="-1">
+									Rank: {row.rank ?? index + 1}
+								</p>
+								<p>{pairTitle(row)}</p>
+								{#if row.name.trim() && row.name.trim() !== pairTitle(row)}
+									<p>Name: {row.name.trim()}</p>
+								{/if}
+								<p>{gainText(row.price_change_pct, '')}</p>
+								<p>USD price: {usdText(row.price_usd)}</p>
+								<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
+								{#if row.pair_address}
+									<button type="button" onclick={() => watchRanking(row, 'fast', index)}>
+										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
+									</button>
+								{/if}
+							</li>
 						{/each}
 					</ol>
 				{/if}
@@ -1658,14 +1708,11 @@
 					<div class="field">
 						<label for="fast-horses-every">How often to send Fast Horses on Telegram</label>
 						<select id="fast-horses-every" bind:value={fastEvery} aria-describedby="fast-horses-hint">
-							{#each FAST_HORSE_INTERVALS as choice (choice.value)}
+							{#each MOVERS_SEND_OPTIONS as choice (choice.value)}
 								<option value={choice.value}>{choice.label}</option>
 							{/each}
 						</select>
-						<p id="fast-horses-hint">
-							This list refreshes every 15 seconds. Saving does not send Telegram. The bot sends
-							the list.
-						</p>
+						<p id="fast-horses-hint">Saving does not send Telegram. The bot sends the list.</p>
 					</div>
 					{#if fastSaveError}
 						<p id="fast-horses-save-error" role="alert" tabindex="-1">{fastSaveError}</p>
@@ -1676,18 +1723,19 @@
 					<button type="submit" disabled={savingFast}>Save</button>
 				</form>
 			</div>
+			{/if}
 
+			{#if slowOpen}
 			<div
 				id="slow-horses-panel"
 				class="horse-panel"
 				role="region"
 				aria-labelledby="slow-horses-heading"
-				hidden={horseList !== 'slow'}
 			>
 				<h3 id="slow-horses-heading">Slow Horses</h3>
 				<p>
-					The top 10 pools up at least 1 percent over this time frame, with at least $1,000 of
-					liquidity. A pool with no saved price that old is left off.
+					Slow Horses are tokens that move more slowly and tend to stay on the list longer. Choose
+					how far back to look, then choose how often to send that list to your Telegram.
 				</p>
 				<div class="field">
 					<label for="slow-horses-window">Slow Horses time frame</label>
@@ -1699,29 +1747,30 @@
 				</div>
 				{#if slowError}
 					<p id="slow-horses-error" role="alert" tabindex="-1">{slowError}</p>
-				{/if}
-				{#if slowRows === null && !slowError}
+				{:else if slowRows === null}
 					<p role="status">Loading Slow Horses.</p>
-				{:else if slowRows && slowRows.length === 0}
-					<p>No pool has cleared a 1 percent gain for this time frame.</p>
-				{:else if slowRows}
+				{:else if slowRows.length === 0}
+					<p>No tokens are on this list right now.</p>
+				{:else}
 					<ol class="horse-list">
 						{#each slowRows as row, index (`slow:${row.pair_address || row.id}:${index}`)}
-							{@const gain = gainSentence(row.price_change_pct, `in ${windowLabel(slowShownWindow)}`)}
-							{#if gain}
-								<li class="wrap">
-									<p id={horseItemId('slow', row, index)} tabindex="-1">Rank: {index + 1}</p>
-									<p>{pairTitle(row)}</p>
-									<p>{gain}</p>
-									<p>USD price: {usdText(row.price_usd)}</p>
-									<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
-									{#if row.pair_address}
-										<button type="button" onclick={() => watchRanking(row, 'slow', index)}>
-											Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
-										</button>
-									{/if}
-								</li>
-							{/if}
+							<li class="wrap">
+								<p id={horseItemId('slow', row, index)} tabindex="-1">
+									Rank: {row.rank ?? index + 1}
+								</p>
+								<p>{pairTitle(row)}</p>
+								{#if row.name.trim() && row.name.trim() !== pairTitle(row)}
+									<p>Name: {row.name.trim()}</p>
+								{/if}
+								<p>{gainText(row.price_change_pct, `in ${windowLabel(slowShownWindow)}`)}</p>
+								<p>USD price: {usdText(row.price_usd)}</p>
+								<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
+								{#if row.pair_address}
+									<button type="button" onclick={() => watchRanking(row, 'slow', index)}>
+										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
+									</button>
+								{/if}
+							</li>
 						{/each}
 					</ol>
 				{/if}
@@ -1756,6 +1805,7 @@
 					<button type="submit" disabled={savingSlow}>Save</button>
 				</form>
 			</div>
+			{/if}
 		</section>
 	{/if}
 
