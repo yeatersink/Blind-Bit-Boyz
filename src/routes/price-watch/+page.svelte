@@ -13,17 +13,23 @@
 		deleteWatch,
 		DOWN_THRESHOLD_HINT,
 		emptyThresholds,
+		BOARD_WINDOW_CHOICES,
+		FAST_HORSE_INTERVALS,
+		SLOW_HORSE_INTERVALS,
 		getChains,
+		getFastHorses,
 		getMe,
-		getBestBoard,
+		getSlowHorses,
+		isBoardWindow,
 		isDownThreshold,
 		listWatches,
+		mergeScheduleUser,
 		parseThresholds,
 		publicErrorMessage,
-		MESSAGE_TIMER_CHOICES,
 		readStoredToken,
-		saveBestAlertEvery,
+		saveBoardAlert,
 		saveChains,
+		saveMoversAlertEvery,
 		searchPairs,
 		signInWithTelegramId,
 		signInWithTelegramWidget,
@@ -32,12 +38,13 @@
 		thresholdInputValue,
 		updateWatch,
 		watchesBySymbol,
+		type BoardWindow,
 		type PairResult,
 		type PriceWatchChain,
-		type SearchTokenResult,
-		type RankingRow,
 		type PriceWatchUser,
+		type RankingRow,
 		type SavedWatch,
+		type SearchTokenResult,
 		type TelegramWidgetAuth,
 		type ThresholdKey
 	} from '$lib/priceWatchApi';
@@ -57,7 +64,7 @@
 	};
 	type PendingRemove = { id: string; name: string; source: 'form' | 'list'; triggerId: string };
 
-	const BEST_REFRESH_MS = 15_000;
+	const HORSE_REFRESH_MS = 15_000;
 
 	let health = $state<Health>('checking');
 	let restoring = $state(false);
@@ -106,18 +113,27 @@
 	let listStatus = $state('');
 
 	let watchlistOpen = $state(false);
-	let performanceOpen = $state(false);
-	let bestRows = $state<RankingRow[] | null>(null);
-	let bestError = $state('');
-	let bestUpdated = $state('');
-	let copyStatus = $state('');
+	let horseList = $state<'fast' | 'slow'>('fast');
+	let fastRows = $state<RankingRow[] | null>(null);
+	let slowRows = $state<RankingRow[] | null>(null);
+	let fastError = $state('');
+	let slowError = $state('');
+	let fastUpdated = $state('');
+	let slowUpdated = $state('');
+	let slowShownWindow = $state<BoardWindow>('15m');
 	let draftReturnId = 'search-heading';
-	let bestSeq = 0;
-	let bestTimer: ReturnType<typeof setInterval> | null = null;
-	let messageInterval = $state('');
-	let messageTimerError = $state('');
-	let messageTimerStatus = $state('');
-	let savingMessageTimer = $state(false);
+	let fastSeq = 0;
+	let slowSeq = 0;
+	let horseTimer: ReturnType<typeof setInterval> | null = null;
+	let fastEvery = $state('0');
+	let slowEvery = $state('0');
+	let boardWindow = $state<BoardWindow>('15m');
+	let fastSaveError = $state('');
+	let slowSaveError = $state('');
+	let fastSaveStatus = $state('');
+	let slowSaveStatus = $state('');
+	let savingFast = $state(false);
+	let savingSlow = $state(false);
 
 	let widgetCleanup: (() => void) | null = null;
 
@@ -308,29 +324,6 @@
 		return formatCryptoPrice(numeric);
 	}
 
-	function changeText(value: number | null): string {
-		if (value === null || !Number.isFinite(value)) return 'n/a';
-		const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(
-			Math.abs(value)
-		);
-		if (value < 0) return `down ${amount}%`;
-		if (value > 0) return `up ${amount}%`;
-		return '0%';
-	}
-
-	function passesLiquidityFloor(row: RankingRow): boolean {
-		if (row.meets_liquidity_floor === false) return false;
-		if (!row.liquidity_usd.trim()) return row.meets_liquidity_floor !== false;
-		const liquidity = Number(row.liquidity_usd);
-		if (!Number.isFinite(liquidity)) return false;
-		return liquidity >= 1000;
-	}
-
-	function rankingHeadingId(row: RankingRow): string {
-		const key = (row.pair_address || row.id).replace(/[^a-zA-Z0-9_-]/g, '');
-		return `performance-${key || 'row'}`;
-	}
-
 	function clockText(date: Date): string {
 		return new Intl.DateTimeFormat('en-US', {
 			hour: 'numeric',
@@ -339,16 +332,85 @@
 		}).format(date);
 	}
 
-	function showBestAlert(seconds: number) {
-		const value = seconds > 0 ? String(seconds) : '';
-		messageInterval = MESSAGE_TIMER_CHOICES.some((item) => item.value === value) ? value : '';
-		messageTimerError = '';
+	function sentText(value: string): string {
+		const time = Date.parse(value);
+		if (!Number.isFinite(time)) return value;
+		return new Intl.DateTimeFormat('en-US', {
+			dateStyle: 'medium',
+			timeStyle: 'short'
+		}).format(time);
 	}
 
-	function clearMessageTimerView() {
-		messageInterval = '';
-		messageTimerError = '';
-		messageTimerStatus = '';
+	function windowLabel(value: BoardWindow): string {
+		return BOARD_WINDOW_CHOICES.find((item) => item.value === value)?.label ?? '15 minutes';
+	}
+
+	function pairTitle(row: RankingRow): string {
+		const symbol = row.symbol.trim();
+		const quote = row.quote_symbol.trim();
+		if (symbol && quote) return `${symbol}/${quote}`;
+		const name = row.name.trim();
+		if (name.includes('/')) return name.replace(/\s*\/\s*/g, '/');
+		return name || symbol;
+	}
+
+	function gainSentence(value: number | null, frame: string): string {
+		if (value === null || !Number.isFinite(value) || value < 1) return '';
+		const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+		if (!amount || amount === '0') return '';
+		return `Up ${amount}% ${frame}.`;
+	}
+
+	function horseItemId(list: 'fast' | 'slow', row: RankingRow, index: number): string {
+		const key = (row.pair_address || row.id).replace(/[^a-zA-Z0-9_-]/g, '');
+		return `${list}-horse-${key || 'row'}-${index}`;
+	}
+
+	function fastAnnouncement(seconds: number): string {
+		const choice = FAST_HORSE_INTERVALS.find((item) => item.seconds === seconds);
+		if (!choice || seconds === 0) return 'Fast Horses set to off.';
+		const phrase = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
+		return `Fast Horses set to ${phrase}.`;
+	}
+
+	function slowAnnouncement(window: BoardWindow, seconds: number): string {
+		const label = windowLabel(window);
+		const choice = SLOW_HORSE_INTERVALS.find((item) => item.seconds === seconds);
+		if (!choice || seconds === 0) return `Slow Horses set to the ${label} list, sending off.`;
+		const phrase = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
+		return `Slow Horses set to the ${label} list, sent ${phrase}.`;
+	}
+
+	function nextDueText(lastSent: string | null, everySeconds: number, name: string): string {
+		if (everySeconds <= 0) return `No ${name} message is scheduled.`;
+		if (!lastSent) return `The next ${name} message is due on the bot's next check.`;
+		const last = Date.parse(lastSent);
+		if (!Number.isFinite(last)) return `The next ${name} message is due on the bot's next check.`;
+		const due = last + everySeconds * 1000;
+		if (due <= Date.now()) return `The next ${name} message is due now.`;
+		return `The next ${name} message is due ${sentText(new Date(due).toISOString())}.`;
+	}
+
+	function showHorseSchedule(next: PriceWatchUser) {
+		fastEvery = FAST_HORSE_INTERVALS.some((item) => item.seconds === next.movers_alert_every)
+			? String(next.movers_alert_every)
+			: '0';
+		slowEvery = SLOW_HORSE_INTERVALS.some((item) => item.seconds === next.board_alert_every)
+			? String(next.board_alert_every)
+			: '0';
+		boardWindow = next.board_alert_window;
+		fastSaveError = '';
+		slowSaveError = '';
+	}
+
+	function clearHorseSchedule() {
+		fastEvery = '0';
+		slowEvery = '0';
+		boardWindow = '15m';
+		fastSaveError = '';
+		slowSaveError = '';
+		fastSaveStatus = '';
+		slowSaveStatus = '';
 	}
 
 	function setLimits(watch: SavedWatch): { label: string; value: string }[] {
@@ -380,7 +442,9 @@
 		accountNote = '';
 		restoring = false;
 		signInError = message;
-		clearMessageTimerView();
+		const previousWindow = boardWindow;
+		clearHorseSchedule();
+		if (previousWindow !== '15m') void loadSlow('15m', true);
 	}
 
 	function clearWidget() {
@@ -429,25 +493,61 @@
 		}
 	}
 
-	async function loadBest() {
-		const seq = ++bestSeq;
+	async function loadFast() {
+		const seq = ++fastSeq;
 		try {
-			const rows = (await getBestBoard()).filter(passesLiquidityFloor);
-			if (seq !== bestSeq) return;
-			bestRows = rows;
-			bestError = '';
-			bestUpdated = clockText(new Date());
-		} catch {
-			if (seq !== bestSeq) return;
-			bestError = 'The best performing list could not be loaded.';
+			const rows = await getFastHorses();
+			if (seq !== fastSeq) return;
+			fastRows = rows;
+			fastError = '';
+			fastUpdated = clockText(new Date());
+		} catch (error) {
+			if (seq !== fastSeq) return;
+			fastError = publicErrorMessage(error, null);
 		}
 	}
 
-	function startBestRefresh() {
-		if (bestTimer) clearInterval(bestTimer);
-		bestTimer = setInterval(() => {
-			void loadBest();
-		}, BEST_REFRESH_MS);
+	async function loadSlow(window: BoardWindow = boardWindow, reset = false) {
+		const seq = ++slowSeq;
+		if (reset) {
+			slowRows = null;
+			slowError = '';
+		}
+		try {
+			const rows = await getSlowHorses(window);
+			if (seq !== slowSeq || window !== boardWindow) return;
+			slowRows = rows;
+			slowShownWindow = window;
+			slowError = '';
+			slowUpdated = clockText(new Date());
+		} catch (error) {
+			if (seq !== slowSeq || window !== boardWindow) return;
+			slowError = publicErrorMessage(error, null);
+		}
+	}
+
+	function startHorseRefresh() {
+		if (horseTimer) clearInterval(horseTimer);
+		horseTimer = setInterval(() => {
+			void loadFast();
+			void loadSlow();
+		}, HORSE_REFRESH_MS);
+	}
+
+	function showFastHorses() {
+		horseList = 'fast';
+	}
+
+	function showSlowHorses() {
+		horseList = 'slow';
+	}
+
+	function chooseSlowWindow(event: Event) {
+		const select = event.currentTarget;
+		if (!(select instanceof HTMLSelectElement) || !isBoardWindow(select.value)) return;
+		boardWindow = select.value;
+		if (select.value === slowShownWindow && slowRows !== null) return;
+		void loadSlow(select.value, true);
 	}
 
 	async function loadWatches() {
@@ -478,10 +578,14 @@
 		accountError = '';
 		try {
 			const me = await getMe(token);
+			const previousWindow = boardWindow;
 			user = me.user;
 			selectedChainIds = me.chains.map((chain) => chain.chain_id);
-			showBestAlert(me.user.best_alert_every);
+			showHorseSchedule(me.user);
 			await loadWatches();
+			if (me.user.board_alert_window !== previousWindow || slowRows === null) {
+				await loadSlow(me.user.board_alert_window, me.user.board_alert_window !== previousWindow);
+			}
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
@@ -502,13 +606,17 @@
 			return;
 		}
 		health = 'up';
-		startBestRefresh();
-		await Promise.all([loadChains(), loadBest()]);
+		startHorseRefresh();
 		const stored = readStoredToken();
-		if (!stored) return;
-		restoring = true;
-		token = stored;
-		await loadAccount();
+		const jobs: Promise<void>[] = [loadChains(), loadFast()];
+		if (stored) {
+			restoring = true;
+			token = stored;
+			jobs.push(loadAccount());
+		} else {
+			jobs.push(loadSlow());
+		}
+		await Promise.all(jobs);
 		restoring = false;
 	}
 
@@ -592,7 +700,9 @@
 		listStatus = '';
 		watchStatus = '';
 		watchError = '';
-		clearMessageTimerView();
+		const previousWindow = boardWindow;
+		clearHorseSchedule();
+		if (previousWindow !== '15m') void loadSlow('15m', true);
 		await tick();
 		await syncWidget();
 		await focusId('sign-in-heading');
@@ -777,17 +887,18 @@
 		void focusId(id ? `watch-${id}` : returnId);
 	}
 
-	function watchRanking(row: RankingRow) {
-		draftReturnId = rankingHeadingId(row);
+	function watchRanking(row: RankingRow, list: 'fast' | 'slow', index: number) {
+		const title = pairTitle(row);
+		draftReturnId = horseItemId(list, row, index);
 		draft = {
 			id: null,
 			chainId: watchChainId(),
 			pairAddress: row.pair_address,
 			tokenAddress: row.token_address,
-			name: row.name,
+			name: title,
 			symbol: row.symbol,
 			baseSymbol: row.symbol,
-			quoteSymbol: ''
+			quoteSymbol: row.quote_symbol
 		};
 		thresholdValues = emptyThresholds();
 		thresholdErrors = {};
@@ -796,15 +907,6 @@
 		pendingRemove = null;
 		removeError = '';
 		void focusId('watch-heading');
-	}
-
-	async function copyAddress(value: string, success: string) {
-		try {
-			await navigator.clipboard.writeText(value);
-			copyStatus = success;
-		} catch {
-			copyStatus = 'Copy failed.';
-		}
 	}
 
 	function describedBy(key: ThresholdKey): string {
@@ -981,40 +1083,28 @@
 		watchlistOpen = !watchlistOpen;
 	}
 
-	function togglePerformance() {
-		performanceOpen = !performanceOpen;
-	}
-
-	async function saveMessageSchedule(event: SubmitEvent) {
+	async function saveFastSchedule(event: SubmitEvent) {
 		event.preventDefault();
-		messageTimerError = '';
-		const form = event.currentTarget;
-		const select = form instanceof HTMLFormElement ? form.elements.namedItem('message-interval') : null;
-		const value = select instanceof HTMLSelectElement ? select.value : messageInterval;
-		messageInterval = value;
-		const choice = MESSAGE_TIMER_CHOICES.find((item) => item.value === value);
+		fastSaveError = '';
+		fastSaveStatus = '';
+		const choice = FAST_HORSE_INTERVALS.find((item) => item.value === fastEvery);
 		if (!choice) {
-			messageTimerError = 'Choose a schedule from the list.';
-			await focusId('message-timer-error');
+			fastSaveError = 'Choose a schedule from the list.';
+			await focusId('fast-horses-save-error');
 			return;
 		}
 		if (!token || !user) {
-			messageTimerError = 'Sign in before you save this schedule.';
-			await focusId('message-timer-error');
+			fastSaveError = 'Sign in before you save this schedule.';
+			await focusId('fast-horses-save-error');
 			return;
 		}
-		const seconds = choice.seconds === null ? 0 : choice.seconds;
-		savingMessageTimer = true;
+		savingFast = true;
 		try {
-			const saved = await saveBestAlertEvery(token, seconds);
-			user = { ...user, best_alert_every: saved };
-			showBestAlert(saved);
-			const spoken = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
-			messageTimerStatus =
-				saved === 0
-					? 'Telegram messages for this list are off.'
-					: `Saved. Telegram will send this list ${spoken}.`;
-			await focusId('message-timer-status');
+			const saved = await saveMoversAlertEvery(token, choice.seconds);
+			user = mergeScheduleUser(user, saved.user, saved.record);
+			showHorseSchedule(user);
+			fastSaveStatus = fastAnnouncement(user.movers_alert_every);
+			await focusId('fast-horses-save-status');
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
@@ -1022,10 +1112,53 @@
 				await focusId('sign-in-heading');
 				return;
 			}
-			messageTimerError = message;
-			await focusId('message-timer-error');
+			fastSaveError = message;
+			await focusId('fast-horses-save-error');
 		} finally {
-			savingMessageTimer = false;
+			savingFast = false;
+		}
+	}
+
+	async function saveSlowSchedule(event: SubmitEvent) {
+		event.preventDefault();
+		slowSaveError = '';
+		slowSaveStatus = '';
+		if (!isBoardWindow(boardWindow)) {
+			slowSaveError = 'Choose a time frame from the list.';
+			await focusId('slow-horses-save-error');
+			return;
+		}
+		const choice = SLOW_HORSE_INTERVALS.find((item) => item.value === slowEvery);
+		if (!choice) {
+			slowSaveError = 'Choose a schedule from the list.';
+			await focusId('slow-horses-save-error');
+			return;
+		}
+		if (!token || !user) {
+			slowSaveError = 'Sign in before you save this schedule.';
+			await focusId('slow-horses-save-error');
+			return;
+		}
+		savingSlow = true;
+		try {
+			const saved = await saveBoardAlert(token, boardWindow, choice.seconds);
+			user = mergeScheduleUser(user, saved.user, saved.record);
+			const windowChanged = slowShownWindow !== user.board_alert_window;
+			showHorseSchedule(user);
+			if (windowChanged) await loadSlow(user.board_alert_window, true);
+			slowSaveStatus = slowAnnouncement(user.board_alert_window, user.board_alert_every);
+			await focusId('slow-horses-save-status');
+		} catch (error) {
+			const message = publicErrorMessage(error, token);
+			if (isLoginError(error)) {
+				dropSession(message);
+				await focusId('sign-in-heading');
+				return;
+			}
+			slowSaveError = message;
+			await focusId('slow-horses-save-error');
+		} finally {
+			savingSlow = false;
 		}
 	}
 
@@ -1035,8 +1168,8 @@
 			await syncWidget();
 		})();
 		return () => {
-			if (bestTimer) clearInterval(bestTimer);
-			bestTimer = null;
+			if (horseTimer) clearInterval(horseTimer);
+			horseTimer = null;
 			clearWidget();
 			if (toastTimer) clearTimeout(toastTimer);
 		};
@@ -1083,9 +1216,7 @@
 					<a class="story-link" href="#watches" onclick={() => (watchlistOpen = true)}>Watchlist</a>
 				</li>
 				<li>
-					<a class="story-link" href="#performance" onclick={() => (performanceOpen = true)}>
-						Best performing
-					</a>
+					<a class="story-link" href="#top-performers">Top Performers</a>
 				</li>
 			</ul>
 		</nav>
@@ -1449,104 +1580,180 @@
 			</div>
 		</section>
 
-		<section id="performance">
-			<h2 id="performance-heading">
+		<section id="top-performers" aria-labelledby="top-performers-heading">
+			<h2 id="top-performers-heading">Top Performers</h2>
+			<div class="horse-switch" role="group" aria-labelledby="top-performers-heading">
 				<button
 					type="button"
-					id="performance-button"
-					class="disclosure"
-					aria-expanded={performanceOpen}
-					aria-controls="performance-panel"
-					onclick={togglePerformance}
+					id="fast-horses-button"
+					class="horse-toggle"
+					aria-pressed={horseList === 'fast' ? 'true' : 'false'}
+					aria-controls="fast-horses-panel"
+					onclick={showFastHorses}
 				>
-					Best performing
+					Fast Horses{#if horseList === 'fast'}<span> (selected)</span>{/if}
 				</button>
-			</h2>
+				<button
+					type="button"
+					id="slow-horses-button"
+					class="horse-toggle"
+					aria-pressed={horseList === 'slow' ? 'true' : 'false'}
+					aria-controls="slow-horses-panel"
+					onclick={showSlowHorses}
+				>
+					Slow Horses{#if horseList === 'slow'}<span> (selected)</span>{/if}
+				</button>
+			</div>
+
 			<div
-				id="performance-panel"
-				class="disclosure-panel"
+				id="fast-horses-panel"
+				class="horse-panel"
 				role="region"
-				aria-labelledby="performance-button"
-				hidden={!performanceOpen}
+				aria-labelledby="fast-horses-heading"
+				hidden={horseList !== 'fast'}
 			>
+				<h3 id="fast-horses-heading">Fast Horses</h3>
 				<p>
-					The live top 10 on {currentChain ? currentChain.name : `chain ${CURRENT_CHAIN_ID}`}.
-					Pools under $1,000 of liquidity are left out.
+					The top 10 pools up at least 1 percent in about the last 15 to 30 seconds, with at least
+					$1,000 of liquidity.
 				</p>
-				<p>These results come from a high-speed private RPC. They should be fast and accurate.</p>
-				{#if bestError}
-					<p id="performance-error" role="alert" tabindex="-1">{bestError}</p>
+				{#if fastError}
+					<p id="fast-horses-error" role="alert" tabindex="-1">{fastError}</p>
 				{/if}
-				{#if bestRows === null && !bestError}
-					<p role="status">Loading the best performing pools.</p>
-				{:else if bestRows && bestRows.length === 0}
-					<p>No pools are on the board yet.</p>
-				{:else if bestRows}
-					<ul class="plain">
-						{#each bestRows as row (row.id)}
-							<li class="wrap">
-								<h3 id={rankingHeadingId(row)} tabindex="-1">{row.name} ({row.symbol})</h3>
-								<p>Rank: {row.rank === null ? 'n/a' : row.rank}</p>
-								<p>Name: {row.name}</p>
-								<p>Symbol: {row.symbol}</p>
-								<p>Price change: {changeText(row.price_change_pct)}</p>
-								<p>Price: {usdText(row.price_usd)}</p>
-								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
-								{#if row.pair_address}
-									<p class="wrap">Pair address: {row.pair_address}</p>
-									<button
-										type="button"
-										onclick={() => copyAddress(row.pair_address, 'Pair address copied.')}
-									>
-										Copy pair address<span class="sr-only">{' '}{row.name}</span>
-									</button>
-								{/if}
-								{#if row.token_address}
-									<p class="wrap">Token address: {row.token_address}</p>
-									<button
-										type="button"
-										onclick={() => copyAddress(row.token_address || '', 'Token address copied.')}
-									>
-										Copy token address<span class="sr-only">{' '}{row.name}</span>
-									</button>
-								{/if}
-								<button type="button" onclick={() => watchRanking(row)}>
-									Watch this pair<span class="sr-only">{' '}{row.name}</span>
-								</button>
-							</li>
+				{#if fastRows === null && !fastError}
+					<p role="status">Loading Fast Horses.</p>
+				{:else if fastRows && fastRows.length === 0}
+					<p>No pool has cleared a 1 percent gain in the last 15 to 30 seconds.</p>
+				{:else if fastRows}
+					<ol class="horse-list">
+						{#each fastRows as row, index (`fast:${row.pair_address || row.id}:${index}`)}
+							{@const gain = gainSentence(row.price_change_pct, 'in the last 15 to 30 seconds')}
+							{#if gain}
+								<li class="wrap">
+									<p id={horseItemId('fast', row, index)} tabindex="-1">Rank: {index + 1}</p>
+									<p>{pairTitle(row)}</p>
+									<p>{gain}</p>
+									<p>USD price: {usdText(row.price_usd)}</p>
+									<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
+									{#if row.pair_address}
+										<button type="button" onclick={() => watchRanking(row, 'fast', index)}>
+											Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
+										</button>
+									{/if}
+								</li>
+							{/if}
 						{/each}
-					</ul>
+					</ol>
 				{/if}
-				{#if bestUpdated}
-					<p role="status" aria-atomic="true">Updated {bestUpdated}.</p>
+				{#if fastUpdated}
+					<p role="status" aria-atomic="true">Updated {fastUpdated}.</p>
 				{/if}
-				{#if copyStatus}
-					<p id="copy-status" role="status" aria-atomic="true">{copyStatus}</p>
+				{#if user}
+					{#if user.movers_alert_last_sent}
+						<p>Last sent {sentText(user.movers_alert_last_sent)}.</p>
+					{/if}
+					<p>{nextDueText(user.movers_alert_last_sent, user.movers_alert_every, 'Fast Horses')}</p>
 				{/if}
-				<form novalidate onsubmit={saveMessageSchedule}>
+				<form novalidate onsubmit={saveFastSchedule}>
 					<div class="field">
-						<label for="performance-message-interval">How often to send this list on Telegram.</label>
-						<select
-							id="performance-message-interval"
-							name="message-interval"
-							bind:value={messageInterval}
-							aria-describedby="performance-message-hint"
-						>
-							{#each MESSAGE_TIMER_CHOICES as choice (choice.value)}
+						<label for="fast-horses-every">How often to send Fast Horses on Telegram</label>
+						<select id="fast-horses-every" bind:value={fastEvery} aria-describedby="fast-horses-hint">
+							{#each FAST_HORSE_INTERVALS as choice (choice.value)}
 								<option value={choice.value}>{choice.label}</option>
 							{/each}
 						</select>
-						<p id="performance-message-hint">
-							This timer does not change the 15-second page refresh.
+						<p id="fast-horses-hint">
+							This list refreshes every 15 seconds. Saving does not send Telegram. The bot sends
+							the list.
 						</p>
 					</div>
-					{#if messageTimerError}
-						<p id="message-timer-error" role="alert" tabindex="-1">{messageTimerError}</p>
+					{#if fastSaveError}
+						<p id="fast-horses-save-error" role="alert" tabindex="-1">{fastSaveError}</p>
 					{/if}
-					{#if messageTimerStatus}
-						<p id="message-timer-status" role="status" tabindex="-1">{messageTimerStatus}</p>
+					{#if fastSaveStatus}
+						<p id="fast-horses-save-status" role="status" tabindex="-1">{fastSaveStatus}</p>
 					{/if}
-					<button type="submit" disabled={savingMessageTimer}>Save message timer</button>
+					<button type="submit" disabled={savingFast}>Save</button>
+				</form>
+			</div>
+
+			<div
+				id="slow-horses-panel"
+				class="horse-panel"
+				role="region"
+				aria-labelledby="slow-horses-heading"
+				hidden={horseList !== 'slow'}
+			>
+				<h3 id="slow-horses-heading">Slow Horses</h3>
+				<p>
+					The top 10 pools up at least 1 percent over this time frame, with at least $1,000 of
+					liquidity. A pool with no saved price that old is left off.
+				</p>
+				<div class="field">
+					<label for="slow-horses-window">Slow Horses time frame</label>
+					<select id="slow-horses-window" bind:value={boardWindow} onchange={chooseSlowWindow}>
+						{#each BOARD_WINDOW_CHOICES as choice (choice.value)}
+							<option value={choice.value}>{choice.label}</option>
+						{/each}
+					</select>
+				</div>
+				{#if slowError}
+					<p id="slow-horses-error" role="alert" tabindex="-1">{slowError}</p>
+				{/if}
+				{#if slowRows === null && !slowError}
+					<p role="status">Loading Slow Horses.</p>
+				{:else if slowRows && slowRows.length === 0}
+					<p>No pool has cleared a 1 percent gain for this time frame.</p>
+				{:else if slowRows}
+					<ol class="horse-list">
+						{#each slowRows as row, index (`slow:${row.pair_address || row.id}:${index}`)}
+							{@const gain = gainSentence(row.price_change_pct, `in ${windowLabel(slowShownWindow)}`)}
+							{#if gain}
+								<li class="wrap">
+									<p id={horseItemId('slow', row, index)} tabindex="-1">Rank: {index + 1}</p>
+									<p>{pairTitle(row)}</p>
+									<p>{gain}</p>
+									<p>USD price: {usdText(row.price_usd)}</p>
+									<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
+									{#if row.pair_address}
+										<button type="button" onclick={() => watchRanking(row, 'slow', index)}>
+											Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
+										</button>
+									{/if}
+								</li>
+							{/if}
+						{/each}
+					</ol>
+				{/if}
+				{#if slowUpdated}
+					<p role="status" aria-atomic="true">Updated {slowUpdated}.</p>
+				{/if}
+				{#if user}
+					{#if user.board_alert_last_sent}
+						<p>Last sent {sentText(user.board_alert_last_sent)}.</p>
+					{/if}
+					<p>{nextDueText(user.board_alert_last_sent, user.board_alert_every, 'Slow Horses')}</p>
+				{/if}
+				<form novalidate onsubmit={saveSlowSchedule}>
+					<div class="field">
+						<label for="slow-horses-every">How often to send Slow Horses on Telegram</label>
+						<select id="slow-horses-every" bind:value={slowEvery} aria-describedby="slow-horses-hint">
+							{#each SLOW_HORSE_INTERVALS as choice (choice.value)}
+								<option value={choice.value}>{choice.label}</option>
+							{/each}
+						</select>
+						<p id="slow-horses-hint">
+							Saving stores this time frame and this schedule. It does not send Telegram, and it
+							does not change Fast Horses. The bot sends the list.
+						</p>
+					</div>
+					{#if slowSaveError}
+						<p id="slow-horses-save-error" role="alert" tabindex="-1">{slowSaveError}</p>
+					{/if}
+					{#if slowSaveStatus}
+						<p id="slow-horses-save-status" role="status" tabindex="-1">{slowSaveStatus}</p>
+					{/if}
+					<button type="submit" disabled={savingSlow}>Save</button>
 				</form>
 			</div>
 		</section>
@@ -1716,5 +1923,49 @@
 
 	.pw .disclosure-panel[hidden] {
 		display: none;
+	}
+
+	.pw .horse-switch {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		align-items: center;
+		margin-top: 0.75rem;
+	}
+
+	.pw .horse-toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+		min-width: 44px;
+		min-height: 44px;
+		margin: 0;
+		border-color: #14120b;
+		border-style: dashed;
+		border-width: 2px;
+		font-weight: 400;
+		text-decoration: none;
+	}
+
+	.pw .horse-toggle[aria-pressed='true'] {
+		border-style: solid;
+		border-width: 4px;
+		font-weight: 700;
+		text-decoration: underline;
+		text-underline-offset: 0.18em;
+	}
+
+	.pw .horse-panel {
+		margin-top: 0.75rem;
+	}
+
+	.pw .horse-panel[hidden] {
+		display: none;
+	}
+
+	.pw ol.horse-list {
+		list-style: decimal;
+		padding-left: 2rem;
 	}
 </style>

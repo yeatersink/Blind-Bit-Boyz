@@ -125,6 +125,45 @@ export type RankingRow = {
 	meets_liquidity_floor: boolean | null;
 };
 
+/** Off is 0. These are the only values stored in movers_alert_every. */
+export const MOVERS_ALERT_SECONDS = [0, 15, 30, 45, 60, 120, 180] as const;
+
+/** Off is 0. The shortest on value is 900. These are the only values stored in board_alert_every. */
+export const BOARD_ALERT_SECONDS = [0, 900, 1800, 3600, 21600, 43200, 86400] as const;
+
+export const BOARD_WINDOW_CHOICES = [
+	{ value: '15m', label: '15 minutes' },
+	{ value: '30m', label: '30 minutes' },
+	{ value: '1h', label: '1 hour' },
+	{ value: '6h', label: '6 hours' },
+	{ value: '12h', label: '12 hours' },
+	{ value: '24h', label: '24 hours' }
+] as const satisfies readonly { value: BoardWindow; label: string }[];
+
+export const FAST_HORSE_INTERVALS = [
+	{ value: '0', seconds: 0, label: 'Off' },
+	{ value: '15', seconds: 15, label: 'Every 15 seconds' },
+	{ value: '30', seconds: 30, label: 'Every 30 seconds' },
+	{ value: '45', seconds: 45, label: 'Every 45 seconds' },
+	{ value: '60', seconds: 60, label: 'Every 1 minute' },
+	{ value: '120', seconds: 120, label: 'Every 2 minutes' },
+	{ value: '180', seconds: 180, label: 'Every 3 minutes' }
+] as const;
+
+export const SLOW_HORSE_INTERVALS = [
+	{ value: '0', seconds: 0, label: 'Off' },
+	{ value: '900', seconds: 900, label: 'Every 15 minutes' },
+	{ value: '1800', seconds: 1800, label: 'Every 30 minutes' },
+	{ value: '3600', seconds: 3600, label: 'Every 1 hour' },
+	{ value: '21600', seconds: 21600, label: 'Every 6 hours' },
+	{ value: '43200', seconds: 43200, label: 'Every 12 hours' },
+	{ value: '86400', seconds: 86400, label: 'Every 1 day' }
+] as const;
+
+export function isBoardWindow(value: string): value is BoardWindow {
+	return BOARD_WINDOW_CHOICES.some((item) => item.value === value);
+}
+
 export type WatchCreateBody = {
 	chain_id: string;
 	pair_address: string;
@@ -238,16 +277,11 @@ function thresholdPayload(values: ThresholdValues): ThresholdValues {
 	return body;
 }
 
-function bestAlertEvery(value: unknown): number {
-	const number = asNumberOrNull(value);
-	if (number === null || number < 0) return 0;
-	return Math.trunc(number);
-}
-
 function asNumberOrNull(value: unknown): number | null {
 	if (value === null || value === undefined || value === '') return null;
 	if (typeof value === 'number' && Number.isFinite(value)) return value;
-	if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value.trim());
+	if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim()))
+		return Number(value.trim());
 	return null;
 }
 
@@ -257,8 +291,28 @@ function asText(value: unknown): string {
 	return '';
 }
 
+function alertSeconds(value: unknown, allowed: readonly number[]): number {
+	const number = asNumberOrNull(value);
+	if (number === null) return 0;
+	const seconds = Math.trunc(number);
+	return allowed.includes(seconds) ? seconds : 0;
+}
+
+function asBoardWindow(value: unknown): BoardWindow {
+	if (typeof value === 'string' && isBoardWindow(value)) return value;
+	return '15m';
+}
+
+function asTimestamp(value: unknown): string | null {
+	if (typeof value !== 'string' || !value.trim()) return null;
+	const time = Date.parse(value);
+	if (!Number.isFinite(time)) return null;
+	return new Date(time).toISOString();
+}
+
 function errorText(json: unknown, status: number): string {
-	if (isRecord(json) && typeof json.error === 'string' && json.error.trim()) return json.error.trim();
+	if (isRecord(json) && typeof json.error === 'string' && json.error.trim())
+		return json.error.trim();
 	return `Request failed (${status}).`;
 }
 
@@ -406,7 +460,10 @@ export async function signInWithTelegramWidget(
 export function asChain(value: unknown): PriceWatchChain | null {
 	if (!isRecord(value)) return null;
 	const chainId = value.chain_id;
-	if ((typeof chainId !== 'string' && typeof chainId !== 'number') || typeof value.name !== 'string') {
+	if (
+		(typeof chainId !== 'string' && typeof chainId !== 'number') ||
+		typeof value.name !== 'string'
+	) {
 		return null;
 	}
 	return {
@@ -431,9 +488,12 @@ export async function getMe(
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
 	const user = asUser(json.user);
-	if (!user) throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	if (!user)
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	const chains = Array.isArray(json.chains)
-		? json.chains.map((item) => asChain(item)).filter((item): item is PriceWatchChain => item !== null)
+		? json.chains
+				.map((item) => asChain(item))
+				.filter((item): item is PriceWatchChain => item !== null)
 		: [];
 	return { user, chains };
 }
@@ -533,7 +593,11 @@ export async function searchPairs(query: string): Promise<PriceWatchSearchResult
 
 function asWatch(value: unknown): SavedWatch | null {
 	if (!isRecord(value)) return null;
-	if (typeof value.id !== 'string' || typeof value.name !== 'string' || typeof value.symbol !== 'string') {
+	if (
+		typeof value.id !== 'string' ||
+		typeof value.name !== 'string' ||
+		typeof value.symbol !== 'string'
+	) {
 		return null;
 	}
 	const chainId = value.chain_id;
@@ -563,7 +627,10 @@ export function watchesBySymbol(items: SavedWatch[]): SavedWatch[] {
 	);
 }
 
-export async function listWatches(token: string, telegramId?: string | null): Promise<SavedWatch[]> {
+export async function listWatches(
+	token: string,
+	telegramId?: string | null
+): Promise<SavedWatch[]> {
 	const params = new URLSearchParams();
 	params.set('sort', 'symbol');
 	const id = telegramId?.trim() ?? '';
@@ -591,7 +658,8 @@ export async function createWatch(token: string, body: WatchCreateBody): Promise
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
 	const watch = asWatch(json.data);
-	if (!watch) throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	if (!watch)
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	return watch;
 }
 
@@ -610,7 +678,8 @@ export async function updateWatch(
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
 	const watch = asWatch(json.data);
-	if (!watch) throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	if (!watch)
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	return watch;
 }
 
@@ -626,10 +695,25 @@ function tokenAddressFrom(value: Record<string, unknown>): string | null {
 	return null;
 }
 
+function quoteSymbolFrom(value: Record<string, unknown>, symbol: string, name: string): string {
+	for (const key of ['quote_symbol', 'token1_symbol', 'quote']) {
+		const text = asText(value[key]).trim();
+		if (text) return text;
+	}
+	const parts = name
+		.split(/\s*\/\s*/)
+		.map((part) => part.trim())
+		.filter(Boolean);
+	if (parts.length < 2) return '';
+	const quote = parts[parts.length - 1];
+	if (!quote || quote.toLowerCase() === symbol.trim().toLowerCase()) return '';
+	return quote;
+}
+
 function asRanking(value: unknown, index: number): RankingRow | null {
 	if (!isRecord(value)) return null;
-	const symbol = asText(value.symbol);
-	const name = asText(value.name);
+	const symbol = asText(value.symbol).trim();
+	const name = asText(value.name).trim();
 	if (!symbol || !name) return null;
 	const rank = asNumberOrNull(value.rank);
 	const pairAddress = asText(value.pair_address);
@@ -639,6 +723,7 @@ function asRanking(value: unknown, index: number): RankingRow | null {
 		rank: rank === null ? null : rank,
 		symbol,
 		name,
+		quote_symbol: quoteSymbolFrom(value, symbol, name),
 		price_change_pct: asNumberOrNull(value.price_change_pct),
 		price_usd: asText(value.price_usd),
 		liquidity_usd: asText(value.liquidity_usd),
@@ -670,23 +755,125 @@ export async function getBestBoard(): Promise<RankingRow[]> {
 		.slice(0, 10);
 }
 
-const BEST_ALERT_SECONDS = new Set<number>([
-	0, 15, 30, 45, 60, 120, 180, 300, 600, 900, 1800, 2700, 3600, 10800, 21600, 43200, 86400,
-	172800, 259200, 604800
-]);
+const MIN_GAIN_PCT = 1;
+const MIN_LIQUIDITY_USD = 1000;
+const TOP_POOLS = 10;
 
-/** Off is 0. This writes best_alert_every on the signed-in app_users row. */
-export async function saveBestAlertEvery(token: string, seconds: number): Promise<number> {
-	if (!BEST_ALERT_SECONDS.has(seconds)) {
-		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
-	}
-	const json = await request('/me', 'PATCH', token, { best_alert_every: seconds });
-	if (!isRecord(json)) {
+/** Pools up at least 1 percent, with at least $1,000 liquidity. A missing change is left off. */
+export function topGainers(rows: RankingRow[]): RankingRow[] {
+	return rows
+		.filter((row) => {
+			const change = row.price_change_pct;
+			if (change === null || !Number.isFinite(change) || change < MIN_GAIN_PCT) return false;
+			if (row.meets_liquidity_floor === false) return false;
+			if (!row.liquidity_usd.trim()) return false;
+			const liquidity = Number(row.liquidity_usd);
+			return Number.isFinite(liquidity) && liquidity >= MIN_LIQUIDITY_USD;
+		})
+		.sort((left, right) => {
+			const leftChange = left.price_change_pct ?? 0;
+			const rightChange = right.price_change_pct ?? 0;
+			if (rightChange !== leftChange) return rightChange - leftChange;
+			if (left.rank === null && right.rank === null) return 0;
+			if (left.rank === null) return 1;
+			if (right.rank === null) return -1;
+			return left.rank - right.rank;
+		})
+		.slice(0, TOP_POOLS);
+}
+
+/** Fast movers. Window 10 is the same list when the movers window has no rows. */
+export async function getFastHorses(): Promise<RankingRow[]> {
+	const movers = await getRankings('movers');
+	const rows = movers.length > 0 ? movers : await getRankings('10');
+	return topGainers(rows);
+}
+
+/** Stable board for one saved time frame. The window value is board_alert_window. */
+export async function getSlowHorses(window: BoardWindow): Promise<RankingRow[]> {
+	return topGainers(await getRankings(window));
+}
+
+export type ScheduleSave = {
+	user: PriceWatchUser;
+	record: Record<string, unknown>;
+};
+
+function userFromResponse(json: unknown): ScheduleSave {
+	if (!isRecord(json) || !isRecord(json.user)) {
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
 	const user = asUser(json.user);
-	if (!user) throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
-	return user.best_alert_every;
+	if (!user)
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	return { user, record: json.user };
+}
+
+/** Keeps a schedule field when a partial /me response omits it, so one list cannot clear the other. */
+export function mergeScheduleUser(
+	previous: PriceWatchUser,
+	next: PriceWatchUser,
+	record: Record<string, unknown>
+): PriceWatchUser {
+	return {
+		...next,
+		movers_alert_every:
+			'movers_alert_every' in record ? next.movers_alert_every : previous.movers_alert_every,
+		board_alert_every:
+			'board_alert_every' in record ? next.board_alert_every : previous.board_alert_every,
+		board_alert_window:
+			'board_alert_window' in record ? next.board_alert_window : previous.board_alert_window,
+		movers_alert_last_sent:
+			'movers_alert_last_sent' in record
+				? next.movers_alert_last_sent
+				: previous.movers_alert_last_sent,
+		board_alert_last_sent:
+			'board_alert_last_sent' in record
+				? next.board_alert_last_sent
+				: previous.board_alert_last_sent
+	};
+}
+
+/** Writes movers_alert_every only. It does not send board fields or last-sent fields. */
+export async function saveMoversAlertEvery(token: string, seconds: number): Promise<ScheduleSave> {
+	if (!MOVERS_ALERT_SECONDS.includes(seconds as (typeof MOVERS_ALERT_SECONDS)[number])) {
+		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
+	}
+	const json = await request('/me', 'PATCH', token, { movers_alert_every: seconds });
+	const saved = userFromResponse(json);
+	if (!('movers_alert_every' in saved.record)) {
+		saved.user.movers_alert_every = seconds;
+		saved.record.movers_alert_every = seconds;
+	}
+	return saved;
+}
+
+/** Writes board_alert_window and board_alert_every together. It does not send movers fields. */
+export async function saveBoardAlert(
+	token: string,
+	window: BoardWindow,
+	seconds: number
+): Promise<ScheduleSave> {
+	if (!isBoardWindow(window)) {
+		throw new PriceWatchApiError('Choose a time frame from the list.', 0);
+	}
+	if (!BOARD_ALERT_SECONDS.includes(seconds as (typeof BOARD_ALERT_SECONDS)[number])) {
+		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
+	}
+	const json = await request('/me', 'PATCH', token, {
+		board_alert_window: window,
+		board_alert_every: seconds
+	});
+	const saved = userFromResponse(json);
+	if (!('board_alert_window' in saved.record)) {
+		saved.user.board_alert_window = window;
+		saved.record.board_alert_window = window;
+	}
+	if (!('board_alert_every' in saved.record)) {
+		saved.user.board_alert_every = seconds;
+		saved.record.board_alert_every = seconds;
+	}
+	return saved;
 }
 
 export const MESSAGE_TIMER_STORAGE_KEY = 'bbb_pricewatch_message_timer';
