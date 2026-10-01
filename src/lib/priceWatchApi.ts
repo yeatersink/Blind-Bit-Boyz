@@ -58,6 +58,11 @@ export type PriceWatchUser = {
 	telegram_id: string;
 	username: string | null;
 	first_name: string | null;
+	movers_alert_every: number;
+	board_alert_every: number;
+	board_alert_window: BoardWindow;
+	movers_alert_last_sent: string | null;
+	board_alert_last_sent: string | null;
 };
 
 export type PriceWatchChain = {
@@ -102,15 +107,22 @@ export type SavedWatch = {
 	active: boolean;
 } & ThresholdValues;
 
-export type RankingWindow = '1h' | '24h' | '7d';
+export type BoardWindow = '15m' | '30m' | '1h' | '6h' | '12h' | '24h';
+
+export type RankingWindow = 'movers' | '10' | BoardWindow | '7d';
 
 export type RankingRow = {
 	id: string;
 	rank: number | null;
 	symbol: string;
 	name: string;
+	quote_symbol: string;
 	price_change_pct: number | null;
+	price_usd: string;
 	liquidity_usd: string;
+	pair_address: string;
+	token_address: string | null;
+	meets_liquidity_floor: boolean | null;
 };
 
 export type WatchCreateBody = {
@@ -224,6 +236,12 @@ function thresholdPayload(values: ThresholdValues): ThresholdValues {
 	const body = {} as ThresholdValues;
 	for (const field of THRESHOLD_FIELDS) body[field.key] = thresholdMagnitude(values[field.key]);
 	return body;
+}
+
+function bestAlertEvery(value: unknown): number {
+	const number = asNumberOrNull(value);
+	if (number === null || number < 0) return 0;
+	return Math.trunc(number);
 }
 
 function asNumberOrNull(value: unknown): number | null {
@@ -345,7 +363,12 @@ function asUser(value: unknown): PriceWatchUser | null {
 		id: value.id,
 		telegram_id: String(telegramId),
 		username: typeof value.username === 'string' ? value.username : null,
-		first_name: typeof value.first_name === 'string' ? value.first_name : null
+		first_name: typeof value.first_name === 'string' ? value.first_name : null,
+		movers_alert_every: alertSeconds(value.movers_alert_every, MOVERS_ALERT_SECONDS),
+		board_alert_every: alertSeconds(value.board_alert_every, BOARD_ALERT_SECONDS),
+		board_alert_window: asBoardWindow(value.board_alert_window),
+		movers_alert_last_sent: asTimestamp(value.movers_alert_last_sent),
+		board_alert_last_sent: asTimestamp(value.board_alert_last_sent)
 	};
 }
 
@@ -595,6 +618,14 @@ export async function deleteWatch(token: string, id: string): Promise<void> {
 	await request(`/me/watches/${encodeURIComponent(id)}`, 'DELETE', token);
 }
 
+function tokenAddressFrom(value: Record<string, unknown>): string | null {
+	for (const key of ['token_address', 'token_contract', 'contract_address', 'base_token_address']) {
+		const text = asText(value[key]).trim();
+		if (text) return text;
+	}
+	return null;
+}
+
 function asRanking(value: unknown, index: number): RankingRow | null {
 	if (!isRecord(value)) return null;
 	const symbol = asText(value.symbol);
@@ -602,13 +633,18 @@ function asRanking(value: unknown, index: number): RankingRow | null {
 	if (!symbol || !name) return null;
 	const rank = asNumberOrNull(value.rank);
 	const pairAddress = asText(value.pair_address);
+	const floor = value.meets_liquidity_floor;
 	return {
 		id: pairAddress || `row-${index}`,
 		rank: rank === null ? null : rank,
 		symbol,
 		name,
 		price_change_pct: asNumberOrNull(value.price_change_pct),
-		liquidity_usd: asText(value.liquidity_usd)
+		price_usd: asText(value.price_usd),
+		liquidity_usd: asText(value.liquidity_usd),
+		pair_address: pairAddress,
+		token_address: tokenAddressFrom(value),
+		meets_liquidity_floor: floor === true ? true : floor === false ? false : null
 	};
 }
 
@@ -619,22 +655,50 @@ export async function getRankings(window: RankingWindow): Promise<RankingRow[]> 
 		.filter((item): item is RankingRow => item !== null);
 }
 
-export type BestPerformingRow = {
-	id: string;
-	rank: number;
-	name: string;
-	symbol: string;
-	quote_symbol: string;
-	price_change_pct: number;
-	price_usd: string;
-	liquidity_usd: string;
-};
+/** Live top 10. Window 1h stores the same rows when window 10 is empty. */
+export async function getBestBoard(): Promise<RankingRow[]> {
+	const live = await getRankings('10');
+	const rows = live.length > 0 ? live : await getRankings('1h');
+	return rows
+		.slice()
+		.sort((left, right) => {
+			if (left.rank === null && right.rank === null) return 0;
+			if (left.rank === null) return 1;
+			if (right.rank === null) return -1;
+			return left.rank - right.rank;
+		})
+		.slice(0, 10);
+}
+
+const BEST_ALERT_SECONDS = new Set<number>([
+	0, 15, 30, 45, 60, 120, 180, 300, 600, 900, 1800, 2700, 3600, 10800, 21600, 43200, 86400,
+	172800, 259200, 604800
+]);
+
+/** Off is 0. This writes best_alert_every on the signed-in app_users row. */
+export async function saveBestAlertEvery(token: string, seconds: number): Promise<number> {
+	if (!BEST_ALERT_SECONDS.has(seconds)) {
+		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
+	}
+	const json = await request('/me', 'PATCH', token, { best_alert_every: seconds });
+	if (!isRecord(json)) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	const user = asUser(json.user);
+	if (!user) throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	return user.best_alert_every;
+}
 
 export const MESSAGE_TIMER_STORAGE_KEY = 'bbb_pricewatch_message_timer';
 
-/** One day is 24 hours. There is no separate 24-hour choice. */
 export const MESSAGE_TIMER_CHOICES = [
 	{ value: '', label: 'Off', seconds: null },
+	{ value: '15', label: 'Every 15 seconds', seconds: 15 },
+	{ value: '30', label: 'Every 30 seconds', seconds: 30 },
+	{ value: '45', label: 'Every 45 seconds', seconds: 45 },
+	{ value: '60', label: 'Every 1 minute', seconds: 60 },
+	{ value: '120', label: 'Every 2 minutes', seconds: 120 },
+	{ value: '180', label: 'Every 3 minutes', seconds: 180 },
 	{ value: '300', label: 'Every 5 minutes', seconds: 300 },
 	{ value: '600', label: 'Every 10 minutes', seconds: 600 },
 	{ value: '900', label: 'Every 15 minutes', seconds: 900 },
@@ -658,58 +722,6 @@ export type MessageTimer = {
 const MESSAGE_TIMER_SECONDS = new Set<number>(
 	MESSAGE_TIMER_CHOICES.flatMap((choice) => (choice.seconds === null ? [] : [choice.seconds]))
 );
-
-function asBestRow(value: unknown): BestPerformingRow | null {
-	if (!isRecord(value)) return null;
-	const name = asText(value.name).trim();
-	const symbol = asText(value.symbol).trim();
-	const id = asText(value.id).trim();
-	const change = asNumberOrNull(value.price_change_pct);
-	const rank = asNumberOrNull(value.rank);
-	if (!id || !name || !symbol || change === null || rank === null) return null;
-	return {
-		id,
-		rank,
-		name,
-		symbol,
-		quote_symbol: asText(value.quote_symbol).trim(),
-		price_change_pct: change,
-		price_usd: asText(value.price_usd),
-		liquidity_usd: asText(value.liquidity_usd)
-	};
-}
-
-export async function getBestPerforming(chainId: string): Promise<BestPerformingRow[]> {
-	let response: Response;
-	try {
-		response = await fetch(`/api/price-watch/best?chain_id=${encodeURIComponent(chainId)}`, {
-			headers: { Accept: 'application/json' },
-			cache: 'no-store'
-		});
-	} catch {
-		throw new PriceWatchApiError('The best performing list could not be loaded.', 0);
-	}
-	const text = await response.text();
-	let json: unknown = null;
-	if (text) {
-		try {
-			json = JSON.parse(text);
-		} catch {
-			json = null;
-		}
-	}
-	if (!response.ok) {
-		throw new PriceWatchApiError(
-			errorText(json, response.status) === `Request failed (${response.status}).`
-				? 'The best performing list could not be loaded.'
-				: errorText(json, response.status),
-			response.status
-		);
-	}
-	return dataList(json)
-		.map((item) => asBestRow(item))
-		.filter((item): item is BestPerformingRow => item !== null);
-}
 
 function readMessageTimerMap(): Record<string, MessageTimer> {
 	try {

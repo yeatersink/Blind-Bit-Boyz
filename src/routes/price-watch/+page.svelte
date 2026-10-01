@@ -13,16 +13,16 @@
 		deleteWatch,
 		DOWN_THRESHOLD_HINT,
 		emptyThresholds,
-		getBestPerforming,
 		getChains,
 		getMe,
+		getBestBoard,
 		isDownThreshold,
 		listWatches,
 		parseThresholds,
 		publicErrorMessage,
 		MESSAGE_TIMER_CHOICES,
-		readMessageTimer,
 		readStoredToken,
+		saveBestAlertEvery,
 		saveChains,
 		searchPairs,
 		signInWithTelegramId,
@@ -32,12 +32,10 @@
 		thresholdInputValue,
 		updateWatch,
 		watchesBySymbol,
-		writeMessageTimer,
 		type PairResult,
 		type PriceWatchChain,
 		type SearchTokenResult,
-		type BestPerformingRow,
-		type MessageTimer,
+		type RankingRow,
 		type PriceWatchUser,
 		type SavedWatch,
 		type TelegramWidgetAuth,
@@ -108,9 +106,12 @@
 	let listStatus = $state('');
 
 	let watchlistOpen = $state(false);
-	let bestRows = $state<BestPerformingRow[] | null>(null);
+	let performanceOpen = $state(false);
+	let bestRows = $state<RankingRow[] | null>(null);
 	let bestError = $state('');
 	let bestUpdated = $state('');
+	let copyStatus = $state('');
+	let draftReturnId = 'search-heading';
 	let bestSeq = 0;
 	let bestTimer: ReturnType<typeof setInterval> | null = null;
 	let messageInterval = $state('');
@@ -307,13 +308,27 @@
 		return formatCryptoPrice(numeric);
 	}
 
-	function changeText(value: number): string {
+	function changeText(value: number | null): string {
+		if (value === null || !Number.isFinite(value)) return 'n/a';
 		const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(
 			Math.abs(value)
 		);
 		if (value < 0) return `down ${amount}%`;
 		if (value > 0) return `up ${amount}%`;
 		return '0%';
+	}
+
+	function passesLiquidityFloor(row: RankingRow): boolean {
+		if (row.meets_liquidity_floor === false) return false;
+		if (!row.liquidity_usd.trim()) return row.meets_liquidity_floor !== false;
+		const liquidity = Number(row.liquidity_usd);
+		if (!Number.isFinite(liquidity)) return false;
+		return liquidity >= 1000;
+	}
+
+	function rankingHeadingId(row: RankingRow): string {
+		const key = (row.pair_address || row.id).replace(/[^a-zA-Z0-9_-]/g, '');
+		return `performance-${key || 'row'}`;
 	}
 
 	function clockText(date: Date): string {
@@ -324,16 +339,9 @@
 		}).format(date);
 	}
 
-	function messageTimeText(iso: string): string {
-		const date = new Date(iso);
-		if (Number.isNaN(date.getTime())) return '';
-		return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-	}
-
-	function showMessageTimer(timer: MessageTimer) {
-		messageInterval = timer.interval_seconds === null ? '' : String(timer.interval_seconds);
-		const when = timer.next_message_at ? messageTimeText(timer.next_message_at) : '';
-		messageTimerStatus = when ? `Next message ${when}.` : '';
+	function showBestAlert(seconds: number) {
+		const value = seconds > 0 ? String(seconds) : '';
+		messageInterval = MESSAGE_TIMER_CHOICES.some((item) => item.value === value) ? value : '';
 		messageTimerError = '';
 	}
 
@@ -424,14 +432,14 @@
 	async function loadBest() {
 		const seq = ++bestSeq;
 		try {
-			const rows = await getBestPerforming(CURRENT_CHAIN_ID);
+			const rows = (await getBestBoard()).filter(passesLiquidityFloor);
 			if (seq !== bestSeq) return;
 			bestRows = rows;
 			bestError = '';
 			bestUpdated = clockText(new Date());
-		} catch (error) {
+		} catch {
 			if (seq !== bestSeq) return;
-			bestError = publicErrorMessage(error, token);
+			bestError = 'The best performing list could not be loaded.';
 		}
 	}
 
@@ -472,7 +480,7 @@
 			const me = await getMe(token);
 			user = me.user;
 			selectedChainIds = me.chains.map((chain) => chain.chain_id);
-			showMessageTimer(readMessageTimer(me.user.id));
+			showBestAlert(me.user.best_alert_every);
 			await loadWatches();
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
@@ -722,6 +730,7 @@
 
 	function choosePair(pair: PairResult) {
 		pairSidesByAddress.set(pair.pair_address.toLowerCase(), pairSides(pair));
+		draftReturnId = 'search-heading';
 		draft = draftFromPair(pair, submittedQuery);
 		thresholdValues = emptyThresholds();
 		thresholdErrors = {};
@@ -759,12 +768,43 @@
 
 	function closeDraft() {
 		const id = draft?.id;
+		const returnId = draftReturnId;
 		draft = null;
 		thresholdErrors = {};
 		watchError = '';
 		watchStatus = '';
 		if (pendingRemove?.source === 'form') pendingRemove = null;
-		void focusId(id ? `watch-${id}` : 'search-heading');
+		void focusId(id ? `watch-${id}` : returnId);
+	}
+
+	function watchRanking(row: RankingRow) {
+		draftReturnId = rankingHeadingId(row);
+		draft = {
+			id: null,
+			chainId: watchChainId(),
+			pairAddress: row.pair_address,
+			tokenAddress: row.token_address,
+			name: row.name,
+			symbol: row.symbol,
+			baseSymbol: row.symbol,
+			quoteSymbol: ''
+		};
+		thresholdValues = emptyThresholds();
+		thresholdErrors = {};
+		watchError = '';
+		watchStatus = '';
+		pendingRemove = null;
+		removeError = '';
+		void focusId('watch-heading');
+	}
+
+	async function copyAddress(value: string, success: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+			copyStatus = success;
+		} catch {
+			copyStatus = 'Copy failed.';
+		}
 	}
 
 	function describedBy(key: ThresholdKey): string {
@@ -941,6 +981,10 @@
 		watchlistOpen = !watchlistOpen;
 	}
 
+	function togglePerformance() {
+		performanceOpen = !performanceOpen;
+	}
+
 	async function saveMessageSchedule(event: SubmitEvent) {
 		event.preventDefault();
 		messageTimerError = '';
@@ -954,34 +998,31 @@
 			await focusId('message-timer-error');
 			return;
 		}
-		if (choice.seconds !== null) {
-			if (!user?.telegram_id.trim()) {
-				messageTimerError = 'Sign in with a saved Telegram id before you schedule this list.';
-				await focusId('message-timer-error');
-				return;
-			}
-			if (selectedChainIds.length === 0) {
-				messageTimerError =
-					'Turn on at least one chain before a schedule other than Off can be saved.';
-				await focusId('message-timer-error');
-				return;
-			}
-		}
-		if (!user) {
-			messageTimerStatus = 'Telegram messages for this list are off.';
-			messageInterval = '';
+		if (!token || !user) {
+			messageTimerError = 'Sign in before you save this schedule.';
+			await focusId('message-timer-error');
 			return;
 		}
+		const seconds = choice.seconds === null ? 0 : choice.seconds;
 		savingMessageTimer = true;
 		try {
-			const saved = writeMessageTimer(user.id, choice.seconds);
-			const when = saved.next_message_at ? messageTimeText(saved.next_message_at) : '';
-			messageTimerStatus = when
-				? `Next message ${when}.`
-				: 'Telegram messages for this list are off.';
+			const saved = await saveBestAlertEvery(token, seconds);
+			user = { ...user, best_alert_every: saved };
+			showBestAlert(saved);
+			const spoken = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
+			messageTimerStatus =
+				saved === 0
+					? 'Telegram messages for this list are off.'
+					: `Saved. Telegram will send this list ${spoken}.`;
 			await focusId('message-timer-status');
 		} catch (error) {
-			messageTimerError = publicErrorMessage(error, token);
+			const message = publicErrorMessage(error, token);
+			if (isLoginError(error)) {
+				dropSession(message);
+				await focusId('sign-in-heading');
+				return;
+			}
+			messageTimerError = message;
 			await focusId('message-timer-error');
 		} finally {
 			savingMessageTimer = false;
@@ -1041,7 +1082,11 @@
 				<li>
 					<a class="story-link" href="#watches" onclick={() => (watchlistOpen = true)}>Watchlist</a>
 				</li>
-				<li><a class="story-link" href="#performance">Best performing</a></li>
+				<li>
+					<a class="story-link" href="#performance" onclick={() => (performanceOpen = true)}>
+						Best performing
+					</a>
+				</li>
 			</ul>
 		</nav>
 
@@ -1404,63 +1449,106 @@
 			</div>
 		</section>
 
-		<section id="performance" aria-labelledby="performance-heading">
-			<h2 id="performance-heading" tabindex="-1">Best performing</h2>
-			<p>
-				Ten pools on {currentChain ? currentChain.name : `chain ${CURRENT_CHAIN_ID}`}, ranked by
-				24-hour price change, best first. Pools under $1,000 of liquidity are left out.
-			</p>
-			<p>On-chain data provided by GeckoTerminal.</p>
-			{#if bestError}
-				<p id="performance-error" role="alert" tabindex="-1">{bestError}</p>
-			{/if}
-			{#if bestRows === null && !bestError}
-				<p role="status">Loading the best performing pools.</p>
-			{:else if bestRows && bestRows.length === 0}
-				<p>No pools on this chain have a 24-hour price change and at least $1,000 of liquidity.</p>
-			{:else if bestRows}
-				<ul class="plain">
-					{#each bestRows as row (row.id)}
-						<li class="wrap">
-							<p>Rank: {row.rank}</p>
-							<p>Name: {row.name}</p>
-							<p>Symbol: {row.symbol}</p>
-							<p>Quote symbol: {row.quote_symbol || 'n/a'}</p>
-							<p>24-hour change: {changeText(row.price_change_pct)}</p>
-							<p>Price: {usdText(row.price_usd)}</p>
-							<p>Liquidity: {usdText(row.liquidity_usd)}</p>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-			{#if bestUpdated}
-				<p role="status" aria-atomic="true">Updated {bestUpdated}.</p>
-			{/if}
-			<form novalidate onsubmit={saveMessageSchedule}>
-				<div class="field">
-					<label for="performance-message-interval">How often to send this list on Telegram.</label>
-					<select
-						id="performance-message-interval"
-						name="message-interval"
-						bind:value={messageInterval}
-						aria-describedby="performance-message-hint"
-					>
-						{#each MESSAGE_TIMER_CHOICES as choice (choice.value)}
-							<option value={choice.value}>{choice.label}</option>
+		<section id="performance">
+			<h2 id="performance-heading">
+				<button
+					type="button"
+					id="performance-button"
+					class="disclosure"
+					aria-expanded={performanceOpen}
+					aria-controls="performance-panel"
+					onclick={togglePerformance}
+				>
+					Best performing
+				</button>
+			</h2>
+			<div
+				id="performance-panel"
+				class="disclosure-panel"
+				role="region"
+				aria-labelledby="performance-button"
+				hidden={!performanceOpen}
+			>
+				<p>
+					The live top 10 on {currentChain ? currentChain.name : `chain ${CURRENT_CHAIN_ID}`}.
+					Pools under $1,000 of liquidity are left out.
+				</p>
+				<p>These results come from a high-speed private RPC. They should be fast and accurate.</p>
+				{#if bestError}
+					<p id="performance-error" role="alert" tabindex="-1">{bestError}</p>
+				{/if}
+				{#if bestRows === null && !bestError}
+					<p role="status">Loading the best performing pools.</p>
+				{:else if bestRows && bestRows.length === 0}
+					<p>No pools are on the board yet.</p>
+				{:else if bestRows}
+					<ul class="plain">
+						{#each bestRows as row (row.id)}
+							<li class="wrap">
+								<h3 id={rankingHeadingId(row)} tabindex="-1">{row.name} ({row.symbol})</h3>
+								<p>Rank: {row.rank === null ? 'n/a' : row.rank}</p>
+								<p>Name: {row.name}</p>
+								<p>Symbol: {row.symbol}</p>
+								<p>Price change: {changeText(row.price_change_pct)}</p>
+								<p>Price: {usdText(row.price_usd)}</p>
+								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
+								{#if row.pair_address}
+									<p class="wrap">Pair address: {row.pair_address}</p>
+									<button
+										type="button"
+										onclick={() => copyAddress(row.pair_address, 'Pair address copied.')}
+									>
+										Copy pair address<span class="sr-only">{' '}{row.name}</span>
+									</button>
+								{/if}
+								{#if row.token_address}
+									<p class="wrap">Token address: {row.token_address}</p>
+									<button
+										type="button"
+										onclick={() => copyAddress(row.token_address || '', 'Token address copied.')}
+									>
+										Copy token address<span class="sr-only">{' '}{row.name}</span>
+									</button>
+								{/if}
+								<button type="button" onclick={() => watchRanking(row)}>
+									Watch this pair<span class="sr-only">{' '}{row.name}</span>
+								</button>
+							</li>
 						{/each}
-					</select>
-					<p id="performance-message-hint">
-						This does not change how often the list on this page refreshes.
-					</p>
-				</div>
-				{#if messageTimerError}
-					<p id="message-timer-error" role="alert" tabindex="-1">{messageTimerError}</p>
+					</ul>
 				{/if}
-				{#if messageTimerStatus}
-					<p id="message-timer-status" role="status" tabindex="-1">{messageTimerStatus}</p>
+				{#if bestUpdated}
+					<p role="status" aria-atomic="true">Updated {bestUpdated}.</p>
 				{/if}
-				<button type="submit" disabled={savingMessageTimer}>Save message timer</button>
-			</form>
+				{#if copyStatus}
+					<p id="copy-status" role="status" aria-atomic="true">{copyStatus}</p>
+				{/if}
+				<form novalidate onsubmit={saveMessageSchedule}>
+					<div class="field">
+						<label for="performance-message-interval">How often to send this list on Telegram.</label>
+						<select
+							id="performance-message-interval"
+							name="message-interval"
+							bind:value={messageInterval}
+							aria-describedby="performance-message-hint"
+						>
+							{#each MESSAGE_TIMER_CHOICES as choice (choice.value)}
+								<option value={choice.value}>{choice.label}</option>
+							{/each}
+						</select>
+						<p id="performance-message-hint">
+							This timer does not change the 15-second page refresh.
+						</p>
+					</div>
+					{#if messageTimerError}
+						<p id="message-timer-error" role="alert" tabindex="-1">{messageTimerError}</p>
+					{/if}
+					{#if messageTimerStatus}
+						<p id="message-timer-status" role="status" tabindex="-1">{messageTimerStatus}</p>
+					{/if}
+					<button type="submit" disabled={savingMessageTimer}>Save message timer</button>
+				</form>
+			</div>
 		</section>
 	{/if}
 

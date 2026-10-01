@@ -1,13 +1,12 @@
 import { json } from '@sveltejs/kit';
-import { bestPerforming } from '$lib/server/bestPerforming';
+import { getBestBoard, omitRpc, PriceWatchApiError } from '$lib/priceWatchApi';
 
-export const GET = async ({ url }) => {
-	const chainId = url.searchParams.get('chain_id') ?? '';
+/** Live top 10 from rankings window 10, or window 1h when that list is empty. */
+export const GET = async () => {
 	try {
-		const result = await bestPerforming(chainId);
-		if ('error' in result) return json({ error: result.error }, { status: result.status });
-		return json({ data: result.rows });
-	} catch {
-		return json({ error: 'The best performing list could not be loaded.' }, { status: 502 });
+		return json(omitRpc({ data: await getBestBoard() }));
+	} catch (error) {
+		const status = error instanceof PriceWatchApiError && error.status >= 400 ? error.status : 502;
+		return json({ error: 'The best performing list could not be loaded.' }, { status });
 	}
 };
