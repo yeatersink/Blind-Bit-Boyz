@@ -2,6 +2,7 @@ export const navItems: { name: string; url: string }[] = [
 	{ name: 'Home Page', url: '/' },
 	{ name: 'Official Links', url: '/official-links' },
 	{ name: 'Tools', url: '/tools' },
+	{ name: 'Blind Bit Boys Price Watch Bot', url: '/price-watch' },
 	{ name: 'Token Search and Analysis', url: '/search' },
 	{ name: 'Instructions', url: '/instructions' },
 	// { name: 'Blockchain and Exchanges', url: '/block_chain' },

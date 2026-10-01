@@ -24,7 +24,7 @@
 		<li><a class="story-link" href="/learn">Learn index</a></li>
 		<li><a class="story-link" href="/tools">Accessible tools</a></li>
 		<li>
-			<a class="story-link" href="/tools/price-watch">Blind Banker Price Watch Bot (WIP)</a>
+			<a class="story-link" href="/price-watch">Blind Bit Boys Price Watch Bot</a>
 		</li>
 		<li><a class="story-link" href="/instructions">Instructions</a></li>
 	</ul>

@@ -872,21 +872,20 @@
 					<a class="story-link" href="/tools">Accessible tools</a>.
 				</p>
 				<p>
-					An upcoming Token Price Watcher is planned to send Telegram messages with a token’s price
-					and whether that price is up, down, or flat. It is not finished.
-					<a class="story-link" href="/tools/price-watch">Blind Banker Price Watch Bot</a>
-					is work in progress.
+					The
+					<a class="story-link" href="/price-watch">Blind Bit Boys Price Watch Bot</a>
+					watches tokens you choose and sends Telegram alerts when price or liquidity moves past
+					the limits you set.
 				</p>
 				<ul class="cta-row">
 					<li><a class="story-cta" href="/search">Search tokens</a></li>
 					<li><a class="story-cta story-cta-secondary" href="/tools">Accessible tools</a></li>
 					<li>
-						<a class="story-cta story-cta-secondary" href="/tools/price-watch"
-							>Blind Banker Price Watch Bot</a
+						<a class="story-cta story-cta-secondary" href="/price-watch"
+							>Blind Bit Boys Price Watch Bot</a
 						>
 					</li>
 				</ul>
-				<p>The price watch link is work in progress. The bot is not live.</p>
 				<p>Education and inclusion come first. Do your own research. We do not manage funds.</p>
 				<p>
 					<a class="story-link" href="/learn/about">Read more: Blind Bit Boys on Blind Bit Boys</a>

@@ -29,13 +29,13 @@
 	<a class="story-link" href="/search">Search tokens to open Technical Analysis</a>
 </p>
 
-<h2>Blind Banker Price Watch Bot</h2>
+<h2>Blind Bit Boys Price Watch Bot</h2>
 <p>
-	Work in progress. A planned Telegram bot that would send a token’s price and whether that price is
-	up, down, or flat. It is not live, and this site does not send those messages yet.
+	Watches tokens you choose and sends Telegram alerts when price or liquidity moves past the limits
+	you set.
 </p>
 <p>
-	<a class="story-link" href="/tools/price-watch">Blind Banker Price Watch Bot</a>
+	<a class="story-link" href="/price-watch">Blind Bit Boys Price Watch Bot</a>
 </p>
 
 <h2>Liberty Swap Finance</h2>

@@ -156,6 +156,13 @@
 	}
 
 	@media (min-width: 64rem) {
+		.site-nav {
+			display: flex;
+			flex: 1 1 auto;
+			justify-content: flex-end;
+			min-width: 0;
+		}
+
 		.menu-button {
 			display: none;
 		}
@@ -164,8 +171,12 @@
 		ul.is-open {
 			position: static;
 			display: flex;
+			flex-wrap: wrap;
 			align-items: center;
-			gap: 1.25rem;
+			justify-content: flex-end;
+			gap: 0.75rem 1.25rem;
+			width: 100%;
+			min-width: 0;
 			max-height: none;
 			overflow: visible;
 			padding: 0;

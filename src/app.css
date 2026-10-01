@@ -339,7 +339,10 @@ fieldset legend {
 
 main input[type='text'],
 main input[type='search'],
+main input[type='number'],
+main input[type='tel'],
 main input[type='datetime-local'],
+main input[readonly],
 main select,
 main textarea {
 	background: #1f2937;
