@@ -213,10 +213,85 @@
 		return address.trim() || 'Unknown token';
 	}
 
+	type PairSide = {
+		address: string;
+		symbol: string;
+		name: string;
+	};
+
+	function pairSide(pair: PairResult, index: 0 | 1): PairSide {
+		if (index === 0) {
+			return {
+				address: pair.token0_address,
+				symbol: pair.token0_symbol,
+				name: pair.token0_name
+			};
+		}
+		return {
+			address: pair.token1_address,
+			symbol: pair.token1_symbol,
+			name: pair.token1_name
+		};
+	}
+
+	/** Contract address outranks symbol or name. Equal scores keep chain order. */
+	function sideScore(query: string, side: PairSide): number {
+		const q = query.trim().toLowerCase();
+		if (!q) return 0;
+		const address = side.address.trim().toLowerCase();
+		const symbol = side.symbol.trim().toLowerCase();
+		const name = side.name.trim().toLowerCase();
+		if (address && address === q) return 3;
+		if ((symbol && symbol === q) || (name && name === q)) return 2;
+		if (q.length < 2) return 0;
+		if ((symbol && symbol.includes(q)) || (name && name.includes(q))) return 1;
+		return 0;
+	}
+
+	// Display order only. token0 and token1 stay in the order the API returned.
+	function orientPair(pair: PairResult, q: string): { base: PairSide; quote: PairSide } {
+		const left = pairSide(pair, 0);
+		const right = pairSide(pair, 1);
+		if (sideScore(q, right) > sideScore(q, left)) return { base: right, quote: left };
+		return { base: left, quote: right };
+	}
+
+	function matchedSides(pair: PairResult, q: string): PairSide[] {
+		const left = pairSide(pair, 0);
+		const right = pairSide(pair, 1);
+		const leftScore = sideScore(q, left);
+		const rightScore = sideScore(q, right);
+		if (leftScore === 0 && rightScore === 0) return [];
+		if (rightScore > leftScore) return [right];
+		if (leftScore > rightScore) return [left];
+		return [left, right];
+	}
+
+	function searchedTokens(pairs: PairResult[], apiTokens: SearchToken[], q: string): SearchToken[] {
+		const tokens = new Map<string, SearchToken>();
+		let matched = false;
+		for (const pair of pairsByLiquidity(pairs)) {
+			for (const side of matchedSides(pair, q)) {
+				matched = true;
+				rememberToken(tokens, side.address, side.symbol, side.name);
+			}
+		}
+		if (!matched) {
+			if (apiTokens.length > 0) return orderQueryFirst(apiTokens, q);
+			return tokensFromResults(pairs, q);
+		}
+		for (const token of apiTokens) {
+			const existing = tokens.get(token.address.trim().toLowerCase());
+			if (!existing) continue;
+			if (!existing.symbol && token.symbol.trim()) existing.symbol = token.symbol.trim();
+			if (!existing.name && token.name.trim()) existing.name = token.name.trim();
+		}
+		return [...tokens.values()];
+	}
+
 	function pairLabel(pair: PairResult): string {
-		const left = sideLabel(pair.token0_symbol, pair.token0_address);
-		const right = sideLabel(pair.token1_symbol, pair.token1_address);
-		return `${left} / ${right}`;
+		const { base, quote } = orientPair(pair, submittedQuery);
+		return `${sideLabel(base.symbol, base.address)} / ${sideLabel(quote.symbol, quote.address)}`;
 	}
 
 	function pairSides(pair: PairResult): { symbol: string; quoteSymbol: string } {
@@ -284,8 +359,8 @@
 
 	const activeChains = $derived(chainCatalog.filter((chain) => chain.active));
 	const searchTokens = $derived.by(() => {
+		if (results) return searchedTokens(results, resultTokens ?? [], submittedQuery);
 		if (resultTokens && resultTokens.length > 0) return orderQueryFirst(resultTokens, submittedQuery);
-		if (results) return tokensFromResults(results, submittedQuery);
 		return [];
 	});
 	const orderedPairs = $derived(results ? pairsByLiquidity(results) : []);
@@ -611,6 +686,24 @@
 		}
 	}
 
+	/** Null means the reload failed. An empty array is a successful reload. */
+	async function fetchWatchList(): Promise<SavedWatch[] | null> {
+		if (!token) return null;
+		try {
+			return await listWatches(token, user?.telegram_id);
+		} catch {
+			return null;
+		}
+	}
+
+	function listWithSaved(items: SavedWatch[], saved: SavedWatch): SavedWatch[] {
+		return watchesBySymbol([saved, ...items.filter((item) => item.id !== saved.id)]);
+	}
+
+	function listWithoutWatch(items: SavedWatch[], id: string): SavedWatch[] {
+		return watchesBySymbol(items.filter((item) => item.id !== id));
+	}
+
 	async function loadAccount() {
 		if (!token) return;
 		accountError = '';
@@ -814,8 +907,7 @@
 			searched = true;
 			selectedTokenAddress = null;
 			if (found.error) searchError = found.error;
-			const listedTokens =
-				found.tokens.length > 0 ? found.tokens : tokensFromResults(found.pairs, q);
+			const listedTokens = searchedTokens(found.pairs, found.tokens, q);
 			if (found.pairs.length === 0 && listedTokens.length === 0) {
 				await focusId(found.error ? 'search-error' : 'search-empty');
 				return;
@@ -839,48 +931,30 @@
 	}
 
 	function draftFromPair(pair: PairResult, q: string): WatchDraft {
-		const queryText = q.trim().toLowerCase();
-		const sides = pairSides(pair);
-		const tokenSides = [
-			{ symbol: pair.token0_symbol, address: pair.token0_address },
-			{ symbol: pair.token1_symbol, address: pair.token1_address }
-		];
-		const exact = tokenSides.find(
-			(side) =>
-				side.symbol.toLowerCase() === queryText ||
-				(side.address !== '' && side.address.toLowerCase() === queryText)
-		);
-		const partial =
-			exact ??
-			tokenSides.find((side) => queryText !== '' && side.symbol.toLowerCase().includes(queryText));
-		if (partial) {
-			return {
-				id: null,
-				chainId: watchChainId(),
-				pairAddress: pair.pair_address,
-				tokenAddress: partial.address || null,
-				name: partial.symbol,
-				symbol: partial.symbol,
-				baseSymbol: sides.symbol,
-				quoteSymbol: sides.quoteSymbol
-			};
-		}
+		const { base, quote } = orientPair(pair, q);
+		const watched = matchedSides(pair, q)[0] ?? null;
+		const baseText = sideLabel(base.symbol, base.address);
+		const quoteText = sideLabel(quote.symbol, quote.address);
 		return {
 			id: null,
 			chainId: watchChainId(),
 			pairAddress: pair.pair_address,
-			tokenAddress: null,
-			name: `${pair.token0_symbol} / ${pair.token1_symbol}`,
-			symbol: `${pair.token0_symbol}/${pair.token1_symbol}`,
-			baseSymbol: sides.symbol,
-			quoteSymbol: sides.quoteSymbol
+			tokenAddress: watched?.address.trim() ? watched.address.trim() : null,
+			name: `${baseText} / ${quoteText}`,
+			symbol: `${baseText}/${quoteText}`,
+			baseSymbol: baseText,
+			quoteSymbol: quoteText
 		};
 	}
 
 	function choosePair(pair: PairResult) {
-		pairSidesByAddress.set(pair.pair_address.toLowerCase(), pairSides(pair));
+		const next = draftFromPair(pair, submittedQuery);
+		pairSidesByAddress.set(pair.pair_address.toLowerCase(), {
+			symbol: next.baseSymbol,
+			quoteSymbol: next.quoteSymbol
+		});
 		draftReturnId = 'search-heading';
-		draft = draftFromPair(pair, submittedQuery);
+		draft = next;
 		thresholdValues = emptyThresholds();
 		thresholdErrors = {};
 		watchError = '';
@@ -1036,25 +1110,36 @@
 		savingWatch = true;
 		const editing = draft.id;
 		const notice = watchNotice(editing ? 'Updated' : 'Added', draft);
+		const currentWatches = watches ? [...watches] : [];
 		try {
-			const saved = editing
-				? await updateWatch(token, editing, parsed.body)
-				: await createWatch(token, {
-						chain_id: draft.chainId,
-						pair_address: draft.pairAddress,
-						name: draft.name,
-						symbol: draft.symbol,
-						...(draft.tokenAddress ? { token_address: draft.tokenAddress } : {}),
-						...parsed.body
-					});
-			const nextWatches = watches
-				? [saved, ...watches.filter((item) => item.id !== saved.id)]
-				: [saved];
-			watches = watchesBySymbol(nextWatches);
-			await showToast(notice);
-			resetSearchAfterSave();
-			await focusId('pair-query');
-			await loadWatches();
+			if (editing) {
+				const saved = await updateWatch(token, editing, parsed.body);
+				const fallback = listWithSaved(currentWatches, saved);
+				const fresh = await fetchWatchList();
+				watches = fresh ? listWithSaved(fresh, saved) : fallback;
+				watchesError = '';
+				await tick();
+				await showToast(notice);
+				resetSearchAfterSave();
+				await focusId('pair-query');
+			} else {
+				const saved = await createWatch(token, {
+					chain_id: draft.chainId,
+					pair_address: draft.pairAddress,
+					name: draft.name,
+					symbol: draft.symbol,
+					...(draft.tokenAddress ? { token_address: draft.tokenAddress } : {}),
+					...parsed.body
+				});
+				const nextWatches = watches
+					? [saved, ...watches.filter((item) => item.id !== saved.id)]
+					: [saved];
+				watches = watchesBySymbol(nextWatches);
+				await showToast(notice);
+				resetSearchAfterSave();
+				await focusId('pair-query');
+				await loadWatches();
+			}
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (message === PICK_CHAIN_MESSAGE) {
@@ -1097,14 +1182,19 @@
 		removing = true;
 		removeError = '';
 		const target = pendingRemove;
+		const currentWatches = watches ? [...watches] : [];
 		try {
 			await deleteWatch(token, target.id);
+			const fallback = listWithoutWatch(currentWatches, target.id);
+			const fresh = await fetchWatchList();
+			watches = fresh ? listWithoutWatch(fresh, target.id) : fallback;
+			watchesError = '';
+			await tick();
+			await showToast(`Removed ${target.name} from the watch list.`);
 			pendingRemove = null;
-			if (draft?.id === target.id) draft = null;
-			if (watches) watches = watches.filter((item) => item.id !== target.id);
-			listStatus = `Removed the watch for ${target.name}.`;
-			await loadWatches();
-			await focusId('list-status');
+			listStatus = '';
+			resetSearchAfterSave();
+			await focusId('pair-query');
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {

@@ -1,3 +1,4 @@
+// The price watch page and its helpers use the Blind Bit Boys API at https://api.blindbitboys.com and nothing else. Do not replace that API, do not add a fallback price source, and do not change this until Matt updates this instruction.
 import { isMoversSendSeconds, MOVERS_SEND_OPTIONS } from './price-watch-types';
 
 export const PRICE_WATCH_API = 'https://api.blindbitboys.com';
