@@ -112,7 +112,31 @@ export type SavedWatch = {
 
 export type BoardWindow = '15m' | '30m' | '1h' | '6h' | '12h' | '24h';
 
-export type RankingWindow = 'movers' | '10' | BoardWindow | '7d';
+export const FAST_MOVER_VIEWS = [
+	{ value: 'live', label: 'Live' },
+	{ value: '5m', label: '5 minutes' },
+	{ value: '10m', label: '10 minutes' },
+	{ value: '15m', label: '15 minutes' },
+	{ value: '30m', label: '30 minutes' },
+	{ value: '1h', label: '1 hour' },
+	{ value: '3h', label: '3 hours' },
+	{ value: '6h', label: '6 hours' },
+	{ value: '12h', label: '12 hours' },
+	{ value: '18h', label: '18 hours' },
+	{ value: '24h', label: '24 hours' }
+] as const;
+
+export type FastMoverWindow = (typeof FAST_MOVER_VIEWS)[number]['value'];
+
+export const SLOW_MOVER_VIEWS = [
+	{ value: 'slow_24h', label: '24 hours' },
+	{ value: 'slow_3d', label: '3 days' },
+	{ value: 'slow_7d', label: '7 days' }
+] as const;
+
+export type SlowMoverWindow = (typeof SLOW_MOVER_VIEWS)[number]['value'];
+
+export type RankingWindow = 'movers' | '10' | BoardWindow | '7d' | FastMoverWindow | SlowMoverWindow;
 
 export type RankingRow = {
 	id: string;
@@ -128,8 +152,14 @@ export type RankingRow = {
 	meets_liquidity_floor: boolean | null;
 };
 
-/** Off is 0. The shortest on value is 900. These are the only values stored in board_alert_every. */
-export const BOARD_ALERT_SECONDS = [0, 900, 1800, 3600, 21600, 43200, 86400] as const;
+/** Off is 0. Older stored values stay readable. The page saves 24 hours, 3 days, or 7 days. */
+export const BOARD_ALERT_SECONDS = [0, 900, 1800, 3600, 21600, 43200, 86400, 259200, 604800] as const;
+
+export const SLOW_MOVER_INTERVALS = [
+	{ value: '86400', seconds: 86400, label: 'Every 24 hours' },
+	{ value: '259200', seconds: 259200, label: 'Every 3 days' },
+	{ value: '604800', seconds: 604800, label: 'Every 7 days' }
+] as const;
 
 export const BOARD_WINDOW_CHOICES = [
 	{ value: '15m', label: '15 minutes' },
@@ -746,6 +776,11 @@ function topTen(rows: RankingRow[]): RankingRow[] {
 		.slice(0, TOP_POOLS);
 }
 
+/** One rankings window, top 10. No fallback to another window. */
+export async function getMoverBoard(window: RankingWindow): Promise<RankingRow[]> {
+	return topTen(await getRankings(window));
+}
+
 /** GET /rankings?window=movers. An API error is returned to that list. */
 export async function getFastHorses(): Promise<RankingRow[]> {
 	return topTen(await getRankings('movers'));
@@ -831,6 +866,20 @@ export async function saveBoardAlert(
 		saved.user.board_alert_window = window;
 		saved.record.board_alert_window = window;
 	}
+	if (!('board_alert_every' in saved.record)) {
+		saved.user.board_alert_every = seconds;
+		saved.record.board_alert_every = seconds;
+	}
+	return saved;
+}
+
+/** Writes board_alert_every only. It does not send the fast interval or a view window. */
+export async function saveSlowMoverInterval(token: string, seconds: number): Promise<ScheduleSave> {
+	if (!SLOW_MOVER_INTERVALS.some((item) => item.seconds === seconds)) {
+		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
+	}
+	const json = await request('/me', 'PATCH', token, { board_alert_every: seconds });
+	const saved = userFromResponse(json);
 	if (!('board_alert_every' in saved.record)) {
 		saved.user.board_alert_every = seconds;
 		saved.record.board_alert_every = seconds;

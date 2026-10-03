@@ -13,22 +13,21 @@
 		deleteWatch,
 		DOWN_THRESHOLD_HINT,
 		emptyThresholds,
-		BOARD_WINDOW_CHOICES,
-		SLOW_HORSE_INTERVALS,
+		FAST_MOVER_VIEWS,
+		SLOW_MOVER_VIEWS,
+		SLOW_MOVER_INTERVALS,
 		getChains,
-		getFastHorses,
 		getMe,
-		getSlowHorses,
-		isBoardWindow,
+		getMoverBoard,
 		isDownThreshold,
 		listWatches,
 		mergeScheduleUser,
 		parseThresholds,
 		publicErrorMessage,
 		readStoredToken,
-		saveBoardAlert,
 		saveChains,
 		saveMoversAlertEvery,
+		saveSlowMoverInterval,
 		searchPairs,
 		signInWithTelegramId,
 		signInWithTelegramWidget,
@@ -37,13 +36,14 @@
 		thresholdInputValue,
 		updateWatch,
 		watchesBySymbol,
-		type BoardWindow,
+		type FastMoverWindow,
 		type PairResult,
 		type PriceWatchChain,
 		type PriceWatchUser,
 		type RankingRow,
 		type SavedWatch,
 		type SearchTokenResult,
+		type SlowMoverWindow,
 		type TelegramWidgetAuth,
 		type ThresholdKey
 	} from '$lib/priceWatchApi';
@@ -113,23 +113,23 @@
 	let listStatus = $state('');
 
 	let watchlistOpen = $state(false);
-	let fastOpen = $state(true);
+	let fastOpen = $state(false);
 	let slowOpen = $state(false);
+	let fastView = $state<FastMoverWindow>('live');
+	let slowView = $state<SlowMoverWindow>('slow_24h');
 	let fastRows = $state<RankingRow[] | null>(null);
 	let slowRows = $state<RankingRow[] | null>(null);
 	let fastError = $state('');
 	let slowError = $state('');
 	let fastUpdated = $state('');
 	let slowUpdated = $state('');
-	let slowShownWindow = $state<BoardWindow>('15m');
 	let draftReturnId = 'search-heading';
 	let fastSeq = 0;
 	let slowSeq = 0;
 	let fastTimer: ReturnType<typeof setInterval> | null = null;
 	let slowTimer: ReturnType<typeof setInterval> | null = null;
 	let fastEvery = $state('0');
-	let slowEvery = $state('0');
-	let boardWindow = $state<BoardWindow>('15m');
+	let slowEvery = $state('86400');
 	let fastSaveError = $state('');
 	let slowSaveError = $state('');
 	let fastSaveStatus = $state('');
@@ -418,10 +418,6 @@
 		}).format(time);
 	}
 
-	function windowLabel(value: BoardWindow): string {
-		return BOARD_WINDOW_CHOICES.find((item) => item.value === value)?.label ?? '15 minutes';
-	}
-
 	function pairTitle(row: RankingRow): string {
 		const symbol = row.symbol.trim();
 		const quote = row.quote_symbol.trim();
@@ -430,32 +426,20 @@
 		return row.name.trim();
 	}
 
-	function gainText(value: number | null, frame: string): string {
-		if (value === null || !Number.isFinite(value)) {
-			return frame ? `Gain: not available ${frame}.` : 'Gain: not available.';
-		}
+	function percentText(value: number | null): string {
+		if (value === null || !Number.isFinite(value)) return 'Percent change: not available.';
 		const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
-		return frame ? `Gain: ${amount}% ${frame}.` : `Gain: ${amount}%.`;
+		return `Percent change: ${amount}%.`;
+	}
+
+	function fieldText(label: string, value: string): string {
+		const text = value.trim();
+		return text ? `${label}: ${text}` : `${label}: not available.`;
 	}
 
 	function horseItemId(list: 'fast' | 'slow', row: RankingRow, index: number): string {
 		const key = (row.pair_address || row.id).replace(/[^a-zA-Z0-9_-]/g, '');
 		return `${list}-horse-${key || 'row'}-${index}`;
-	}
-
-	function fastAnnouncement(seconds: number): string {
-		const choice = MOVERS_SEND_OPTIONS.find((item) => item.seconds === seconds);
-		if (!choice || seconds === 0) return 'Fast Horses set to off.';
-		const phrase = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
-		return `Fast Horses set to ${phrase}.`;
-	}
-
-	function slowAnnouncement(window: BoardWindow, seconds: number): string {
-		const label = windowLabel(window);
-		const choice = SLOW_HORSE_INTERVALS.find((item) => item.seconds === seconds);
-		if (!choice || seconds === 0) return `Slow Horses set to the ${label} list, sending off.`;
-		const phrase = choice.label.charAt(0).toLowerCase() + choice.label.slice(1);
-		return `Slow Horses set to the ${label} list, sent ${phrase}.`;
 	}
 
 	function nextDueText(lastSent: string | null, everySeconds: number, name: string): string {
@@ -472,18 +456,16 @@
 		fastEvery = MOVERS_SEND_OPTIONS.some((item) => item.seconds === next.movers_alert_every)
 			? String(next.movers_alert_every)
 			: '0';
-		slowEvery = SLOW_HORSE_INTERVALS.some((item) => item.seconds === next.board_alert_every)
+		slowEvery = SLOW_MOVER_INTERVALS.some((item) => item.seconds === next.board_alert_every)
 			? String(next.board_alert_every)
-			: '0';
-		boardWindow = next.board_alert_window;
+			: '86400';
 		fastSaveError = '';
 		slowSaveError = '';
 	}
 
 	function clearHorseSchedule() {
 		fastEvery = '0';
-		slowEvery = '0';
-		boardWindow = '15m';
+		slowEvery = '86400';
 		fastSaveError = '';
 		slowSaveError = '';
 		fastSaveStatus = '';
@@ -519,9 +501,7 @@
 		accountNote = '';
 		restoring = false;
 		signInError = message;
-		const previousWindow = boardWindow;
 		clearHorseSchedule();
-		if (slowOpen && previousWindow !== '15m') void loadSlow('15m', true);
 	}
 
 	function clearWidget() {
@@ -570,37 +550,52 @@
 		}
 	}
 
-	async function loadFast() {
+	function isFastView(value: string): value is FastMoverWindow {
+		return FAST_MOVER_VIEWS.some((item) => item.value === value);
+	}
+
+	function isSlowView(value: string): value is SlowMoverWindow {
+		return SLOW_MOVER_VIEWS.some((item) => item.value === value);
+	}
+
+	async function loadFast(reset = false) {
 		if (!fastOpen) return;
+		const view = fastView;
 		const seq = ++fastSeq;
+		if (reset) {
+			fastRows = null;
+			fastError = '';
+		}
 		try {
-			const rows = await getFastHorses();
-			if (seq !== fastSeq || !fastOpen) return;
+			const rows = await getMoverBoard(view);
+			if (seq !== fastSeq || !fastOpen || view !== fastView) return;
 			fastRows = rows;
 			fastError = '';
 			fastUpdated = clockText(new Date());
 		} catch (error) {
-			if (seq !== fastSeq || !fastOpen) return;
+			if (seq !== fastSeq || !fastOpen || view !== fastView) return;
+			fastRows = [];
 			fastError = publicErrorMessage(error, null);
 		}
 	}
 
-	async function loadSlow(window: BoardWindow = boardWindow, reset = false) {
+	async function loadSlow(reset = false) {
 		if (!slowOpen) return;
+		const view = slowView;
 		const seq = ++slowSeq;
 		if (reset) {
 			slowRows = null;
 			slowError = '';
 		}
 		try {
-			const rows = await getSlowHorses(window);
-			if (seq !== slowSeq || window !== boardWindow || !slowOpen) return;
+			const rows = await getMoverBoard(view);
+			if (seq !== slowSeq || !slowOpen || view !== slowView) return;
 			slowRows = rows;
-			slowShownWindow = window;
 			slowError = '';
 			slowUpdated = clockText(new Date());
 		} catch (error) {
-			if (seq !== slowSeq || window !== boardWindow || !slowOpen) return;
+			if (seq !== slowSeq || !slowOpen || view !== slowView) return;
+			slowRows = [];
 			slowError = publicErrorMessage(error, null);
 		}
 	}
@@ -655,12 +650,20 @@
 		void startSlowRefresh();
 	}
 
-	function chooseSlowWindow(event: Event) {
+	function chooseFastView(event: Event) {
 		const select = event.currentTarget;
-		if (!(select instanceof HTMLSelectElement) || !isBoardWindow(select.value)) return;
-		boardWindow = select.value;
-		if (select.value === slowShownWindow && slowRows !== null) return;
-		void loadSlow(select.value, true);
+		if (!(select instanceof HTMLSelectElement) || !isFastView(select.value)) return;
+		if (select.value === fastView && fastRows !== null && !fastError) return;
+		fastView = select.value;
+		void loadFast(true);
+	}
+
+	function chooseSlowView(event: Event) {
+		const select = event.currentTarget;
+		if (!(select instanceof HTMLSelectElement) || !isSlowView(select.value)) return;
+		if (select.value === slowView && slowRows !== null && !slowError) return;
+		slowView = select.value;
+		void loadSlow(true);
 	}
 
 	async function loadWatches() {
@@ -709,17 +712,10 @@
 		accountError = '';
 		try {
 			const me = await getMe(token);
-			const previousWindow = boardWindow;
 			user = me.user;
 			selectedChainIds = me.chains.map((chain) => chain.chain_id);
 			showHorseSchedule(me.user);
 			await loadWatches();
-			if (
-				slowOpen &&
-				(me.user.board_alert_window !== previousWindow || slowRows === null)
-			) {
-				await loadSlow(me.user.board_alert_window, me.user.board_alert_window !== previousWindow);
-			}
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
@@ -832,9 +828,7 @@
 		listStatus = '';
 		watchStatus = '';
 		watchError = '';
-		const previousWindow = boardWindow;
 		clearHorseSchedule();
-		if (slowOpen && previousWindow !== '15m') void loadSlow('15m', true);
 		await tick();
 		await syncWidget();
 		await focusId('sign-in-heading');
@@ -1220,12 +1214,12 @@
 		const choice = MOVERS_SEND_OPTIONS.find((item) => item.value === fastEvery);
 		if (!choice) {
 			fastSaveError = 'Choose a schedule from the list.';
-			await focusId('fast-horses-save-error');
+			await focusId('fast-movers-save-error');
 			return;
 		}
 		if (!token || !user) {
-			fastSaveError = 'Sign in before you save this schedule.';
-			await focusId('fast-horses-save-error');
+			fastSaveError = 'Sign in with Telegram before saving.';
+			await focusId('fast-movers-save-error');
 			return;
 		}
 		const current = user;
@@ -1237,8 +1231,8 @@
 			fastEvery = MOVERS_SEND_OPTIONS.some((item) => item.seconds === nextUser.movers_alert_every)
 				? String(nextUser.movers_alert_every)
 				: '0';
-			fastSaveStatus = fastAnnouncement(nextUser.movers_alert_every);
-			await focusId('fast-horses-save-status');
+			fastSaveStatus = 'Saved.';
+			await focusId('fast-movers-save-status');
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
@@ -1247,7 +1241,7 @@
 				return;
 			}
 			fastSaveError = message;
-			await focusId('fast-horses-save-error');
+			await focusId('fast-movers-save-error');
 		} finally {
 			savingFast = false;
 		}
@@ -1257,36 +1251,28 @@
 		event.preventDefault();
 		slowSaveError = '';
 		slowSaveStatus = '';
-		if (!isBoardWindow(boardWindow)) {
-			slowSaveError = 'Choose a time frame from the list.';
-			await focusId('slow-horses-save-error');
-			return;
-		}
-		const choice = SLOW_HORSE_INTERVALS.find((item) => item.value === slowEvery);
+		const choice = SLOW_MOVER_INTERVALS.find((item) => item.value === slowEvery);
 		if (!choice) {
 			slowSaveError = 'Choose a schedule from the list.';
-			await focusId('slow-horses-save-error');
+			await focusId('slow-movers-save-error');
 			return;
 		}
 		if (!token || !user) {
-			slowSaveError = 'Sign in before you save this schedule.';
-			await focusId('slow-horses-save-error');
+			slowSaveError = 'Sign in with Telegram before saving.';
+			await focusId('slow-movers-save-error');
 			return;
 		}
 		const current = user;
 		savingSlow = true;
 		try {
-			const saved = await saveBoardAlert(token, boardWindow, choice.seconds);
+			const saved = await saveSlowMoverInterval(token, choice.seconds);
 			const nextUser = mergeScheduleUser(current, saved.user, saved.record);
 			user = nextUser;
-			const windowChanged = slowShownWindow !== nextUser.board_alert_window;
-			slowEvery = SLOW_HORSE_INTERVALS.some((item) => item.seconds === nextUser.board_alert_every)
+			slowEvery = SLOW_MOVER_INTERVALS.some((item) => item.seconds === nextUser.board_alert_every)
 				? String(nextUser.board_alert_every)
-				: '0';
-			boardWindow = nextUser.board_alert_window;
-			if (slowOpen && windowChanged) await loadSlow(nextUser.board_alert_window, true);
-			slowSaveStatus = slowAnnouncement(nextUser.board_alert_window, nextUser.board_alert_every);
-			await focusId('slow-horses-save-status');
+				: '86400';
+			slowSaveStatus = 'Saved.';
+			await focusId('slow-movers-save-status');
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
@@ -1295,7 +1281,7 @@
 				return;
 			}
 			slowSaveError = message;
-			await focusId('slow-horses-save-error');
+			await focusId('slow-movers-save-error');
 		} finally {
 			savingSlow = false;
 		}
@@ -1721,61 +1707,68 @@
 
 		<section id="top-performers" aria-labelledby="top-performers-heading">
 			<h2 id="top-performers-heading">Top Performers</h2>
+			<p id="top-performers-intro">
+				Welcome to top performers. Fast movers are the short bursts. Slow movers are tokens that
+				were promoted from a fast board and are now measured over a longer time. Open a section,
+				choose one view, and read that view’s top 10. Then choose how often that section may send
+				Telegram notifications, and save that choice. A saved choice applies only to that section.
+			</p>
 			<div class="horse-switch" role="group" aria-labelledby="top-performers-heading">
 				<button
 					type="button"
-					id="fast-horses-button"
+					id="fast-movers-button"
 					class="horse-toggle"
-					aria-pressed={fastOpen ? 'true' : 'false'}
-					aria-controls={fastOpen ? 'fast-horses-panel' : undefined}
+					aria-expanded={fastOpen ? 'true' : 'false'}
+					aria-controls={fastOpen ? 'fast-movers-panel' : undefined}
 					onclick={toggleFastHorses}
 				>
-					Fast Horses{#if fastOpen}<span> (selected)</span>{/if}
+					Fast movers
 				</button>
 				<button
 					type="button"
-					id="slow-horses-button"
+					id="slow-movers-button"
 					class="horse-toggle"
-					aria-pressed={slowOpen ? 'true' : 'false'}
-					aria-controls={slowOpen ? 'slow-horses-panel' : undefined}
+					aria-expanded={slowOpen ? 'true' : 'false'}
+					aria-controls={slowOpen ? 'slow-movers-panel' : undefined}
 					onclick={toggleSlowHorses}
 				>
-					Slow Horses{#if slowOpen}<span> (selected)</span>{/if}
+					Slow movers
 				</button>
 			</div>
 
 			{#if fastOpen}
 			<div
-				id="fast-horses-panel"
+				id="fast-movers-panel"
 				class="horse-panel"
 				role="region"
-				aria-labelledby="fast-horses-heading"
+				aria-labelledby="fast-movers-button"
 			>
-				<h3 id="fast-horses-heading">Fast Horses</h3>
-				<p>
-					Fast Horses are tokens that move quickly. They go up and down, and a token is often on
-					this list for only a short time. Choose how often to send this list to your Telegram.
-				</p>
+				<div class="field">
+					<label for="fast-movers-view">View</label>
+					<select id="fast-movers-view" value={fastView} onchange={chooseFastView}>
+						{#each FAST_MOVER_VIEWS as choice (choice.value)}
+							<option value={choice.value}>{choice.label}</option>
+						{/each}
+					</select>
+				</div>
 				{#if fastError}
-					<p id="fast-horses-error" role="alert" tabindex="-1">{fastError}</p>
+					<p id="fast-movers-error" role="alert" tabindex="-1">{fastError}</p>
 				{:else if fastRows === null}
-					<p role="status">Loading Fast Horses.</p>
+					<p role="status">Loading this view.</p>
 				{:else if fastRows.length === 0}
-					<p>No tokens are on this list right now.</p>
+					<p>This view has no tokens yet.</p>
 				{:else}
 					<ol class="horse-list">
-						{#each fastRows as row, index (`fast:${row.pair_address || row.id}:${index}`)}
+						{#each fastRows as row, index (`fast:${fastView}:${row.pair_address || row.id}:${index}`)}
 							<li class="wrap">
 								<p id={horseItemId('fast', row, index)} tabindex="-1">
 									Rank: {row.rank ?? index + 1}
 								</p>
-								<p>{pairTitle(row)}</p>
-								{#if row.name.trim() && row.name.trim() !== pairTitle(row)}
-									<p>Name: {row.name.trim()}</p>
-								{/if}
-								<p>{gainText(row.price_change_pct, '')}</p>
-								<p>USD price: {usdText(row.price_usd)}</p>
-								<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
+								<p>{fieldText('Symbol', row.symbol)}</p>
+								<p>{fieldText('Name', row.name)}</p>
+								<p>{percentText(row.price_change_pct)}</p>
+								<p>Price: {usdText(row.price_usd)}</p>
+								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
 								{#if row.pair_address}
 									<button type="button" onclick={() => watchRanking(row, 'fast', index)}>
 										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
@@ -1785,30 +1778,32 @@
 						{/each}
 					</ol>
 				{/if}
-				{#if fastUpdated}
+				{#if fastUpdated && !fastError}
 					<p role="status" aria-atomic="true">Updated {fastUpdated}.</p>
 				{/if}
 				{#if user}
 					{#if user.movers_alert_last_sent}
 						<p>Last sent {sentText(user.movers_alert_last_sent)}.</p>
 					{/if}
-					<p>{nextDueText(user.movers_alert_last_sent, user.movers_alert_every, 'Fast Horses')}</p>
+					<p>{nextDueText(user.movers_alert_last_sent, user.movers_alert_every, 'Fast movers')}</p>
 				{/if}
 				<form novalidate onsubmit={saveFastSchedule}>
 					<div class="field">
-						<label for="fast-horses-every">How often to send Fast Horses on Telegram</label>
-						<select id="fast-horses-every" bind:value={fastEvery} aria-describedby="fast-horses-hint">
+						<label for="fast-movers-every">How often Fast movers may send Telegram notifications</label>
+						<select id="fast-movers-every" bind:value={fastEvery} aria-describedby="fast-movers-hint">
 							{#each MOVERS_SEND_OPTIONS as choice (choice.value)}
 								<option value={choice.value}>{choice.label}</option>
 							{/each}
 						</select>
-						<p id="fast-horses-hint">Saving does not send Telegram. The bot sends the list.</p>
+						<p id="fast-movers-hint">
+							Saving applies only to Fast movers. It does not send Telegram. The bot sends the list.
+						</p>
 					</div>
 					{#if fastSaveError}
-						<p id="fast-horses-save-error" role="alert" tabindex="-1">{fastSaveError}</p>
+						<p id="fast-movers-save-error" role="alert" tabindex="-1">{fastSaveError}</p>
 					{/if}
 					{#if fastSaveStatus}
-						<p id="fast-horses-save-status" role="status" tabindex="-1">{fastSaveStatus}</p>
+						<p id="fast-movers-save-status" role="status" tabindex="-1">{fastSaveStatus}</p>
 					{/if}
 					<button type="submit" disabled={savingFast}>Save</button>
 				</form>
@@ -1817,44 +1812,37 @@
 
 			{#if slowOpen}
 			<div
-				id="slow-horses-panel"
+				id="slow-movers-panel"
 				class="horse-panel"
 				role="region"
-				aria-labelledby="slow-horses-heading"
+				aria-labelledby="slow-movers-button"
 			>
-				<h3 id="slow-horses-heading">Slow Horses</h3>
-				<p>
-					Slow Horses are tokens that move more slowly and tend to stay on the list longer. Choose
-					how far back to look, then choose how often to send that list to your Telegram.
-				</p>
 				<div class="field">
-					<label for="slow-horses-window">Slow Horses time frame</label>
-					<select id="slow-horses-window" bind:value={boardWindow} onchange={chooseSlowWindow}>
-						{#each BOARD_WINDOW_CHOICES as choice (choice.value)}
+					<label for="slow-movers-view">View</label>
+					<select id="slow-movers-view" value={slowView} onchange={chooseSlowView}>
+						{#each SLOW_MOVER_VIEWS as choice (choice.value)}
 							<option value={choice.value}>{choice.label}</option>
 						{/each}
 					</select>
 				</div>
 				{#if slowError}
-					<p id="slow-horses-error" role="alert" tabindex="-1">{slowError}</p>
+					<p id="slow-movers-error" role="alert" tabindex="-1">{slowError}</p>
 				{:else if slowRows === null}
-					<p role="status">Loading Slow Horses.</p>
+					<p role="status">Loading this view.</p>
 				{:else if slowRows.length === 0}
-					<p>No tokens are on this list right now.</p>
+					<p>This view has no tokens yet.</p>
 				{:else}
 					<ol class="horse-list">
-						{#each slowRows as row, index (`slow:${row.pair_address || row.id}:${index}`)}
+						{#each slowRows as row, index (`slow:${slowView}:${row.pair_address || row.id}:${index}`)}
 							<li class="wrap">
 								<p id={horseItemId('slow', row, index)} tabindex="-1">
 									Rank: {row.rank ?? index + 1}
 								</p>
-								<p>{pairTitle(row)}</p>
-								{#if row.name.trim() && row.name.trim() !== pairTitle(row)}
-									<p>Name: {row.name.trim()}</p>
-								{/if}
-								<p>{gainText(row.price_change_pct, `in ${windowLabel(slowShownWindow)}`)}</p>
-								<p>USD price: {usdText(row.price_usd)}</p>
-								<p>USD liquidity: {usdText(row.liquidity_usd)}</p>
+								<p>{fieldText('Symbol', row.symbol)}</p>
+								<p>{fieldText('Name', row.name)}</p>
+								<p>{percentText(row.price_change_pct)}</p>
+								<p>Price: {usdText(row.price_usd)}</p>
+								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
 								{#if row.pair_address}
 									<button type="button" onclick={() => watchRanking(row, 'slow', index)}>
 										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
@@ -1864,33 +1852,32 @@
 						{/each}
 					</ol>
 				{/if}
-				{#if slowUpdated}
+				{#if slowUpdated && !slowError}
 					<p role="status" aria-atomic="true">Updated {slowUpdated}.</p>
 				{/if}
 				{#if user}
 					{#if user.board_alert_last_sent}
 						<p>Last sent {sentText(user.board_alert_last_sent)}.</p>
 					{/if}
-					<p>{nextDueText(user.board_alert_last_sent, user.board_alert_every, 'Slow Horses')}</p>
+					<p>{nextDueText(user.board_alert_last_sent, user.board_alert_every, 'Slow movers')}</p>
 				{/if}
 				<form novalidate onsubmit={saveSlowSchedule}>
 					<div class="field">
-						<label for="slow-horses-every">How often to send Slow Horses on Telegram</label>
-						<select id="slow-horses-every" bind:value={slowEvery} aria-describedby="slow-horses-hint">
-							{#each SLOW_HORSE_INTERVALS as choice (choice.value)}
+						<label for="slow-movers-every">How often Slow movers may send Telegram notifications</label>
+						<select id="slow-movers-every" bind:value={slowEvery} aria-describedby="slow-movers-hint">
+							{#each SLOW_MOVER_INTERVALS as choice (choice.value)}
 								<option value={choice.value}>{choice.label}</option>
 							{/each}
 						</select>
-						<p id="slow-horses-hint">
-							Saving stores this time frame and this schedule. It does not send Telegram, and it
-							does not change Fast Horses. The bot sends the list.
+						<p id="slow-movers-hint">
+							Saving applies only to Slow movers. It does not send Telegram. The bot sends the list.
 						</p>
 					</div>
 					{#if slowSaveError}
-						<p id="slow-horses-save-error" role="alert" tabindex="-1">{slowSaveError}</p>
+						<p id="slow-movers-save-error" role="alert" tabindex="-1">{slowSaveError}</p>
 					{/if}
 					{#if slowSaveStatus}
-						<p id="slow-horses-save-status" role="status" tabindex="-1">{slowSaveStatus}</p>
+						<p id="slow-movers-save-status" role="status" tabindex="-1">{slowSaveStatus}</p>
 					{/if}
 					<button type="submit" disabled={savingSlow}>Save</button>
 				</form>
@@ -2088,7 +2075,7 @@
 		text-decoration: none;
 	}
 
-	.pw .horse-toggle[aria-pressed='true'] {
+	.pw .horse-toggle[aria-expanded='true'] {
 		border-style: solid;
 		border-width: 4px;
 		font-weight: 700;
