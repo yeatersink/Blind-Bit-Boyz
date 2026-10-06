@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
 	import {
 		API_UNREACHABLE,
@@ -29,9 +30,6 @@
 		saveMoversAlertEvery,
 		saveSlowMoverInterval,
 		searchPairs,
-		signInWithTelegramId,
-		signInWithTelegramWidget,
-		storeToken,
 		THRESHOLD_NEGATIVE_MESSAGE,
 		thresholdInputValue,
 		updateWatch,
@@ -44,12 +42,9 @@
 		type SavedWatch,
 		type SearchTokenResult,
 		type SlowMoverWindow,
-		type TelegramWidgetAuth,
 		type ThresholdKey
 	} from '$lib/priceWatchApi';
 	import { MOVERS_SEND_OPTIONS } from '$lib/price-watch-types';
-
-	let { data } = $props();
 
 	type Health = 'checking' | 'down' | 'up';
 	type WatchDraft = {
@@ -70,11 +65,7 @@
 	let restoring = $state(false);
 	let token: string | null = null;
 	let user = $state<PriceWatchUser | null>(null);
-	let accountNote = $state('');
 	let accountError = $state('');
-	let telegramId = $state('');
-	let signInError = $state('');
-	let signingIn = $state(false);
 
 	let chainCatalog = $state<PriceWatchChain[]>([]);
 	let chainsLoaded = $state(false);
@@ -136,8 +127,6 @@
 	let slowSaveStatus = $state('');
 	let savingFast = $state(false);
 	let savingSlow = $state(false);
-
-	let widgetCleanup: (() => void) | null = null;
 
 	type SearchToken = SearchTokenResult;
 
@@ -492,50 +481,16 @@
 		return error instanceof PriceWatchApiError && error.status === 401;
 	}
 
-	function dropSession(message: string) {
+	async function dropSession() {
 		clearStoredToken();
 		token = null;
 		user = null;
 		watches = null;
 		selectedChainIds = [];
-		accountNote = '';
+		accountError = '';
 		restoring = false;
-		signInError = message;
 		clearHorseSchedule();
-	}
-
-	function clearWidget() {
-		widgetCleanup?.();
-		widgetCleanup = null;
-	}
-
-	function mountWidget(username: string) {
-		const host = document.getElementById('telegram-login-widget');
-		if (!host) return;
-		const win = window as unknown as Record<string, unknown>;
-		win.onTelegramAuth = (widgetUser: Partial<TelegramWidgetAuth>) => {
-			void signInFromWidget(widgetUser);
-		};
-		const script = document.createElement('script');
-		script.async = true;
-		script.src = 'https://telegram.org/js/telegram-widget.js?22';
-		script.dataset.telegramLogin = username;
-		script.dataset.size = 'large';
-		script.dataset.onauth = 'onTelegramAuth(user)';
-		script.dataset.requestAccess = 'write';
-		host.replaceChildren(script);
-		widgetCleanup = () => {
-			delete win.onTelegramAuth;
-			host.replaceChildren();
-			widgetCleanup = null;
-		};
-	}
-
-	async function syncWidget() {
-		clearWidget();
-		if (health !== 'up' || user || !data.botUsername) return;
-		await tick();
-		mountWidget(data.botUsername);
+		await goto('/price-watch/login?notice=expired', { replaceState: true });
 	}
 
 	async function loadChains() {
@@ -679,8 +634,7 @@
 			const message = publicErrorMessage(error, token);
 			watches = null;
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			watchesError = message;
@@ -719,8 +673,7 @@
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			accountError = message;
@@ -728,6 +681,12 @@
 	}
 
 	async function start() {
+		const stored = readStoredToken();
+		if (!stored) {
+			health = 'up';
+			await goto('/price-watch/login', { replaceState: true });
+			return;
+		}
 		try {
 			await checkHealth();
 		} catch {
@@ -736,83 +695,13 @@
 			return;
 		}
 		health = 'up';
-		const stored = readStoredToken();
-		const jobs: Promise<void>[] = [loadChains()];
+		restoring = true;
+		token = stored;
+		const jobs: Promise<void>[] = [loadChains(), loadAccount()];
 		if (fastOpen) jobs.push(startFastRefresh());
-		if (stored) {
-			restoring = true;
-			token = stored;
-			jobs.push(loadAccount());
-		}
 		await Promise.all(jobs);
 		restoring = false;
-	}
-
-	async function adoptSession(nextToken: string, nextUser: PriceWatchUser) {
-		token = nextToken;
-		const stored = storeToken(nextToken);
-		user = nextUser;
-		telegramId = '';
-		signInError = '';
-		accountNote = stored
-			? ''
-			: 'Signed in for this visit. This browser did not keep the sign-in.';
-		clearWidget();
-		await loadAccount();
-		await focusId('account-heading');
-	}
-
-	async function submitTelegramId(event: SubmitEvent) {
-		event.preventDefault();
-		const digits = telegramId.replace(/\D/g, '');
-		telegramId = digits;
-		if (!/^\d+$/.test(digits)) {
-			signInError = 'Telegram id must be digits only.';
-			await focusId('sign-in-error');
-			return;
-		}
-		signingIn = true;
-		signInError = '';
-		try {
-			const result = await signInWithTelegramId(digits);
-			await adoptSession(result.token, result.user);
-		} catch (error) {
-			signInError = publicErrorMessage(error, null);
-			await focusId('sign-in-error');
-		} finally {
-			signingIn = false;
-		}
-	}
-
-	async function signInFromWidget(widgetUser: Partial<TelegramWidgetAuth>) {
-		if (
-			typeof widgetUser.hash !== 'string' ||
-			widgetUser.id === undefined ||
-			widgetUser.auth_date === undefined
-		) {
-			signInError = 'Telegram login did not include a hash.';
-			await focusId('sign-in-error');
-			return;
-		}
-		signingIn = true;
-		signInError = '';
-		try {
-			const result = await signInWithTelegramWidget({
-				id: widgetUser.id,
-				hash: widgetUser.hash,
-				auth_date: widgetUser.auth_date,
-				first_name: widgetUser.first_name,
-				last_name: widgetUser.last_name,
-				username: widgetUser.username,
-				photo_url: widgetUser.photo_url
-			});
-			await adoptSession(result.token, result.user);
-		} catch (error) {
-			signInError = publicErrorMessage(error, null);
-			await focusId('sign-in-error');
-		} finally {
-			signingIn = false;
-		}
+		if (!user && !accountError) await goto('/price-watch/login', { replaceState: true });
 	}
 
 	async function signOut() {
@@ -823,15 +712,12 @@
 		selectedChainIds = [];
 		draft = null;
 		pendingRemove = null;
-		accountNote = '';
 		accountError = '';
 		listStatus = '';
 		watchStatus = '';
 		watchError = '';
 		clearHorseSchedule();
-		await tick();
-		await syncWidget();
-		await focusId('sign-in-heading');
+		await goto('/price-watch/login');
 	}
 
 	function toggleChain(chainId: string, checked: boolean) {
@@ -847,8 +733,7 @@
 		chainsError = '';
 		chainsStatus = '';
 		if (!token) {
-			signInError = 'Sign in before you save chains.';
-			await focusId('sign-in-heading');
+			await dropSession();
 			return;
 		}
 		const chainIds = activeChains
@@ -865,8 +750,7 @@
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			chainsError = message;
@@ -1088,8 +972,7 @@
 		watchError = '';
 		watchStatus = '';
 		if (!token) {
-			signInError = 'Sign in before you save a watch.';
-			await focusId('sign-in-heading');
+			await dropSession();
 			return;
 		}
 		const parsed = parseThresholds(thresholdValues);
@@ -1142,8 +1025,7 @@
 				return;
 			}
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			watchError = message;
@@ -1169,8 +1051,7 @@
 	async function confirmRemove() {
 		if (!pendingRemove) return;
 		if (!token) {
-			signInError = 'Sign in before you remove a watch.';
-			await focusId('sign-in-heading');
+			await dropSession();
 			return;
 		}
 		removing = true;
@@ -1192,8 +1073,7 @@
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			removeError = message;
@@ -1218,8 +1098,7 @@
 			return;
 		}
 		if (!token || !user) {
-			fastSaveError = 'Sign in with Telegram before saving.';
-			await focusId('fast-movers-save-error');
+			await dropSession();
 			return;
 		}
 		const current = user;
@@ -1236,8 +1115,7 @@
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			fastSaveError = message;
@@ -1258,8 +1136,7 @@
 			return;
 		}
 		if (!token || !user) {
-			slowSaveError = 'Sign in with Telegram before saving.';
-			await focusId('slow-movers-save-error');
+			await dropSession();
 			return;
 		}
 		const current = user;
@@ -1276,8 +1153,7 @@
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			if (isLoginError(error)) {
-				dropSession(message);
-				await focusId('sign-in-heading');
+				await dropSession();
 				return;
 			}
 			slowSaveError = message;
@@ -1288,14 +1164,10 @@
 	}
 
 	onMount(() => {
-		void (async () => {
-			await start();
-			await syncWidget();
-		})();
+		void start();
 		return () => {
 			stopFastRefresh();
 			stopSlowRefresh();
-			clearWidget();
 			if (toastTimer) clearTimeout(toastTimer);
 		};
 	});
@@ -1314,27 +1186,28 @@
 		{toastText}
 	</p>
 	<h1>Blind Bit Boys Price Watch Bot</h1>
-	<p>
-		This page watches PulseChain tokens you choose and sends Telegram alerts when price or liquidity
-		moves past the limits you set. The site talks only to the Blind Bit Boys API. It never talks to
-		Directus and never shows an RPC address.
-	</p>
 	<noscript>
-		<p>This page needs JavaScript to sign in, search, and save watches.</p>
+		<p>This page needs JavaScript. A login is required before the price watch home is available.</p>
 	</noscript>
 
-	{#if health === 'checking'}
-		<p role="status">Checking whether the price watch API is reachable.</p>
+	{#if health === 'checking' || restoring}
+		<p role="status">Loading your account.</p>
 	{:else if health === 'down'}
 		<p id="health-error" role="alert" tabindex="-1">{API_UNREACHABLE}</p>
+	{:else if !user}
+		<p role="status">Returning to the login page.</p>
+		{#if accountError}
+			<p id="account-error" role="alert" tabindex="-1">{accountError}</p>
+		{/if}
 	{:else}
+		<p>
+			This page watches PulseChain tokens you choose and sends Telegram alerts when price or liquidity
+			moves past the limits you set. The site talks only to the Blind Bit Boys API. It never talks to
+			Directus and never shows an RPC address.
+		</p>
 		<nav aria-label="On this page">
 			<ul>
-				{#if user}
-					<li><a class="story-link" href="#account">Your account</a></li>
-				{:else if !restoring}
-					<li><a class="story-link" href="#sign-in">Sign in</a></li>
-				{/if}
+				<li><a class="story-link" href="#account">Your account</a></li>
 				<li><a class="story-link" href="#chains">Chains you watch</a></li>
 				<li><a class="story-link" href="#find-a-pair">Find a pair</a></li>
 				<li>
@@ -1346,54 +1219,14 @@
 			</ul>
 		</nav>
 
-		{#if restoring && !user}
-			<p role="status">Loading your account.</p>
-		{:else if user}
-			<section id="account" aria-labelledby="account-heading">
-				<h2 id="account-heading" tabindex="-1">Your account</h2>
-				<p>Signed in with Telegram id {user.telegram_id}.</p>
-				{#if accountNote}<p>{accountNote}</p>{/if}
-				{#if accountError}
-					<p id="account-error" role="alert" tabindex="-1">{accountError}</p>
-				{/if}
-				<button type="button" onclick={signOut}>Sign out</button>
-			</section>
-		{:else}
-			<section id="sign-in" aria-labelledby="sign-in-heading">
-				<h2 id="sign-in-heading" tabindex="-1">Sign in with Telegram</h2>
-				<form novalidate onsubmit={submitTelegramId}>
-					<div class="field">
-						<label for="telegram-id">Telegram id</label>
-						<input
-							id="telegram-id"
-							type="text"
-							inputmode="numeric"
-							autocomplete="off"
-							spellcheck="false"
-							value={telegramId}
-							aria-describedby="telegram-id-hint"
-							aria-invalid={signInError ? 'true' : undefined}
-							oninput={(event) => {
-								const input = event.currentTarget;
-								if (!(input instanceof HTMLInputElement)) return;
-								const digits = input.value.replace(/\D/g, '');
-								telegramId = digits;
-								if (input.value !== digits) input.value = digits;
-							}}
-						/>
-						<p id="telegram-id-hint">Digits only.</p>
-					</div>
-					{#if signInError}
-						<p id="sign-in-error" role="alert" tabindex="-1">{signInError}</p>
-					{/if}
-					<button type="submit" disabled={signingIn}>Sign in with Telegram id</button>
-				</form>
-				{#if data.botUsername}
-					<p>Or use the Telegram login button. If that button does not appear, use the Telegram id field.</p>
-					<div id="telegram-login-widget"></div>
-				{/if}
-			</section>
-		{/if}
+		<section id="account" aria-labelledby="account-heading">
+			<h2 id="account-heading" tabindex="-1">Your account</h2>
+			<p>Signed in with Telegram id {user.telegram_id}.</p>
+			{#if accountError}
+				<p id="account-error" role="alert" tabindex="-1">{accountError}</p>
+			{/if}
+			<button type="button" onclick={signOut}>Sign out</button>
+		</section>
 
 		<section id="chains" aria-labelledby="chains-heading">
 			<h2 id="chains-heading" tabindex="-1">Chains you watch</h2>
@@ -2030,11 +1863,6 @@
 
 	.pw .wrap {
 		overflow-wrap: anywhere;
-	}
-
-	.pw #telegram-login-widget {
-		margin-top: 0.75rem;
-		min-height: 2.75rem;
 	}
 
 	.pw h2 .disclosure {

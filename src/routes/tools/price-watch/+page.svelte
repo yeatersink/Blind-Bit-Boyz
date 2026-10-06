@@ -86,7 +86,7 @@
 {:else if !signedIn}
 	<p>Sign in to load your saved watches.</p>
 	<p>
-		<a class="story-link" href="/price-watch">Sign in on Blind Bit Boys Price Watch Bot</a>
+		<a class="story-link" href="/price-watch/login">Log in to Blind Bit Boys Price Watch Bot</a>
 	</p>
 {:else if watches && watches.length === 0}
 	<p>You have no saved watches yet.</p>
