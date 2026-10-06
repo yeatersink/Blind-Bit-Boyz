@@ -4,7 +4,7 @@ import {
 	CODE_REJECTED,
 	cleanLoginCode,
 	cleanTelegramId,
-	createAccountFromCode,
+	loginFromCode,
 	sameSiteRequest
 } from '$lib/server/telegramLogin';
 
@@ -31,7 +31,7 @@ export const POST = async ({ request, cookies, url }) => {
 		return json({ error: CODE_REJECTED }, { status: 400 });
 	}
 	try {
-		const session = await createAccountFromCode(cookies, telegramId, code);
+		const session = await loginFromCode(cookies, telegramId, code);
 		return json(omitRpc({ token: session.token }));
 	} catch (error) {
 		if (error instanceof PriceWatchApiError && error.status === 0) {

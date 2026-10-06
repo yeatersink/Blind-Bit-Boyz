@@ -182,7 +182,7 @@ async function deliverCode(token: string, telegramId: string, code: string): Pro
 	}
 }
 
-export async function createAccountFromCode(
+export async function loginFromCode(
 	cookies: CookieStore,
 	telegramId: string,
 	code: string
@@ -197,7 +197,11 @@ export async function createAccountFromCode(
 		pending.exp > Math.floor(Date.now() / 1000) &&
 		safeEqual(pending.mac, expected);
 	if (!matches) throw new PriceWatchApiError(CODE_REJECTED, 401);
+	// /auth/telegram looks up this Telegram user id and creates the account only when none exists.
 	const session = await openAccount({ telegram_id: telegramId });
+	if (String(session.user.telegram_id ?? '') !== telegramId) {
+		throw new PriceWatchApiError('Sign in did not return an account.', 502);
+	}
 	cookies.delete(CODE_COOKIE, { path: '/price-watch/login' });
 	return session;
 }

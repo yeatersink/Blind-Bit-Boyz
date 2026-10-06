@@ -25,7 +25,7 @@
 	let loginError = $state('');
 	let loginStatus = $state('');
 	let sending = $state(false);
-	let creating = $state(false);
+	let loggingIn = $state(false);
 	let signingIn = $state(false);
 	let widgetCleanup: (() => void) | null = null;
 
@@ -204,7 +204,7 @@
 		}
 	}
 
-	async function createAccount(event: SubmitEvent) {
+	async function logIn(event: SubmitEvent) {
 		event.preventDefault();
 		const digits = chatId.replace(/\D/g, '');
 		const entered = code.trim();
@@ -218,7 +218,7 @@
 			await showError('That code is wrong or expired.');
 			return;
 		}
-		creating = true;
+		loggingIn = true;
 		loginError = '';
 		loginStatus = '';
 		try {
@@ -232,7 +232,7 @@
 		} catch (error) {
 			await showError(publicErrorMessage(error, null));
 		} finally {
-			creating = false;
+			loggingIn = false;
 		}
 	}
 
@@ -324,7 +324,7 @@
 			</div>
 			<button type="submit" disabled={sending}>Send code.</button>
 		</form>
-		<form novalidate onsubmit={createAccount}>
+		<form novalidate onsubmit={logIn}>
 			<div class="field">
 				<label for="login-code">Code</label>
 				<input
@@ -341,7 +341,7 @@
 					}}
 				/>
 			</div>
-			<button type="submit" disabled={creating}>Create account.</button>
+			<button type="submit" disabled={loggingIn}>Log in.</button>
 		</form>
 		{#if codeSent && loginStatus}
 			<p id="login-status" role="status" tabindex="-1">{loginStatus}</p>
