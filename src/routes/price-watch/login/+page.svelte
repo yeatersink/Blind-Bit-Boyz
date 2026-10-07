@@ -21,12 +21,18 @@
 	let readerOpen = $state(false);
 	let chatId = $state('');
 	let code = $state('');
-	let codeSent = $state(false);
 	let loginError = $state('');
 	let loginStatus = $state('');
 	let sending = $state(false);
 	let loggingIn = $state(false);
+	let createOpen = $state(false);
+	let createChatId = $state('');
+	let createCode = $state('');
+	let createStatus = $state('');
+	let createSending = $state(false);
+	let creating = $state(false);
 	let signingIn = $state(false);
+	let blockSubmit = false;
 	let widgetCleanup: (() => void) | null = null;
 
 	let expiredNotice = $derived($page.url.searchParams.get('notice') === 'expired');
@@ -42,7 +48,17 @@
 	function showError(message: string) {
 		loginError = message;
 		loginStatus = '';
+		createStatus = '';
 		return focusId('login-error');
+	}
+
+	function blockEscape(event: KeyboardEvent) {
+		if (event.key !== 'Escape') return;
+		event.preventDefault();
+		blockSubmit = true;
+		setTimeout(() => {
+			blockSubmit = false;
+		}, 0);
 	}
 
 	async function finishLogin(token: string) {
@@ -180,32 +196,46 @@
 		return digits;
 	}
 
-	async function sendCode(event: SubmitEvent) {
-		event.preventDefault();
-		const digits = chatId.replace(/\D/g, '');
-		chatId = digits;
+	async function sendCodeTo(chat: string, focusCodeId: string, markSent: (status: string) => void) {
+		const digits = chat.replace(/\D/g, '');
 		if (!/^\d{5,20}$/.test(digits)) {
 			await showError('Telegram chat id must be digits only.');
-			return;
+			return digits;
 		}
-		sending = true;
-		loginError = '';
-		loginStatus = '';
 		try {
 			await postJson('/price-watch/login/code', { telegram_id: digits });
-			codeSent = true;
-			loginStatus = 'The code was sent to that Telegram chat.';
-			await focusId('login-code');
+			markSent('The code was sent to that Telegram chat.');
+			await focusId(focusCodeId);
 		} catch (error) {
-			codeSent = false;
 			await showError(publicErrorMessage(error, null));
-		} finally {
-			sending = false;
 		}
+		return digits;
 	}
 
-	async function logIn(event: SubmitEvent) {
+	function codeProblem(entered: string): string | null {
+		if (!entered.trim()) return 'Enter the 6 digit code from Telegram.';
+		if (!/^\d{6}$/.test(entered)) return 'That code is wrong or expired.';
+		return null;
+	}
+
+	async function submitLogin(event: SubmitEvent) {
 		event.preventDefault();
+		if (blockSubmit) return;
+		const intent = event.submitter instanceof HTMLButtonElement ? event.submitter.value : 'login';
+		if (intent === 'send') {
+			sending = true;
+			loginError = '';
+			loginStatus = '';
+			try {
+				const digits = await sendCodeTo(chatId, 'login-code', (status) => {
+					loginStatus = status;
+				});
+				chatId = digits;
+			} finally {
+				sending = false;
+			}
+			return;
+		}
 		const digits = chatId.replace(/\D/g, '');
 		const entered = code.trim();
 		chatId = digits;
@@ -214,8 +244,9 @@
 			await showError('Telegram chat id must be digits only.');
 			return;
 		}
-		if (!/^\d{6}$/.test(entered)) {
-			await showError('That code is wrong or expired.');
+		const problem = codeProblem(entered);
+		if (problem) {
+			await showError(problem);
 			return;
 		}
 		loggingIn = true;
@@ -223,6 +254,7 @@
 		loginStatus = '';
 		try {
 			const json = await postJson('/price-watch/login/account', {
+				action: 'login',
 				telegram_id: digits,
 				code: entered
 			});
@@ -233,6 +265,62 @@
 			await showError(publicErrorMessage(error, null));
 		} finally {
 			loggingIn = false;
+		}
+	}
+
+	async function toggleCreate() {
+		createOpen = !createOpen;
+		if (!createOpen) return;
+		await focusId('create-chat-id');
+	}
+
+	async function submitCreate(event: SubmitEvent) {
+		event.preventDefault();
+		if (blockSubmit) return;
+		const intent = event.submitter instanceof HTMLButtonElement ? event.submitter.value : 'create';
+		if (intent === 'send') {
+			createSending = true;
+			loginError = '';
+			createStatus = '';
+			try {
+				const digits = await sendCodeTo(createChatId, 'create-code', (status) => {
+					createStatus = status;
+				});
+				createChatId = digits;
+			} finally {
+				createSending = false;
+			}
+			return;
+		}
+		const digits = createChatId.replace(/\D/g, '');
+		const entered = createCode.trim();
+		createChatId = digits;
+		createCode = entered;
+		if (!/^\d{5,20}$/.test(digits)) {
+			await showError('Telegram chat id must be digits only.');
+			return;
+		}
+		const problem = codeProblem(entered);
+		if (problem) {
+			await showError(problem);
+			return;
+		}
+		creating = true;
+		loginError = '';
+		createStatus = '';
+		try {
+			const json = await postJson('/price-watch/login/account', {
+				action: 'create',
+				telegram_id: digits,
+				code: entered
+			});
+			const token = sessionToken(json);
+			if (!token) throw new PriceWatchApiError('Sign in did not return an account.', 502);
+			await finishLogin(token);
+		} catch (error) {
+			await showError(publicErrorMessage(error, null));
+		} finally {
+			creating = false;
 		}
 	}
 
@@ -305,7 +393,7 @@
 
 	<div id="screen-reader-login" hidden={checking || !readerOpen}>
 		<p id="reader-start">Open the Blind Bit Boys bot and press Start before you request a code.</p>
-		<form novalidate onsubmit={sendCode}>
+		<form id="login-form" novalidate onsubmit={submitLogin} onkeydown={blockEscape}>
 			<div class="field">
 				<label for="login-chat-id">Telegram chat id</label>
 				<input
@@ -322,11 +410,9 @@
 					}}
 				/>
 			</div>
-			<button type="submit" disabled={sending}>Send code.</button>
-		</form>
-		<form novalidate onsubmit={logIn}>
+			<button type="submit" value="send" disabled={sending}>Send code.</button>
 			<div class="field">
-				<label for="login-code">Code</label>
+				<label for="login-code">6-digit code</label>
 				<input
 					id="login-code"
 					type="text"
@@ -341,10 +427,63 @@
 					}}
 				/>
 			</div>
-			<button type="submit" disabled={loggingIn}>Log in.</button>
+			<button type="submit" value="login" disabled={loggingIn}>Log in.</button>
 		</form>
-		{#if codeSent && loginStatus}
+		{#if loginStatus}
 			<p id="login-status" role="status" tabindex="-1">{loginStatus}</p>
+		{/if}
+		<button
+			type="button"
+			aria-expanded={createOpen ? 'true' : 'false'}
+			aria-controls="create-account"
+			onclick={toggleCreate}
+		>
+			Create account
+		</button>
+		<form
+			id="create-account"
+			hidden={!createOpen}
+			novalidate
+			onsubmit={submitCreate}
+			onkeydown={blockEscape}
+		>
+			<div class="field">
+				<label for="create-chat-id">Telegram chat id</label>
+				<input
+					id="create-chat-id"
+					type="text"
+					inputmode="numeric"
+					autocomplete="off"
+					spellcheck="false"
+					value={createChatId}
+					aria-describedby={loginError ? 'login-error' : undefined}
+					aria-invalid={loginError ? 'true' : undefined}
+					oninput={(event) => {
+						createChatId = digitsFrom(event);
+					}}
+				/>
+			</div>
+			<button type="submit" value="send" disabled={createSending}>Send code.</button>
+			<div class="field">
+				<label for="create-code">6-digit code</label>
+				<input
+					id="create-code"
+					type="text"
+					inputmode="numeric"
+					autocomplete="one-time-code"
+					spellcheck="false"
+					value={createCode}
+					aria-describedby={loginError ? 'login-error' : undefined}
+					aria-invalid={loginError ? 'true' : undefined}
+					oninput={(event) => {
+						createCode = digitsFrom(event);
+					}}
+				/>
+			</div>
+			<button type="submit" value="create" disabled={creating}>Create account</button>
+		</form>
+		{#if createStatus}
+			<p id="create-status" role="status" tabindex="-1">{createStatus}</p>
 		{/if}
 	</div>
 
@@ -408,6 +547,7 @@
 
 	.pw #login-error,
 	.pw #login-status,
+	.pw #create-status,
 	.pw #reader-start {
 		max-width: 40rem;
 	}

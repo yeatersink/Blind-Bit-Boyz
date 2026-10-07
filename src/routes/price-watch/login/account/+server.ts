@@ -2,8 +2,10 @@ import { json } from '@sveltejs/kit';
 import { API_UNREACHABLE, omitRpc, PriceWatchApiError } from '$lib/priceWatchApi';
 import {
 	CODE_REJECTED,
+	CODE_REQUIRED,
 	cleanLoginCode,
 	cleanTelegramId,
+	createAccountFromCode,
 	loginFromCode,
 	sameSiteRequest
 } from '$lib/server/telegramLogin';
@@ -20,18 +22,26 @@ export const POST = async ({ request, cookies, url }) => {
 	}
 	const record =
 		body && typeof body === 'object' && !Array.isArray(body)
-			? (body as { telegram_id?: unknown; code?: unknown })
+			? (body as { telegram_id?: unknown; code?: unknown; action?: unknown })
 			: {};
 	const telegramId = cleanTelegramId(record.telegram_id);
-	const code = cleanLoginCode(record.code);
+	const codeText =
+		typeof record.code === 'string' ? record.code : record.code == null ? '' : String(record.code);
+	const code = cleanLoginCode(codeText);
 	if (!telegramId) {
 		return json({ error: 'Telegram chat id must be digits only.' }, { status: 400 });
+	}
+	if (!codeText.trim()) {
+		return json({ error: CODE_REQUIRED }, { status: 400 });
 	}
 	if (!code) {
 		return json({ error: CODE_REJECTED }, { status: 400 });
 	}
+	const create = record.action === 'create';
 	try {
-		const session = await loginFromCode(cookies, telegramId, code);
+		const session = create
+			? await createAccountFromCode(cookies, telegramId, code)
+			: await loginFromCode(cookies, telegramId, code);
 		return json(omitRpc({ token: session.token }));
 	} catch (error) {
 		if (error instanceof PriceWatchApiError && error.status === 0) {

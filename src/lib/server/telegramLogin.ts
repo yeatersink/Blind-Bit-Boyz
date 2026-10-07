@@ -8,6 +8,12 @@ export const CODE_NOT_DELIVERED =
 
 export const CODE_REJECTED = 'That code is wrong or expired.';
 
+export const CODE_REQUIRED = 'Enter the 6 digit code from Telegram.';
+
+export const NO_ACCOUNT = 'No account for that chat id. Open Create account.';
+
+export const ACCOUNT_EXISTS = 'That chat id already has an account. Use Log in.';
+
 const CODE_COOKIE = 'bbb_pw_login_code';
 const CODE_TTL_SECONDS = 600;
 const TELEGRAM_ID_PATTERN = /^[0-9]{5,20}$/;
@@ -182,11 +188,7 @@ async function deliverCode(token: string, telegramId: string, code: string): Pro
 	}
 }
 
-export async function loginFromCode(
-	cookies: CookieStore,
-	telegramId: string,
-	code: string
-): Promise<AccountSession> {
+function assertMatchingCode(cookies: CookieStore, telegramId: string, code: string) {
 	const token = botToken();
 	if (!token) throw new PriceWatchApiError(CODE_REJECTED, 401);
 	const pending = openPending(token, cookies.get(CODE_COOKIE));
@@ -197,12 +199,61 @@ export async function loginFromCode(
 		pending.exp > Math.floor(Date.now() / 1000) &&
 		safeEqual(pending.mac, expected);
 	if (!matches) throw new PriceWatchApiError(CODE_REJECTED, 401);
-	// /auth/telegram looks up this Telegram user id and creates the account only when none exists.
-	const session = await openAccount({ telegram_id: telegramId });
+}
+
+function consumeCode(cookies: CookieStore) {
+	cookies.delete(CODE_COOKIE, { path: '/price-watch/login' });
+}
+
+function accountCreatedAt(user: Record<string, unknown>): number | null {
+	const raw = user.date_created;
+	if (typeof raw !== 'string' || !raw.trim()) return null;
+	const created = Date.parse(raw);
+	return Number.isFinite(created) ? created : null;
+}
+
+/** True when this request's account call inserted the row. */
+function accountWasCreatedNow(user: Record<string, unknown>, requestedAt: number): boolean {
+	const created = accountCreatedAt(user);
+	if (created === null) return false;
+	return Math.abs(requestedAt - created) <= 15_000;
+}
+
+function sameAccount(session: AccountSession, telegramId: string) {
 	if (String(session.user.telegram_id ?? '') !== telegramId) {
 		throw new PriceWatchApiError('Sign in did not return an account.', 502);
 	}
-	cookies.delete(CODE_COOKIE, { path: '/price-watch/login' });
+}
+
+export async function loginFromCode(
+	cookies: CookieStore,
+	telegramId: string,
+	code: string
+): Promise<AccountSession> {
+	assertMatchingCode(cookies, telegramId, code);
+	const requestedAt = Date.now();
+	const session = await openAccount({ telegram_id: telegramId });
+	sameAccount(session, telegramId);
+	if (accountWasCreatedNow(session.user, requestedAt)) {
+		throw new PriceWatchApiError(NO_ACCOUNT, 404);
+	}
+	consumeCode(cookies);
+	return session;
+}
+
+export async function createAccountFromCode(
+	cookies: CookieStore,
+	telegramId: string,
+	code: string
+): Promise<AccountSession> {
+	assertMatchingCode(cookies, telegramId, code);
+	const requestedAt = Date.now();
+	const session = await openAccount({ telegram_id: telegramId });
+	sameAccount(session, telegramId);
+	if (!accountWasCreatedNow(session.user, requestedAt)) {
+		throw new PriceWatchApiError(ACCOUNT_EXISTS, 409);
+	}
+	consumeCode(cookies);
 	return session;
 }
 

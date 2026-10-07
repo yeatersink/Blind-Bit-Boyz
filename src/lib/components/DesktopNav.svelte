@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { navItems } from '$lib/utils/navManager';
 
 	let open = $state(false);
+	let closePriceWatchMenu = false;
 	let mobile = $state(false);
 	let buttonEl = $state<HTMLButtonElement | null>(null);
 	let panelEl = $state<HTMLUListElement | null>(null);
@@ -22,9 +23,43 @@
 		return () => desktopQuery.removeEventListener('change', sync);
 	});
 
-	afterNavigate(() => {
+	beforeNavigate((navigation) => {
+		if (!closePriceWatchMenu) return;
+		closePriceWatchMenu = false;
+		if (navigation.to?.url.pathname !== '/price-watch') return;
 		open = false;
 	});
+
+	afterNavigate(() => {
+		closePriceWatchMenu = false;
+		open = false;
+	});
+
+	function plainClick(event: MouseEvent) {
+		return (
+			event.button === 0 &&
+			!event.metaKey &&
+			!event.ctrlKey &&
+			!event.shiftKey &&
+			!event.altKey
+		);
+	}
+
+	function onPriceWatchClick(event: MouseEvent) {
+		if (!plainClick(event)) return;
+		closePriceWatchMenu = true;
+	}
+
+	function onPriceWatchKeydown(event: KeyboardEvent) {
+		if (event.repeat || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		const link = event.currentTarget;
+		if (!(link instanceof HTMLAnchorElement)) return;
+		closePriceWatchMenu = true;
+		if (event.key !== ' ') return;
+		event.preventDefault();
+		link.click();
+	}
 
 	function onKeydown(event: KeyboardEvent) {
 		if (event.key !== 'Escape' || !open) return;
@@ -66,13 +101,24 @@
 	<ul id="global-nav-panel" bind:this={panelEl} class:is-open={open} inert={mobile && !open}>
 		{#each navItems as { name, url } (url)}
 			<li>
-				<a
-					href={url}
-					aria-current={url === path ? 'page' : undefined}
-					onclick={() => (open = false)}
-				>
-					{name}
-				</a>
+				{#if url === '/price-watch'}
+					<a
+						href={url}
+						aria-current={url === path ? 'page' : undefined}
+						onclick={onPriceWatchClick}
+						onkeydown={onPriceWatchKeydown}
+					>
+						{name}
+					</a>
+				{:else}
+					<a
+						href={url}
+						aria-current={url === path ? 'page' : undefined}
+						onclick={() => (open = false)}
+					>
+						{name}
+					</a>
+				{/if}
 			</li>
 		{/each}
 	</ul>
