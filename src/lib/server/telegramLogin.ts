@@ -333,6 +333,12 @@ export function widgetBodyFrom(value: unknown): WidgetBody | null {
 	return body;
 }
 
+function loginGate(): string {
+	const gate = env.LOGIN_GATE?.trim() ?? '';
+	if (!gate) throw new PriceWatchApiError('Sign in did not return an account.', 502);
+	return gate;
+}
+
 export async function openAccount(body: {
 	telegram_id: string;
 	username?: string | null;
@@ -346,7 +352,11 @@ export async function openAccount(body: {
 		response = await fetch(`${PRICE_WATCH_API}/auth/telegram`, {
 			method: 'POST',
 			cache: 'no-store',
-			headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				'X-Login-Gate': loginGate()
+			},
 			body: JSON.stringify(payload)
 		});
 	} catch {
