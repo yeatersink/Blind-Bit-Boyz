@@ -70,6 +70,7 @@
 	let chainCatalog = $state<PriceWatchChain[]>([]);
 	let chainsLoaded = $state(false);
 	let selectedChainIds = $state<string[]>([]);
+	let viewingChainId = $state(CURRENT_CHAIN_ID);
 	let chainsError = $state('');
 	let chainsStatus = $state('');
 	let savingChains = $state(false);
@@ -347,6 +348,7 @@
 	}
 
 	const activeChains = $derived(chainCatalog.filter((chain) => chain.active));
+	const viewChoices = $derived(activeChains.filter((chain) => selectedChainIds.includes(chain.chain_id)));
 	const searchTokens = $derived.by(() => {
 		if (results) return searchedTokens(results, resultTokens ?? [], submittedQuery);
 		if (resultTokens && resultTokens.length > 0) return orderQueryFirst(resultTokens, submittedQuery);
@@ -377,10 +379,7 @@
 	}
 
 	function watchChainId(): string {
-		const current = activeChains.find((chain) => chain.chain_id === CURRENT_CHAIN_ID);
-		if (current) return current.chain_id;
-		if (activeChains[0]) return activeChains[0].chain_id;
-		return CURRENT_CHAIN_ID;
+		return viewingChainId || CURRENT_CHAIN_ID;
 	}
 
 	function usdText(value: string): string {
@@ -522,7 +521,7 @@
 			fastError = '';
 		}
 		try {
-			const rows = await getMoverBoard(view);
+			const rows = await getMoverBoard(view, watchChainId());
 			if (seq !== fastSeq || !fastOpen || view !== fastView) return;
 			fastRows = rows;
 			fastError = '';
@@ -543,7 +542,7 @@
 			slowError = '';
 		}
 		try {
-			const rows = await getMoverBoard(view);
+			const rows = await getMoverBoard(view, watchChainId());
 			if (seq !== slowSeq || !slowOpen || view !== slowView) return;
 			slowRows = rows;
 			slowError = '';
@@ -629,7 +628,7 @@
 		watchesError = '';
 		watchesLoading = true;
 		try {
-			watches = await listWatches(token, user?.telegram_id);
+			watches = await listWatches(token, user?.telegram_id, viewingChainId);
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			watches = null;
@@ -647,7 +646,7 @@
 	async function fetchWatchList(): Promise<SavedWatch[] | null> {
 		if (!token) return null;
 		try {
-			return await listWatches(token, user?.telegram_id);
+			return await listWatches(token, user?.telegram_id, viewingChainId);
 		} catch {
 			return null;
 		}
@@ -668,6 +667,7 @@
 			const me = await getMe(token);
 			user = me.user;
 			selectedChainIds = me.chains.map((chain) => chain.chain_id);
+			viewingChainId = selectedChainIds.includes(CURRENT_CHAIN_ID) ? CURRENT_CHAIN_ID : (selectedChainIds[0] ?? CURRENT_CHAIN_ID);
 			showHorseSchedule(me.user);
 			await loadWatches();
 		} catch (error) {
@@ -777,7 +777,7 @@
 		const seq = ++searchSeq;
 		searching = true;
 		try {
-			const found = await searchPairs(q);
+			const found = await searchPairs(q, watchChainId());
 			if (seq !== searchSeq) return;
 			results = found.pairs;
 			resultTokens = found.tokens;
@@ -1234,25 +1234,37 @@
 				<p id="chains-error" role="alert" tabindex="-1">{chainsError}</p>
 			{/if}
 			{#if currentChain}
-				<p>{currentChain.name}, chain {currentChain.chain_id}, is the current chain.</p>
+				<p>This page is {chainLabel(watchChainId())}.</p>
 			{/if}
-			{#if chainsLoaded && activeChains.length === 0}
+						{#if chainsLoaded && activeChains.length === 0}
 				<p>No active chains are available.</p>
 			{/if}
 			{#if activeChains.length > 0}
 				<form novalidate onsubmit={submitChains}>
 					<fieldset>
-						<legend>Select every chain you want alerts for</legend>
+						<legend>Select the chain for this page</legend>
 						{#each activeChains as chain (chain.chain_id)}
 							<div class="choice">
 								<input
-									type="checkbox"
+									type="radio"
+									name="page-chain"
 									id="chain-{chain.chain_id}"
-									checked={selectedChainIds.includes(chain.chain_id)}
+									checked={watchChainId() === chain.chain_id}
 									onchange={(event) => {
 										const input = event.currentTarget;
-										if (!(input instanceof HTMLInputElement)) return;
-										toggleChain(chain.chain_id, input.checked);
+										if (!(input instanceof HTMLInputElement) || !input.checked) return;
+										viewingChainId = chain.chain_id;
+											selectedChainIds = [chain.chain_id];
+											watches = [];
+											results = null;
+											resultTokens = null;
+											searched = false;
+											searchError = '';
+											searchStatus = '';
+											draft = null;
+											loadWatches();
+											if (fastOpen) loadFast(true);
+											if (slowOpen) loadSlow(true);
 									}}
 								/>
 								<label for="chain-{chain.chain_id}">{chain.name}, chain {chain.chain_id}</label>
@@ -1262,11 +1274,11 @@
 					{#each extraSaved as id (id)}
 						<p>Chain {id} is saved and is not an active chain, so it is not listed above.</p>
 					{/each}
-					<p>Save chains stores the checked chains.</p>
+					<p>Save chain stores this one chain.</p>
 					{#if chainsStatus}
 						<p id="chains-status" tabindex="-1">{chainsStatus}</p>
 					{/if}
-					<button type="submit" disabled={savingChains}>Save chains</button>
+					<button type="submit" disabled={savingChains}>Save chain</button>
 				</form>
 			{/if}
 		</section>
@@ -1540,6 +1552,7 @@
 
 		<section id="top-performers" aria-labelledby="top-performers-heading">
 			<h2 id="top-performers-heading">Top Performers</h2>
+			
 			<p id="top-performers-intro">
 				Welcome to top performers. Fast movers are the short bursts. Slow movers are tokens that
 				were promoted from a fast board and are now measured over a longer time. Open a section,
@@ -1703,7 +1716,7 @@
 							{/each}
 						</select>
 						<p id="slow-movers-hint">
-							Saving applies only to Slow movers. It does not send Telegram. The bot sends the list.
+							Saving applies only to Slow movers. Saving sends a confirmation. The bot sends the list on this schedule.
 						</p>
 					</div>
 					{#if slowSaveError}
@@ -1716,6 +1729,7 @@
 				</form>
 			</div>
 			{/if}
+			
 		</section>
 	{/if}
 

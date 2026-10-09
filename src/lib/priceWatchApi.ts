@@ -152,10 +152,11 @@ export type RankingRow = {
 	meets_liquidity_floor: boolean | null;
 };
 
-/** Off is 0. Older stored values stay readable. The page saves 24 hours, 3 days, or 7 days. */
+/** Off is 0. The page saves off, 24 hours, 3 days, or 7 days. */
 export const BOARD_ALERT_SECONDS = [0, 900, 1800, 3600, 21600, 43200, 86400, 259200, 604800] as const;
 
 export const SLOW_MOVER_INTERVALS = [
+    { value: '0', seconds: 0, label: 'Off' },
 	{ value: '86400', seconds: 86400, label: 'Every 24 hours' },
 	{ value: '259200', seconds: 259200, label: 'Every 3 days' },
 	{ value: '604800', seconds: 604800, label: 'Every 7 days' }
@@ -597,9 +598,10 @@ function tokensFromList(value: unknown[]): SearchTokenResult[] {
 	return [...tokens.values()];
 }
 
-export async function searchPairs(query: string): Promise<PriceWatchSearchResult> {
+export async function searchPairs(query: string, chainId: string = CURRENT_CHAIN_ID): Promise<PriceWatchSearchResult> {
 	const q = query.trim();
-	const json = await request(`/search?q=${encodeURIComponent(q)}`, 'GET', null);
+	const chain = chainId.trim() || CURRENT_CHAIN_ID;
+	const json = await request(`/search?q=${encodeURIComponent(q)}&chain_id=${encodeURIComponent(chain)}`, 'GET', null);
 	if (!isRecord(json)) {
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
@@ -652,12 +654,15 @@ export function watchesBySymbol(items: SavedWatch[]): SavedWatch[] {
 
 export async function listWatches(
 	token: string,
-	telegramId?: string | null
+	telegramId?: string | null,
+	chainId?: string | null
 ): Promise<SavedWatch[]> {
 	const params = new URLSearchParams();
 	params.set('sort', 'symbol');
 	const id = telegramId?.trim() ?? '';
 	if (id) params.set('filter[telegram_id][_eq]', id);
+	const chain = chainId?.trim() ?? '';
+	if (chain) params.set('chain_id', chain);
 	const json = await request(`/me/watches?${params.toString()}`, 'GET', token);
 	return watchesBySymbol(
 		dataList(json)
@@ -740,17 +745,18 @@ function asRanking(value: unknown, index: number): RankingRow | null {
 	};
 }
 
-export async function getRankings(window: RankingWindow): Promise<RankingRow[]> {
-	const json = await request(`/rankings?window=${encodeURIComponent(window)}`, 'GET', null);
+export async function getRankings(window: RankingWindow, chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+	const chain = chainId.trim() || CURRENT_CHAIN_ID;
+	const json = await request(`/rankings?window=${encodeURIComponent(window)}&chain_id=${encodeURIComponent(chain)}`, 'GET', null);
 	return dataList(json)
 		.map((item, index) => asRanking(item, index))
 		.filter((item): item is RankingRow => item !== null);
 }
 
 /** Live top 10. Window 1h stores the same rows when window 10 is empty. */
-export async function getBestBoard(): Promise<RankingRow[]> {
-	const live = await getRankings('10');
-	const rows = live.length > 0 ? live : await getRankings('1h');
+export async function getBestBoard(chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+	const live = await getRankings('10', chainId);
+	const rows = live.length > 0 ? live : await getRankings('1h', chainId);
 	return rows
 		.slice()
 		.sort((left, right) => {
@@ -777,18 +783,18 @@ function topTen(rows: RankingRow[]): RankingRow[] {
 }
 
 /** One rankings window, top 10. No fallback to another window. */
-export async function getMoverBoard(window: RankingWindow): Promise<RankingRow[]> {
-	return topTen(await getRankings(window));
+export async function getMoverBoard(window: RankingWindow, chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+	return topTen(await getRankings(window, chainId));
 }
 
 /** GET /rankings?window=movers. An API error is returned to that list. */
-export async function getFastHorses(): Promise<RankingRow[]> {
-	return topTen(await getRankings('movers'));
+export async function getFastHorses(chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+	return topTen(await getRankings('movers', chainId));
 }
 
 /** GET /rankings?window= for 15m, 30m, 1h, 6h, 12h, or 24h. */
-export async function getSlowHorses(window: BoardWindow): Promise<RankingRow[]> {
-	return topTen(await getRankings(window));
+export async function getSlowHorses(window: BoardWindow, chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+	return topTen(await getRankings(window, chainId));
 }
 
 export type ScheduleSave = {

@@ -1,0 +1,17 @@
+services:
+  blind-bit-boyz:
+    build: .
+    image: blind-bit-boyz:local
+    container_name: blind-bit-boyz
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["node", "build/index.js"]
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - niv-louie-app_default
+
+networks:
+  niv-louie-app_default:
+    external: true
