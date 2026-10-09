@@ -416,7 +416,7 @@
 
 	function percentText(value: number | null): string {
 		if (value === null || !Number.isFinite(value)) return 'Percent change: not available.';
-		const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+		const amount = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 8 }).format(value);
 		return `Percent change: ${amount}%.`;
 	}
 
@@ -1587,7 +1587,7 @@
 				id="fast-movers-panel"
 				class="horse-panel"
 				role="region"
-				aria-labelledby="fast-movers-button"
+				aria-labelledby="fast-movers-heading"
 			>
 				<div class="field">
 					<label for="fast-movers-view">View</label>
@@ -1607,9 +1607,7 @@
 					<ol class="horse-list">
 						{#each fastRows as row, index (`fast:${fastView}:${row.pair_address || row.id}:${index}`)}
 							<li class="wrap">
-								<p id={horseItemId('fast', row, index)} tabindex="-1">
-									Rank: {row.rank ?? index + 1}
-								</p>
+								<h4 id={horseItemId('fast', row, index)} tabindex="-1">Rank {row.rank ?? index + 1}. {row.name || row.symbol}</h4>
 								<p>{fieldText('Symbol', row.symbol)}</p>
 								<p>{fieldText('Name', row.name)}</p>
 								<p>{percentText(row.price_change_pct)}</p>
@@ -1661,7 +1659,7 @@
 				id="slow-movers-panel"
 				class="horse-panel"
 				role="region"
-				aria-labelledby="slow-movers-button"
+				aria-labelledby="slow-movers-heading"
 			>
 				<div class="field">
 					<label for="slow-movers-view">View</label>
@@ -1681,9 +1679,7 @@
 					<ol class="horse-list">
 						{#each slowRows as row, index (`slow:${slowView}:${row.pair_address || row.id}:${index}`)}
 							<li class="wrap">
-								<p id={horseItemId('slow', row, index)} tabindex="-1">
-									Rank: {row.rank ?? index + 1}
-								</p>
+								<h4 id={horseItemId('slow', row, index)} tabindex="-1">Rank {row.rank ?? index + 1}. {row.name || row.symbol}</h4>
 								<p>{fieldText('Symbol', row.symbol)}</p>
 								<p>{fieldText('Name', row.name)}</p>
 								<p>{percentText(row.price_change_pct)}</p>
@@ -1936,5 +1932,14 @@
 	.pw ol.horse-list {
 		list-style: decimal;
 		padding-left: 2rem;
+	}
+
+	.horse-panel > h3 {
+		font-size: 1.15rem;
+		margin: 0 0 0.75rem;
+	}
+	.horse-list h4 {
+		font-size: 1rem;
+		margin: 0.75rem 0 0.25rem;
 	}
 </style>
