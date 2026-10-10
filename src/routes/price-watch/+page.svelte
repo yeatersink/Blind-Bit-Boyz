@@ -111,6 +111,7 @@
 	let slowView = $state<SlowMoverWindow>('slow_24h');
 	let fastRows = $state<RankingRow[] | null>(null);
 	let slowRows = $state<RankingRow[] | null>(null);
+	let copyStatus = $state('');
 	let fastError = $state('');
 	let slowError = $state('');
 	let fastUpdated = $state('');
@@ -875,7 +876,22 @@
 		watchError = '';
 		watchStatus = '';
 		if (pendingRemove?.source === 'form') pendingRemove = null;
-		void focusId(id ? `watch-${id}` : returnId);
+		void focusId(id ? `	async function copyAddress(kind: string, row: RankingRow) {
+		const value = (kind === 'token contract' ? row.token_address : row.pair_address) || '';
+		const label = kind + ' for ' + (row.symbol || row.name || 'this token');
+		if (!value.trim()) {
+			copyStatus = 'The ' + label + ' is not available.';
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(value.trim());
+			copyStatus = 'Copied the ' + label + '.';
+		} catch {
+			copyStatus = 'Could not copy the ' + label + '. It is still shown on the page.';
+		}
+	}
+
+watch-${id}` : returnId);
 	}
 
 	function watchRanking(row: RankingRow, list: 'fast' | 'slow', index: number) {
@@ -1604,6 +1620,7 @@
 				{:else if fastRows.length === 0}
 					<p>This view has no tokens yet.</p>
 				{:else}
+					<p role="status" aria-live="polite">{copyStatus}</p>
 					<ol class="horse-list">
 						{#each fastRows as row, index (`fast:${fastView}:${row.pair_address || row.id}:${index}`)}
 							<li class="wrap">
@@ -1613,7 +1630,17 @@
 								<p>{percentText(row.price_change_pct)}</p>
 								<p>Price: {usdText(row.price_usd)}</p>
 								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
-								{#if row.pair_address}
+								{#if row.token_address}
+									<p class="wrap">Token contract: {row.token_address}
+										<button type="button" onclick={() => copyAddress('token contract', row)}>Copy token contract<span class="sr-only"> for {pairTitle(row)}</span></button>
+									</p>
+								{:else}
+									<p>Token contract: not available yet.</p>
+								{/if}
+{#if row.pair_address}
+									<p class="wrap">Pair address: {row.pair_address}
+										<button type="button" onclick={() => copyAddress('pair address', row)}>Copy pair address<span class="sr-only"> for {pairTitle(row)}</span></button>
+									</p>
 									<button type="button" onclick={() => watchRanking(row, 'fast', index)}>
 										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
 									</button>
@@ -1685,7 +1712,17 @@
 								<p>{percentText(row.price_change_pct)}</p>
 								<p>Price: {usdText(row.price_usd)}</p>
 								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
-								{#if row.pair_address}
+								{#if row.token_address}
+									<p class="wrap">Token contract: {row.token_address}
+										<button type="button" onclick={() => copyAddress('token contract', row)}>Copy token contract<span class="sr-only"> for {pairTitle(row)}</span></button>
+									</p>
+								{:else}
+									<p>Token contract: not available yet.</p>
+								{/if}
+{#if row.pair_address}
+									<p class="wrap">Pair address: {row.pair_address}
+										<button type="button" onclick={() => copyAddress('pair address', row)}>Copy pair address<span class="sr-only"> for {pairTitle(row)}</span></button>
+									</p>
 									<button type="button" onclick={() => watchRanking(row, 'slow', index)}>
 										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
 									</button>
