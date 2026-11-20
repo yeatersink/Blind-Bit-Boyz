@@ -9,16 +9,13 @@
 		getMe,
 		publicErrorMessage,
 		readStoredToken,
-		signInWithTelegramWidget,
-		storeToken,
-		type TelegramWidgetAuth
+		storeToken
 	} from '$lib/priceWatchApi';
 
 	let { data } = $props();
 
 	let checking = $state(true);
 	let sessionNote = $state('');
-	let readerOpen = $state(false);
 	let chatId = $state('');
 	let code = $state('');
 	let loginError = $state('');
@@ -31,9 +28,7 @@
 	let createStatus = $state('');
 	let createSending = $state(false);
 	let creating = $state(false);
-	let signingIn = $state(false);
 	let blockSubmit = false;
-	let widgetCleanup: (() => void) | null = null;
 
 	let expiredNotice = $derived($page.url.searchParams.get('notice') === 'expired');
 
@@ -74,33 +69,6 @@
 		await goto('/price-watch');
 	}
 
-	function clearWidget() {
-		widgetCleanup?.();
-		widgetCleanup = null;
-	}
-
-	function mountWidget(username: string) {
-		const host = document.getElementById('telegram-login-widget');
-		if (!host) return;
-		const win = window as unknown as Record<string, unknown>;
-		win.onTelegramAuth = (widgetUser: Partial<TelegramWidgetAuth>) => {
-			void signInFromWidget(widgetUser);
-		};
-		const script = document.createElement('script');
-		script.async = true;
-		script.src = 'https://telegram.org/js/telegram-widget.js?22';
-		script.dataset.telegramLogin = username;
-		script.dataset.size = 'large';
-		script.dataset.onauth = 'onTelegramAuth(user)';
-		script.dataset.requestAccess = 'write';
-		host.replaceChildren(script);
-		widgetCleanup = () => {
-			delete win.onTelegramAuth;
-			host.replaceChildren();
-			widgetCleanup = null;
-		};
-	}
-
 	async function postJson(path: string, body: unknown): Promise<unknown> {
 		let response: Response;
 		try {
@@ -136,56 +104,6 @@
 		const token = (json as { token?: unknown }).token;
 		if (typeof token !== 'string' || !token.trim()) return null;
 		return token;
-	}
-
-	async function signInFromWidget(widgetUser: Partial<TelegramWidgetAuth>) {
-		if (
-			typeof widgetUser.hash !== 'string' ||
-			widgetUser.id === undefined ||
-			widgetUser.auth_date === undefined
-		) {
-			await showError('Telegram login did not include a hash.');
-			return;
-		}
-		signingIn = true;
-		loginError = '';
-		loginStatus = '';
-		const widget = {
-			id: widgetUser.id,
-			hash: widgetUser.hash,
-			auth_date: widgetUser.auth_date,
-			first_name: widgetUser.first_name,
-			last_name: widgetUser.last_name,
-			username: widgetUser.username,
-			photo_url: widgetUser.photo_url
-		};
-		try {
-			let result: { token: string };
-			try {
-				result = await signInWithTelegramWidget(widget);
-			} catch (error) {
-				const message = publicErrorMessage(error, null);
-				if (message !== 'TELEGRAM_BOT_TOKEN is not set') throw error;
-				const fallback = await postJson('/price-watch/login/widget', widget);
-				const token = sessionToken(fallback);
-				if (!token) throw new PriceWatchApiError('Sign in did not return an account.', 502);
-				result = { token };
-			}
-			await finishLogin(result.token);
-		} catch (error) {
-			const message = publicErrorMessage(error, null);
-			await showError(
-				message === 'TELEGRAM_BOT_TOKEN is not set' ? 'Telegram login was rejected.' : message
-			);
-		} finally {
-			signingIn = false;
-		}
-	}
-
-	async function openReader() {
-		readerOpen = true;
-		loginError = '';
-		await focusId('login-chat-id');
 	}
 
 	function digitsFrom(event: Event): string {
@@ -340,12 +258,9 @@
 			}
 			if (cancelled) return;
 			checking = false;
-			await tick();
-			if (data.botUsername) mountWidget(data.botUsername);
 		})();
 		return () => {
 			cancelled = true;
-			clearWidget();
 		};
 	});
 </script>
@@ -360,12 +275,45 @@
 
 <div class="learn-shell pw">
 	<h1>Log in</h1>
-	<p>An account is your Telegram identity.</p>
-	<p>Notifications cannot arrive until you open the Blind Bit Boys bot and press Start.</p>
 	<p>
-		The Telegram button is the normal login. Log in with screen reader is the path that does not
-		depend on Telegram's widget.
+		An account is your Telegram identity. Notifications will not arrive until you open the Blind Bit
+		Boys bot and press Start.
 	</p>
+
+	<h2>How to sign in</h2>
+	<ol>
+		<li>
+			{#if data.botUsername}
+				Open Telegram and search for @{data.botUsername}. That is the Blind Bit Boys bot. Press Start
+				once you open it.
+			{:else}
+				Open Telegram and search for Blind Bit Boys. Press Start once you open the bot.
+			{/if}
+		</li>
+		<li>
+			Get your Telegram chat ID. Message @userinfobot, or any bot that replies with your numeric ID.
+			Copy the number it sends you. That number is your chat ID. It is digits only.
+		</li>
+		<li>
+			Use the Log in form below. Enter your chat ID, choose Send code, then enter the 6-digit code
+			Telegram sends to that chat. If you do not have an account yet, use Create account the same
+			way.
+		</li>
+	</ol>
+	<p>
+		This entire process uses ordinary form fields and works with screen readers, including JAWS,
+		NVDA, VoiceOver, and others.
+	</p>
+
+	<h2>Accessible Telegram clients</h2>
+	<ul>
+		<li>On Windows, Unigram is an accessible version of Telegram.</li>
+		<li>
+			On iOS, the official Telegram app is relatively accessible and works great with VoiceOver for
+			this method of monitoring prices.
+		</li>
+	</ul>
+
 	<noscript>
 		<p>This page needs JavaScript to sign in.</p>
 	</noscript>
@@ -380,18 +328,8 @@
 		<p role="status">{sessionNote}</p>
 	{/if}
 
-	<p hidden={checking}>
-		<button
-			type="button"
-			aria-expanded={readerOpen ? 'true' : 'false'}
-			aria-controls="screen-reader-login"
-			onclick={openReader}
-		>
-			Log in with screen reader
-		</button>
-	</p>
-
-	<div id="screen-reader-login" hidden={checking || !readerOpen}>
+	<div id="screen-reader-login" hidden={checking}>
+		<h2>Log in with your chat ID</h2>
 		<p id="reader-start">Open the Blind Bit Boys bot and press Start before you request a code.</p>
 		<form id="login-form" novalidate onsubmit={submitLogin} onkeydown={blockEscape}>
 			<div class="field">
@@ -490,16 +428,6 @@
 	{#if loginError}
 		<p id="login-error" role="alert" tabindex="-1">{loginError}</p>
 	{/if}
-
-	<div hidden={checking}>
-		<h2>Telegram login</h2>
-		{#if data.botUsername}
-			<p>{signingIn ? 'Checking the Telegram login.' : 'Use the Telegram button to log in.'}</p>
-			<div id="telegram-login-widget"></div>
-		{:else}
-			<p>The Telegram login button is not available. Use Log in with screen reader.</p>
-		{/if}
-	</div>
 </div>
 
 <style>
@@ -538,11 +466,6 @@
 	.pw input:focus-visible {
 		outline: 2px solid #fff;
 		outline-offset: 3px;
-	}
-
-	.pw #telegram-login-widget {
-		margin-top: 0.75rem;
-		min-height: 2.75rem;
 	}
 
 	.pw #login-error,
