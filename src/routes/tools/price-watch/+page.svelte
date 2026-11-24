@@ -6,6 +6,7 @@
 		getChains,
 		getMe,
 		listWatches,
+		watchDisplay,
 		PriceWatchApiError,
 		publicErrorMessage,
 		readStoredToken,
@@ -94,8 +95,8 @@
 	<ul>
 		{#each watches as watch (watch.id)}
 			<li>
-				<h2>{watch.symbol}</h2>
-				<p>Name: {watch.name}</p>
+				<h2>{watchDisplay(watch.name, watch.symbol)}</h2>
+				<p>Name: {watchDisplay(watch.name, watch.symbol)}</p>
 				<p>Chain: {chainLabel(watch.chain_id)}</p>
 				<p class="pair">Pair address: {watch.pair_address}</p>
 			</li>

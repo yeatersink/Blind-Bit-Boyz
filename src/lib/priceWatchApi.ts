@@ -11,6 +11,21 @@ export const PICK_CHAIN_MESSAGE = 'pick this chain before saving a watch';
 
 export const CURRENT_CHAIN_ID = '369';
 
+/** Full token name with its symbol, for example Hex (HEX). */
+export function tokenTitle(name: string | null | undefined, symbol: string | null | undefined): string {
+	const full = (name ?? '').trim();
+	const ticker = (symbol ?? '').trim();
+	if (full && ticker && full.toLowerCase() !== ticker.toLowerCase()) return `${full} (${ticker})`;
+	return full || ticker;
+}
+
+/** A saved title that already includes the symbol stays as written. */
+export function watchDisplay(name: string | null | undefined, symbol: string | null | undefined): string {
+	const full = (name ?? '').trim();
+	if (full.includes('(') && full.includes(')')) return full;
+	return tokenTitle(full, symbol) || 'Token';
+}
+
 export const THRESHOLD_FIELDS = [
 	{ key: 'price_up_pct', label: 'Price up percent' },
 	{ key: 'price_down_pct', label: 'Price down percent' },
@@ -28,6 +43,17 @@ export type ThresholdKey = (typeof THRESHOLD_FIELDS)[number]['key'];
 
 export type ThresholdValues = Record<ThresholdKey, number | null>;
 
+export const RATIO_THRESHOLD_FIELDS = [
+	{ key: 'ratio_up_pct', label: 'Ratio up percent' },
+	{ key: 'ratio_down_pct', label: 'Ratio down percent' },
+	{ key: 'ratio_up', label: 'Ratio up' },
+	{ key: 'ratio_down', label: 'Ratio down' }
+] as const;
+
+export type RatioThresholdKey = (typeof RATIO_THRESHOLD_FIELDS)[number]['key'];
+
+export type RatioThresholdValues = Record<RatioThresholdKey, number | null>;
+
 export const THRESHOLD_NEGATIVE_MESSAGE =
 	'Enter a number zero or greater. Down means how far it falls, not a minus sign.';
 
@@ -43,6 +69,12 @@ const DOWN_THRESHOLD_KEYS = new Set<ThresholdKey>([
 
 export function isDownThreshold(key: ThresholdKey): boolean {
 	return DOWN_THRESHOLD_KEYS.has(key);
+}
+
+const RATIO_DOWN_KEYS = new Set<RatioThresholdKey>(['ratio_down_pct', 'ratio_down']);
+
+export function isRatioDownThreshold(key: RatioThresholdKey): boolean {
+	return RATIO_DOWN_KEYS.has(key);
 }
 
 /** Blank stays blank. A stored negative is shown as the positive magnitude. */
@@ -63,9 +95,11 @@ export type PriceWatchUser = {
 	first_name: string | null;
 	movers_alert_every: number;
 	board_alert_every: number;
+	volume_alert_every: number;
 	board_alert_window: BoardWindow;
 	movers_alert_last_sent: string | null;
 	board_alert_last_sent: string | null;
+	volume_alert_last_sent: string | null;
 };
 
 export type PriceWatchChain = {
@@ -136,7 +170,17 @@ export const SLOW_MOVER_VIEWS = [
 
 export type SlowMoverWindow = (typeof SLOW_MOVER_VIEWS)[number]['value'];
 
-export type RankingWindow = 'movers' | '10' | BoardWindow | '7d' | FastMoverWindow | SlowMoverWindow;
+export const VOLUME_VIEWS = [
+	{ value: 'volume_15m', label: '15 minutes' },
+	{ value: 'volume_1h', label: '1 hour' },
+	{ value: 'volume_6h', label: '6 hours' },
+	{ value: 'volume_24h', label: '24 hours' }
+] as const;
+
+export type VolumeWindow = (typeof VOLUME_VIEWS)[number]['value'];
+
+export type RankingWindow =
+	'movers' | '10' | BoardWindow | '7d' | FastMoverWindow | SlowMoverWindow | VolumeWindow;
 
 export type RankingRow = {
 	id: string;
@@ -147,16 +191,19 @@ export type RankingRow = {
 	price_change_pct: number | null;
 	price_usd: string;
 	liquidity_usd: string;
+	volume_usd: string;
 	pair_address: string;
 	token_address: string | null;
 	meets_liquidity_floor: boolean | null;
 };
 
 /** Off is 0. The page saves off, 24 hours, 3 days, or 7 days. */
-export const BOARD_ALERT_SECONDS = [0, 900, 1800, 3600, 21600, 43200, 86400, 259200, 604800] as const;
+export const BOARD_ALERT_SECONDS = [
+	0, 900, 1800, 3600, 21600, 43200, 86400, 259200, 604800
+] as const;
 
 export const SLOW_MOVER_INTERVALS = [
-    { value: '0', seconds: 0, label: 'Off' },
+	{ value: '0', seconds: 0, label: 'Off' },
 	{ value: '86400', seconds: 86400, label: 'Every 24 hours' },
 	{ value: '259200', seconds: 259200, label: 'Every 3 days' },
 	{ value: '604800', seconds: 604800, label: 'Every 7 days' }
@@ -251,17 +298,29 @@ export function emptyThresholds(): Record<ThresholdKey, string> {
 	};
 }
 
+export function emptyRatioThresholds(): Record<RatioThresholdKey, string> {
+	return {
+		ratio_up_pct: '',
+		ratio_down_pct: '',
+		ratio_up: '',
+		ratio_down: ''
+	};
+}
+
 export type ThresholdParseError = {
 	key: ThresholdKey;
 	message: string;
 };
 
-export function parseThresholds(
-	values: Record<ThresholdKey, string>
-): { ok: true; body: ThresholdValues } | { ok: false; errors: ThresholdParseError[] } {
-	const body = {} as ThresholdValues;
-	const errors: ThresholdParseError[] = [];
-	for (const field of THRESHOLD_FIELDS) {
+function parseNamedThresholds<K extends string>(
+	fields: readonly { key: K; label: string }[],
+	values: Record<K, string>
+):
+	| { ok: true; body: Record<K, number | null> }
+	| { ok: false; errors: { key: K; message: string }[] } {
+	const body = {} as Record<K, number | null>;
+	const errors: { key: K; message: string }[] = [];
+	for (const field of fields) {
 		const raw = String(values[field.key] ?? '').trim();
 		if (raw === '') {
 			body[field.key] = null;
@@ -292,9 +351,30 @@ export function parseThresholds(
 	return { ok: true, body };
 }
 
+export function parseThresholds(
+	values: Record<ThresholdKey, string>
+): { ok: true; body: ThresholdValues } | { ok: false; errors: ThresholdParseError[] } {
+	return parseNamedThresholds(THRESHOLD_FIELDS, values);
+}
+
+export function parseRatioThresholds(
+	values: Record<RatioThresholdKey, string>
+):
+	| { ok: true; body: RatioThresholdValues }
+	| { ok: false; errors: { key: RatioThresholdKey; message: string }[] } {
+	return parseNamedThresholds(RATIO_THRESHOLD_FIELDS, values);
+}
+
 function thresholdPayload(values: ThresholdValues): ThresholdValues {
 	const body = {} as ThresholdValues;
 	for (const field of THRESHOLD_FIELDS) body[field.key] = thresholdMagnitude(values[field.key]);
+	return body;
+}
+
+function ratioThresholdPayload(values: RatioThresholdValues): RatioThresholdValues {
+	const body = {} as RatioThresholdValues;
+	for (const field of RATIO_THRESHOLD_FIELDS)
+		body[field.key] = thresholdMagnitude(values[field.key]);
 	return body;
 }
 
@@ -444,9 +524,14 @@ function asUser(value: unknown): PriceWatchUser | null {
 			MOVERS_SEND_OPTIONS.map((item) => item.seconds)
 		),
 		board_alert_every: alertSeconds(value.board_alert_every, BOARD_ALERT_SECONDS),
+		volume_alert_every: alertSeconds(
+			value.volume_alert_every,
+			MOVERS_SEND_OPTIONS.map((item) => item.seconds)
+		),
 		board_alert_window: asBoardWindow(value.board_alert_window),
 		movers_alert_last_sent: asTimestamp(value.movers_alert_last_sent),
-		board_alert_last_sent: asTimestamp(value.board_alert_last_sent)
+		board_alert_last_sent: asTimestamp(value.board_alert_last_sent),
+		volume_alert_last_sent: asTimestamp(value.volume_alert_last_sent)
 	};
 }
 
@@ -598,10 +683,17 @@ function tokensFromList(value: unknown[]): SearchTokenResult[] {
 	return [...tokens.values()];
 }
 
-export async function searchPairs(query: string, chainId: string = CURRENT_CHAIN_ID): Promise<PriceWatchSearchResult> {
+export async function searchPairs(
+	query: string,
+	chainId: string = CURRENT_CHAIN_ID
+): Promise<PriceWatchSearchResult> {
 	const q = query.trim();
 	const chain = chainId.trim() || CURRENT_CHAIN_ID;
-	const json = await request(`/search?q=${encodeURIComponent(q)}&chain_id=${encodeURIComponent(chain)}`, 'GET', null);
+	const json = await request(
+		`/search?q=${encodeURIComponent(q)}&chain_id=${encodeURIComponent(chain)}`,
+		'GET',
+		null
+	);
 	if (!isRecord(json)) {
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
@@ -715,6 +807,252 @@ export async function deleteWatch(token: string, id: string): Promise<void> {
 	await request(`/me/watches/${encodeURIComponent(id)}`, 'DELETE', token);
 }
 
+export type BestPair = {
+	chain_id: string;
+	pair_address: string;
+	dex: string;
+	liquidity_usd: string;
+	price_usd: string;
+	base_token_address: string;
+	quote_token_address: string;
+	base_symbol: string;
+	quote_symbol: string;
+	base_name: string;
+	quote_name: string;
+	ratio: string | null;
+	priced_in: string;
+	base_pair_address: string | null;
+	quote_pair_address: string | null;
+};
+
+export type SavedRatioWatch = {
+	id: string;
+	chain_id: string;
+	base_token_address: string;
+	quote_token_address: string;
+	name: string;
+	symbol: string;
+	active: boolean;
+	ratio: string | null;
+	priced_in: string;
+	pair_address: string | null;
+	base_pair_address: string | null;
+	quote_pair_address: string | null;
+} & RatioThresholdValues;
+
+export type RatioWatchCreateBody = {
+	chain_id: string;
+	base_token_address: string;
+	quote_token_address: string;
+	name: string;
+	symbol: string;
+} & RatioThresholdValues;
+
+function asBestPair(value: unknown, chainId: string): BestPair | null {
+	if (!isRecord(value)) return null;
+	const base =
+		asText(value.base_token_address) || asText(value.token_address) || asText(value.token0_address);
+	const quote = asText(value.quote_token_address) || asText(value.token1_address);
+	const pairAddress = asText(value.pair_address);
+	const ratio = asText(value.ratio).trim();
+	if (!pairAddress && !base && !ratio) return null;
+	return {
+		chain_id: asText(value.chain_id) || chainId,
+		pair_address: pairAddress,
+		dex: asText(value.dex),
+		liquidity_usd: asText(value.liquidity_usd),
+		price_usd: asText(value.price_usd),
+		base_token_address: base,
+		quote_token_address: quote,
+		base_symbol: asText(value.base_symbol) || asText(value.token0_symbol) || asText(value.symbol),
+		quote_symbol: asText(value.quote_symbol) || asText(value.token1_symbol),
+		base_name: asText(value.base_name) || asText(value.token0_name) || asText(value.name),
+		quote_name: asText(value.quote_name) || asText(value.token1_name),
+		ratio: ratio || null,
+		priced_in: asText(value.priced_in).trim(),
+		base_pair_address: asText(value.base_pair_address).trim() || null,
+		quote_pair_address: asText(value.quote_pair_address).trim() || null
+	};
+}
+
+export async function getBestPair(
+	chainId: string,
+	query: { token: string } | { base: string; quote: string }
+): Promise<BestPair> {
+	const chain = chainId.trim();
+	if (!chain) throw new PriceWatchApiError('Choose a chain before you search.', 0);
+	const params = new URLSearchParams();
+	params.set('chain_id', chain);
+	if ('token' in query) {
+		const tokenAddress = query.token.trim();
+		if (!tokenAddress) throw new PriceWatchApiError('Enter a token contract address.', 0);
+		params.set('token', tokenAddress);
+	} else {
+		const base = query.base.trim();
+		const quote = query.quote.trim();
+		if (!base || !quote) throw new PriceWatchApiError('Enter both token contract addresses.', 0);
+		params.set('base', base);
+		params.set('quote', quote);
+	}
+	const json = await request(`/pairs/best?${params.toString()}`, 'GET', null);
+	if (!isRecord(json)) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	const error = typeof json.error === 'string' ? json.error.trim() : '';
+	if (!isRecord(json.data)) {
+		throw new PriceWatchApiError(
+			error || 'The price watch API returned an unexpected response.',
+			200
+		);
+	}
+	const pair = asBestPair(json.data, chain);
+	if (!pair) {
+		throw new PriceWatchApiError(
+			error || 'The price watch API returned an unexpected response.',
+			200
+		);
+	}
+	return pair;
+}
+
+export async function getPairByAddress(chainId: string, pairAddress: string): Promise<BestPair> {
+	const chain = chainId.trim();
+	const pairAddressText = pairAddress.trim();
+	if (!chain) throw new PriceWatchApiError('Choose a chain before you search.', 0);
+	if (!pairAddressText) throw new PriceWatchApiError('Enter a pair contract address.', 0);
+	const params = new URLSearchParams();
+	params.set('chain_id', chain);
+	const json = await request(
+		`/pairs/${encodeURIComponent(pairAddressText)}?${params.toString()}`,
+		'GET',
+		null
+	);
+	if (!isRecord(json)) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	const error = typeof json.error === 'string' ? json.error.trim() : '';
+	if (!isRecord(json.data)) {
+		throw new PriceWatchApiError(
+			error || 'The price watch API returned an unexpected response.',
+			200
+		);
+	}
+	const pair = asBestPair(json.data, chain);
+	if (!pair) {
+		throw new PriceWatchApiError(
+			error || 'The price watch API returned an unexpected response.',
+			200
+		);
+	}
+	return pair;
+}
+
+function asRatioWatch(value: unknown): SavedRatioWatch | null {
+	if (!isRecord(value)) return null;
+	if (
+		typeof value.id !== 'string' ||
+		typeof value.name !== 'string' ||
+		typeof value.symbol !== 'string'
+	) {
+		return null;
+	}
+	const chainId = value.chain_id;
+	const base = asText(value.base_token_address);
+	const quote = asText(value.quote_token_address);
+	if ((typeof chainId !== 'string' && typeof chainId !== 'number') || !base || !quote) return null;
+	const thresholds = {} as RatioThresholdValues;
+	for (const field of RATIO_THRESHOLD_FIELDS) {
+		thresholds[field.key] = asNumberOrNull(value[field.key]);
+	}
+	const ratio = asText(value.ratio).trim();
+	return {
+		id: value.id,
+		chain_id: String(chainId),
+		base_token_address: base,
+		quote_token_address: quote,
+		name: value.name,
+		symbol: value.symbol,
+		active: value.active !== false,
+		ratio: ratio || null,
+		priced_in: asText(value.priced_in).trim(),
+		pair_address: asText(value.pair_address).trim() || null,
+		base_pair_address: asText(value.base_pair_address).trim() || null,
+		quote_pair_address: asText(value.quote_pair_address).trim() || null,
+		...thresholds
+	};
+}
+
+export function ratioWatchesBySymbol(items: SavedRatioWatch[]): SavedRatioWatch[] {
+	return [...items].sort((left, right) =>
+		left.symbol.trim().localeCompare(right.symbol.trim(), 'en', { sensitivity: 'base' })
+	);
+}
+
+export async function listRatioWatches(
+	token: string,
+	chainId?: string | null
+): Promise<SavedRatioWatch[]> {
+	const params = new URLSearchParams();
+	params.set('sort', 'symbol');
+	const chain = chainId?.trim() ?? '';
+	if (chain) params.set('chain_id', chain);
+	const json = await request(`/me/ratio-watches?${params.toString()}`, 'GET', token);
+	return ratioWatchesBySymbol(
+		dataList(json)
+			.map((item) => asRatioWatch(item))
+			.filter((item): item is SavedRatioWatch => item !== null)
+	);
+}
+
+export async function createRatioWatch(
+	token: string,
+	body: RatioWatchCreateBody
+): Promise<SavedRatioWatch> {
+	const payload: Record<string, string | number | null> = {
+		chain_id: body.chain_id,
+		base_token_address: body.base_token_address,
+		quote_token_address: body.quote_token_address,
+		name: body.name,
+		symbol: body.symbol
+	};
+	const magnitudes = ratioThresholdPayload(body);
+	for (const field of RATIO_THRESHOLD_FIELDS) payload[field.key] = magnitudes[field.key];
+	const json = await request('/me/ratio-watches', 'POST', token, payload);
+	if (!isRecord(json)) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	const watch = asRatioWatch(json.data);
+	if (!watch) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	return watch;
+}
+
+export async function updateRatioWatch(
+	token: string,
+	id: string,
+	thresholds: RatioThresholdValues
+): Promise<SavedRatioWatch> {
+	const json = await request(
+		`/me/ratio-watches/${encodeURIComponent(id)}`,
+		'PATCH',
+		token,
+		ratioThresholdPayload(thresholds)
+	);
+	if (!isRecord(json)) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	const watch = asRatioWatch(json.data);
+	if (!watch) {
+		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
+	}
+	return watch;
+}
+
+export async function deleteRatioWatch(token: string, id: string): Promise<void> {
+	await request(`/me/ratio-watches/${encodeURIComponent(id)}`, 'DELETE', token);
+}
+
 function tokenAddressFrom(value: Record<string, unknown>): string | null {
 	for (const key of ['token_address', 'token_contract', 'contract_address', 'base_token_address']) {
 		const text = asText(value[key]).trim();
@@ -739,15 +1077,23 @@ function asRanking(value: unknown, index: number): RankingRow | null {
 		price_change_pct: asNumberOrNull(value.price_change_pct),
 		price_usd: asText(value.price_usd),
 		liquidity_usd: asText(value.liquidity_usd),
+		volume_usd: asText(value.volume_usd),
 		pair_address: pairAddress,
 		token_address: tokenAddressFrom(value),
 		meets_liquidity_floor: floor === true ? true : floor === false ? false : null
 	};
 }
 
-export async function getRankings(window: RankingWindow, chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+export async function getRankings(
+	window: RankingWindow,
+	chainId: string = CURRENT_CHAIN_ID
+): Promise<RankingRow[]> {
 	const chain = chainId.trim() || CURRENT_CHAIN_ID;
-	const json = await request(`/rankings?window=${encodeURIComponent(window)}&chain_id=${encodeURIComponent(chain)}`, 'GET', null);
+	const json = await request(
+		`/rankings?window=${encodeURIComponent(window)}&chain_id=${encodeURIComponent(chain)}`,
+		'GET',
+		null
+	);
 	return dataList(json)
 		.map((item, index) => asRanking(item, index))
 		.filter((item): item is RankingRow => item !== null);
@@ -783,7 +1129,10 @@ function topTen(rows: RankingRow[]): RankingRow[] {
 }
 
 /** One rankings window, top 10. No fallback to another window. */
-export async function getMoverBoard(window: RankingWindow, chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+export async function getMoverBoard(
+	window: RankingWindow,
+	chainId: string = CURRENT_CHAIN_ID
+): Promise<RankingRow[]> {
 	return topTen(await getRankings(window, chainId));
 }
 
@@ -793,7 +1142,10 @@ export async function getFastHorses(chainId: string = CURRENT_CHAIN_ID): Promise
 }
 
 /** GET /rankings?window= for 15m, 30m, 1h, 6h, 12h, or 24h. */
-export async function getSlowHorses(window: BoardWindow, chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
+export async function getSlowHorses(
+	window: BoardWindow,
+	chainId: string = CURRENT_CHAIN_ID
+): Promise<RankingRow[]> {
 	return topTen(await getRankings(window, chainId));
 }
 
@@ -833,7 +1185,13 @@ export function mergeScheduleUser(
 		board_alert_last_sent:
 			'board_alert_last_sent' in record
 				? next.board_alert_last_sent
-				: previous.board_alert_last_sent
+				: previous.board_alert_last_sent,
+		volume_alert_every:
+			'volume_alert_every' in record ? next.volume_alert_every : previous.volume_alert_every,
+		volume_alert_last_sent:
+			'volume_alert_last_sent' in record
+				? next.volume_alert_last_sent
+				: previous.volume_alert_last_sent
 	};
 }
 
@@ -889,6 +1247,20 @@ export async function saveSlowMoverInterval(token: string, seconds: number): Pro
 	if (!('board_alert_every' in saved.record)) {
 		saved.user.board_alert_every = seconds;
 		saved.record.board_alert_every = seconds;
+	}
+	return saved;
+}
+
+/** Writes volume_alert_every only. It does not send movers or slow-board fields. */
+export async function saveVolumeAlertEvery(token: string, seconds: number): Promise<ScheduleSave> {
+	if (!isMoversSendSeconds(seconds)) {
+		throw new PriceWatchApiError('Choose a schedule from the list.', 0);
+	}
+	const json = await request('/me', 'PATCH', token, { volume_alert_every: seconds });
+	const saved = userFromResponse(json);
+	if (!('volume_alert_every' in saved.record)) {
+		saved.user.volume_alert_every = seconds;
+		saved.record.volume_alert_every = seconds;
 	}
 	return saved;
 }

@@ -2,21 +2,25 @@
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
+	import MoverBoard from '$lib/components/price-watch/MoverBoard.svelte';
+	import RatioWatchPanel from '$lib/components/price-watch/RatioWatchPanel.svelte';
 	import {
 		API_UNREACHABLE,
 		CURRENT_CHAIN_ID,
+		FAST_MOVER_VIEWS,
 		PICK_CHAIN_MESSAGE,
 		PriceWatchApiError,
+		SLOW_MOVER_INTERVALS,
+		SLOW_MOVER_VIEWS,
 		THRESHOLD_FIELDS,
+		THRESHOLD_NEGATIVE_MESSAGE,
+		VOLUME_VIEWS,
 		checkHealth,
 		clearStoredToken,
 		createWatch,
 		deleteWatch,
 		DOWN_THRESHOLD_HINT,
 		emptyThresholds,
-		FAST_MOVER_VIEWS,
-		SLOW_MOVER_VIEWS,
-		SLOW_MOVER_INTERVALS,
 		getChains,
 		getMe,
 		getMoverBoard,
@@ -29,19 +33,20 @@
 		saveChains,
 		saveMoversAlertEvery,
 		saveSlowMoverInterval,
+		saveVolumeAlertEvery,
 		searchPairs,
-		THRESHOLD_NEGATIVE_MESSAGE,
 		thresholdInputValue,
+		tokenTitle,
 		updateWatch,
+		watchDisplay,
 		watchesBySymbol,
-		type FastMoverWindow,
 		type PairResult,
 		type PriceWatchChain,
 		type PriceWatchUser,
 		type RankingRow,
+		type RankingWindow,
 		type SavedWatch,
 		type SearchTokenResult,
-		type SlowMoverWindow,
 		type ThresholdKey
 	} from '$lib/priceWatchApi';
 	import { MOVERS_SEND_OPTIONS } from '$lib/price-watch-types';
@@ -59,11 +64,9 @@
 	};
 	type PendingRemove = { id: string; name: string; source: 'form' | 'list'; triggerId: string };
 
-	const HORSE_REFRESH_MS = 15_000;
-
 	let health = $state<Health>('checking');
 	let restoring = $state(false);
-	let token: string | null = null;
+	let token = $state<string | null>(null);
 	let user = $state<PriceWatchUser | null>(null);
 	let accountError = $state('');
 
@@ -71,6 +74,7 @@
 	let chainsLoaded = $state(false);
 	let selectedChainIds = $state<string[]>([]);
 	let viewingChainId = $state(CURRENT_CHAIN_ID);
+	let watchMode = $state<'price' | 'ratio'>('price');
 	let chainsError = $state('');
 	let chainsStatus = $state('');
 	let savingChains = $state(false);
@@ -105,30 +109,7 @@
 	let listStatus = $state('');
 
 	let watchlistOpen = $state(false);
-	let fastOpen = $state(false);
-	let slowOpen = $state(false);
-	let fastView = $state<FastMoverWindow>('live');
-	let slowView = $state<SlowMoverWindow>('slow_24h');
-	let fastRows = $state<RankingRow[] | null>(null);
-	let slowRows = $state<RankingRow[] | null>(null);
-	let copyStatus = $state('');
-	let fastError = $state('');
-	let slowError = $state('');
-	let fastUpdated = $state('');
-	let slowUpdated = $state('');
 	let draftReturnId = 'search-heading';
-	let fastSeq = 0;
-	let slowSeq = 0;
-	let fastTimer: ReturnType<typeof setInterval> | null = null;
-	let slowTimer: ReturnType<typeof setInterval> | null = null;
-	let fastEvery = $state('0');
-	let slowEvery = $state('86400');
-	let fastSaveError = $state('');
-	let slowSaveError = $state('');
-	let fastSaveStatus = $state('');
-	let slowSaveStatus = $state('');
-	let savingFast = $state(false);
-	let savingSlow = $state(false);
 
 	type SearchToken = SearchTokenResult;
 
@@ -280,9 +261,17 @@
 		return [...tokens.values()];
 	}
 
+	function sideTitle(side: PairSide): string {
+		return tokenTitle(side.name, side.symbol) || side.address.trim() || 'Unknown token';
+	}
+
+	function sideTicker(side: PairSide): string {
+		return side.symbol.trim() || side.address.trim() || 'Unknown token';
+	}
+
 	function pairLabel(pair: PairResult): string {
 		const { base, quote } = orientPair(pair, submittedQuery);
-		return `${sideLabel(base.symbol, base.address)} / ${sideLabel(quote.symbol, quote.address)}`;
+		return `${sideTitle(base)} / ${sideTitle(quote)}`;
 	}
 
 	function pairSides(pair: PairResult): { symbol: string; quoteSymbol: string } {
@@ -326,11 +315,11 @@
 	}
 
 	function watchNotice(verb: 'Added' | 'Updated', item: WatchDraft): string {
-		return `${verb} ${item.baseSymbol} / ${item.quoteSymbol} on ${chainName(item.chainId)}.`;
+		return `${verb} ${watchDisplay(item.name, item.symbol)} on ${chainName(item.chainId)}.`;
 	}
 
 	function tokenLabel(item: SearchToken): string {
-		return item.symbol.trim() || item.address;
+		return tokenTitle(item.name, item.symbol) || item.address;
 	}
 
 	function tokenFilterPressed(item: SearchToken): boolean {
@@ -349,26 +338,22 @@
 	}
 
 	const activeChains = $derived(chainCatalog.filter((chain) => chain.active));
-	const viewChoices = $derived(activeChains.filter((chain) => selectedChainIds.includes(chain.chain_id)));
 	const searchTokens = $derived.by(() => {
 		if (results) return searchedTokens(results, resultTokens ?? [], submittedQuery);
 		if (resultTokens && resultTokens.length > 0) return orderQueryFirst(resultTokens, submittedQuery);
 		return [];
 	});
 	const orderedPairs = $derived(results ? pairsByLiquidity(results) : []);
-	const visiblePairs = $derived(
-		selectedTokenAddress
-			? orderedPairs.filter((pair) => pairIncludesToken(pair, selectedTokenAddress))
-			: orderedPairs
-	);
+	const visiblePairs = $derived.by(() => {
+		const selected = selectedTokenAddress;
+		if (!selected) return orderedPairs;
+		return orderedPairs.filter((pair) => pairIncludesToken(pair, selected));
+	});
 	const selectedToken = $derived.by(() => {
 		if (!selectedTokenAddress) return null;
 		const key = selectedTokenAddress.toLowerCase();
 		return searchTokens.find((item) => item.address.toLowerCase() === key) ?? null;
 	});
-	const currentChain = $derived(
-		chainCatalog.find((chain) => chain.chain_id === CURRENT_CHAIN_ID) ?? null
-	);
 	const extraSaved = $derived(
 		selectedChainIds.filter((id) => !activeChains.some((chain) => chain.chain_id === id))
 	);
@@ -388,77 +373,6 @@
 		const numeric = Number(value);
 		if (!Number.isFinite(numeric)) return 'n/a';
 		return formatCryptoPrice(numeric);
-	}
-
-	function clockText(date: Date): string {
-		return new Intl.DateTimeFormat('en-US', {
-			hour: 'numeric',
-			minute: '2-digit',
-			second: '2-digit'
-		}).format(date);
-	}
-
-	function sentText(value: string): string {
-		const time = Date.parse(value);
-		if (!Number.isFinite(time)) return value;
-		return new Intl.DateTimeFormat('en-US', {
-			dateStyle: 'medium',
-			timeStyle: 'short'
-		}).format(time);
-	}
-
-	function pairTitle(row: RankingRow): string {
-		const symbol = row.symbol.trim();
-		const quote = row.quote_symbol.trim();
-		if (symbol && quote) return `${symbol}/${quote}`;
-		if (symbol) return symbol;
-		return row.name.trim();
-	}
-
-	function percentText(value: number | null): string {
-		if (value === null || !Number.isFinite(value)) return 'Percent change: not available.';
-		const amount = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 8 }).format(value);
-		return `Percent change: ${amount}%.`;
-	}
-
-	function fieldText(label: string, value: string): string {
-		const text = value.trim();
-		return text ? `${label}: ${text}` : `${label}: not available.`;
-	}
-
-	function horseItemId(list: 'fast' | 'slow', row: RankingRow, index: number): string {
-		const key = (row.pair_address || row.id).replace(/[^a-zA-Z0-9_-]/g, '');
-		return `${list}-horse-${key || 'row'}-${index}`;
-	}
-
-	function nextDueText(lastSent: string | null, everySeconds: number, name: string): string {
-		if (everySeconds <= 0) return `No ${name} message is scheduled.`;
-		if (!lastSent) return `The next ${name} message is due on the bot's next check.`;
-		const last = Date.parse(lastSent);
-		if (!Number.isFinite(last)) return `The next ${name} message is due on the bot's next check.`;
-		const due = last + everySeconds * 1000;
-		if (due <= Date.now()) return `The next ${name} message is due now.`;
-		return `The next ${name} message is due ${sentText(new Date(due).toISOString())}.`;
-	}
-
-	function showHorseSchedule(next: PriceWatchUser) {
-		fastEvery = MOVERS_SEND_OPTIONS.some((item) => item.seconds === next.movers_alert_every)
-			? String(next.movers_alert_every)
-			: '0';
-		slowEvery = SLOW_MOVER_INTERVALS.some((item) => item.seconds === next.board_alert_every)
-			? String(next.board_alert_every)
-			: '86400';
-		fastSaveError = '';
-		slowSaveError = '';
-	}
-
-	function clearHorseSchedule() {
-		fastEvery = '0';
-		slowEvery = '86400';
-		fastSaveError = '';
-		slowSaveError = '';
-		fastSaveStatus = '';
-		slowSaveStatus = '';
 	}
 
 	function setLimits(watch: SavedWatch): { label: string; value: string }[] {
@@ -489,7 +403,6 @@
 		selectedChainIds = [];
 		accountError = '';
 		restoring = false;
-		clearHorseSchedule();
 		await goto('/price-watch/login?notice=expired', { replaceState: true });
 	}
 
@@ -503,122 +416,6 @@
 			chainsLoaded = false;
 			chainsError = publicErrorMessage(error, token);
 		}
-	}
-
-	function isFastView(value: string): value is FastMoverWindow {
-		return FAST_MOVER_VIEWS.some((item) => item.value === value);
-	}
-
-	function isSlowView(value: string): value is SlowMoverWindow {
-		return SLOW_MOVER_VIEWS.some((item) => item.value === value);
-	}
-
-	async function loadFast(reset = false) {
-		if (!fastOpen) return;
-		const view = fastView;
-		const seq = ++fastSeq;
-		if (reset) {
-			fastRows = null;
-			fastError = '';
-		}
-		try {
-			const rows = await getMoverBoard(view, watchChainId());
-			if (seq !== fastSeq || !fastOpen || view !== fastView) return;
-			fastRows = rows;
-			fastError = '';
-			fastUpdated = clockText(new Date());
-		} catch (error) {
-			if (seq !== fastSeq || !fastOpen || view !== fastView) return;
-			fastRows = [];
-			fastError = publicErrorMessage(error, null);
-		}
-	}
-
-	async function loadSlow(reset = false) {
-		if (!slowOpen) return;
-		const view = slowView;
-		const seq = ++slowSeq;
-		if (reset) {
-			slowRows = null;
-			slowError = '';
-		}
-		try {
-			const rows = await getMoverBoard(view, watchChainId());
-			if (seq !== slowSeq || !slowOpen || view !== slowView) return;
-			slowRows = rows;
-			slowError = '';
-			slowUpdated = clockText(new Date());
-		} catch (error) {
-			if (seq !== slowSeq || !slowOpen || view !== slowView) return;
-			slowRows = [];
-			slowError = publicErrorMessage(error, null);
-		}
-	}
-
-	function stopFastRefresh() {
-		fastSeq += 1;
-		if (fastTimer) clearInterval(fastTimer);
-		fastTimer = null;
-	}
-
-	function stopSlowRefresh() {
-		slowSeq += 1;
-		if (slowTimer) clearInterval(slowTimer);
-		slowTimer = null;
-	}
-
-	function startFastRefresh() {
-		stopFastRefresh();
-		const first = loadFast();
-		fastTimer = setInterval(() => {
-			void loadFast();
-		}, HORSE_REFRESH_MS);
-		return first;
-	}
-
-	function startSlowRefresh() {
-		stopSlowRefresh();
-		const first = loadSlow();
-		slowTimer = setInterval(() => {
-			void loadSlow();
-		}, HORSE_REFRESH_MS);
-		return first;
-	}
-
-	function toggleFastHorses() {
-		if (fastOpen) {
-			fastOpen = false;
-			stopFastRefresh();
-			return;
-		}
-		fastOpen = true;
-		void startFastRefresh();
-	}
-
-	function toggleSlowHorses() {
-		if (slowOpen) {
-			slowOpen = false;
-			stopSlowRefresh();
-			return;
-		}
-		slowOpen = true;
-		void startSlowRefresh();
-	}
-
-	function chooseFastView(event: Event) {
-		const select = event.currentTarget;
-		if (!(select instanceof HTMLSelectElement) || !isFastView(select.value)) return;
-		if (select.value === fastView && fastRows !== null && !fastError) return;
-		fastView = select.value;
-		void loadFast(true);
-	}
-
-	function chooseSlowView(event: Event) {
-		const select = event.currentTarget;
-		if (!(select instanceof HTMLSelectElement) || !isSlowView(select.value)) return;
-		if (select.value === slowView && slowRows !== null && !slowError) return;
-		slowView = select.value;
-		void loadSlow(true);
 	}
 
 	async function loadWatches() {
@@ -668,8 +465,9 @@
 			const me = await getMe(token);
 			user = me.user;
 			selectedChainIds = me.chains.map((chain) => chain.chain_id);
-			viewingChainId = selectedChainIds.includes(CURRENT_CHAIN_ID) ? CURRENT_CHAIN_ID : (selectedChainIds[0] ?? CURRENT_CHAIN_ID);
-			showHorseSchedule(me.user);
+			viewingChainId = selectedChainIds.includes(CURRENT_CHAIN_ID)
+				? CURRENT_CHAIN_ID
+				: (selectedChainIds[0] ?? CURRENT_CHAIN_ID);
 			await loadWatches();
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
@@ -698,9 +496,7 @@
 		health = 'up';
 		restoring = true;
 		token = stored;
-		const jobs: Promise<void>[] = [loadChains(), loadAccount()];
-		if (fastOpen) jobs.push(startFastRefresh());
-		await Promise.all(jobs);
+		await Promise.all([loadChains(), loadAccount()]);
 		restoring = false;
 		if (!user && !accountError) await goto('/price-watch/login', { replaceState: true });
 	}
@@ -717,16 +513,59 @@
 		listStatus = '';
 		watchStatus = '';
 		watchError = '';
-		clearHorseSchedule();
 		await goto('/price-watch/login');
 	}
 
-	function toggleChain(chainId: string, checked: boolean) {
-		if (checked) {
-			if (!selectedChainIds.includes(chainId)) selectedChainIds = [...selectedChainIds, chainId];
-			return;
+	function clearPriceWorkspace() {
+		searchSeq += 1;
+		searching = false;
+		query = '';
+		submittedQuery = '';
+		results = null;
+		resultTokens = null;
+		selectedTokenAddress = null;
+		searched = false;
+		searchError = '';
+		searchStatus = '';
+		draft = null;
+		thresholdValues = emptyThresholds();
+		thresholdErrors = {};
+		watchError = '';
+		watchStatus = '';
+		if (pendingRemove?.source === 'form') pendingRemove = null;
+	}
+
+	function chooseMode(event: Event) {
+		const select = event.currentTarget;
+		if (!(select instanceof HTMLSelectElement)) return;
+		const next = select.value === 'ratio' ? 'ratio' : 'price';
+		if (next === watchMode) return;
+		watchMode = next;
+		clearPriceWorkspace();
+	}
+
+	function chooseChain(event: Event) {
+		const select = event.currentTarget;
+		if (!(select instanceof HTMLSelectElement)) return;
+		const next = select.value.trim();
+		if (!next || next === viewingChainId) return;
+		viewingChainId = next;
+		selectedChainIds = [next];
+		clearPriceWorkspace();
+		watches = [];
+		void loadWatches();
+	}
+
+	async function saveBoardSchedule(
+		seconds: number,
+		save: (auth: string, value: number) => Promise<{ user: PriceWatchUser; record: Record<string, unknown> }>
+	) {
+		if (!token || !user) {
+			throw new PriceWatchApiError('Sign in before you save this schedule.', 401);
 		}
-		selectedChainIds = selectedChainIds.filter((id) => id !== chainId);
+		const current = user;
+		const saved = await save(token, seconds);
+		user = mergeScheduleUser(current, saved.user, saved.record);
 	}
 
 	async function submitChains(event: SubmitEvent) {
@@ -737,9 +576,8 @@
 			await dropSession();
 			return;
 		}
-		const chainIds = activeChains
-			.filter((chain) => selectedChainIds.includes(chain.chain_id))
-			.map((chain) => chain.chain_id);
+		const selected = watchChainId();
+		const chainIds = activeChains.some((chain) => chain.chain_id === selected) ? [selected] : [];
 		savingChains = true;
 		try {
 			const saved = await saveChains(token, chainIds);
@@ -812,14 +650,14 @@
 	function draftFromPair(pair: PairResult, q: string): WatchDraft {
 		const { base, quote } = orientPair(pair, q);
 		const watched = matchedSides(pair, q)[0] ?? null;
-		const baseText = sideLabel(base.symbol, base.address);
-		const quoteText = sideLabel(quote.symbol, quote.address);
+		const baseText = sideTicker(base);
+		const quoteText = sideTicker(quote);
 		return {
 			id: null,
 			chainId: watchChainId(),
 			pairAddress: pair.pair_address,
 			tokenAddress: watched?.address.trim() ? watched.address.trim() : null,
-			name: `${baseText} / ${quoteText}`,
+			name: `${sideTitle(base)} / ${sideTitle(quote)}`,
 			symbol: `${baseText}/${quoteText}`,
 			baseSymbol: baseText,
 			quoteSymbol: quoteText
@@ -876,36 +714,24 @@
 		watchError = '';
 		watchStatus = '';
 		if (pendingRemove?.source === 'form') pendingRemove = null;
-		void focusId(id ? `	async function copyAddress(kind: string, row: RankingRow) {
-		const value = (kind === 'token contract' ? row.token_address : row.pair_address) || '';
-		const label = kind + ' for ' + (row.symbol || row.name || 'this token');
-		if (!value.trim()) {
-			copyStatus = 'The ' + label + ' is not available.';
-			return;
-		}
-		try {
-			await navigator.clipboard.writeText(value.trim());
-			copyStatus = 'Copied the ' + label + '.';
-		} catch {
-			copyStatus = 'Could not copy the ' + label + '. It is still shown on the page.';
-		}
+		void focusId(id ? `watch-${id}` : returnId);
 	}
 
-watch-${id}` : returnId);
-	}
-
-	function watchRanking(row: RankingRow, list: 'fast' | 'slow', index: number) {
+	function watchRanking(row: RankingRow, returnId: string) {
 		const sides = symbolsFromText(row.name, row.symbol);
 		const quote = row.quote_symbol.trim() || sides.quoteSymbol;
-		draftReturnId = horseItemId(list, row, index);
+		const symbol = row.symbol.trim() || sides.symbol;
+		const title = symbol && quote ? `${symbol}/${quote}` : row.name.trim() || symbol;
+		watchMode = 'price';
+		draftReturnId = returnId;
 		draft = {
 			id: null,
 			chainId: watchChainId(),
 			pairAddress: row.pair_address,
 			tokenAddress: row.token_address,
-			name: row.name.trim() || pairTitle(row),
-			symbol: row.symbol.trim() || sides.symbol,
-			baseSymbol: row.symbol.trim() || sides.symbol,
+			name: row.name.trim() || title,
+			symbol,
+			baseSymbol: symbol,
 			quoteSymbol: quote
 		};
 		thresholdValues = emptyThresholds();
@@ -1103,87 +929,9 @@ watch-${id}` : returnId);
 		watchlistOpen = !watchlistOpen;
 	}
 
-	async function saveFastSchedule(event: SubmitEvent) {
-		event.preventDefault();
-		fastSaveError = '';
-		fastSaveStatus = '';
-		const choice = MOVERS_SEND_OPTIONS.find((item) => item.value === fastEvery);
-		if (!choice) {
-			fastSaveError = 'Choose a schedule from the list.';
-			await focusId('fast-movers-save-error');
-			return;
-		}
-		if (!token || !user) {
-			await dropSession();
-			return;
-		}
-		const current = user;
-		savingFast = true;
-		try {
-			const saved = await saveMoversAlertEvery(token, choice.seconds);
-			const nextUser = mergeScheduleUser(current, saved.user, saved.record);
-			user = nextUser;
-			fastEvery = MOVERS_SEND_OPTIONS.some((item) => item.seconds === nextUser.movers_alert_every)
-				? String(nextUser.movers_alert_every)
-				: '0';
-			fastSaveStatus = 'Saved.';
-			await focusId('fast-movers-save-status');
-		} catch (error) {
-			const message = publicErrorMessage(error, token);
-			if (isLoginError(error)) {
-				await dropSession();
-				return;
-			}
-			fastSaveError = message;
-			await focusId('fast-movers-save-error');
-		} finally {
-			savingFast = false;
-		}
-	}
-
-	async function saveSlowSchedule(event: SubmitEvent) {
-		event.preventDefault();
-		slowSaveError = '';
-		slowSaveStatus = '';
-		const choice = SLOW_MOVER_INTERVALS.find((item) => item.value === slowEvery);
-		if (!choice) {
-			slowSaveError = 'Choose a schedule from the list.';
-			await focusId('slow-movers-save-error');
-			return;
-		}
-		if (!token || !user) {
-			await dropSession();
-			return;
-		}
-		const current = user;
-		savingSlow = true;
-		try {
-			const saved = await saveSlowMoverInterval(token, choice.seconds);
-			const nextUser = mergeScheduleUser(current, saved.user, saved.record);
-			user = nextUser;
-			slowEvery = SLOW_MOVER_INTERVALS.some((item) => item.seconds === nextUser.board_alert_every)
-				? String(nextUser.board_alert_every)
-				: '86400';
-			slowSaveStatus = 'Saved.';
-			await focusId('slow-movers-save-status');
-		} catch (error) {
-			const message = publicErrorMessage(error, token);
-			if (isLoginError(error)) {
-				await dropSession();
-				return;
-			}
-			slowSaveError = message;
-			await focusId('slow-movers-save-error');
-		} finally {
-			savingSlow = false;
-		}
-	}
-
 	onMount(() => {
 		void start();
 		return () => {
-			stopFastRefresh();
-			stopSlowRefresh();
 			if (toastTimer) clearTimeout(toastTimer);
 		};
 	});
@@ -1217,23 +965,66 @@ watch-${id}` : returnId);
 		{/if}
 	{:else}
 		<p>
-			This page watches PulseChain tokens you choose and sends Telegram alerts when price or liquidity
-			moves past the limits you set. The site talks only to the Blind Bit Boys API. It never talks to
-			Directus and never shows an RPC address.
+			Choose a chain and a watch mode. Price Watch follows one pair. Ratio Watch follows two tokens.
+			Top Performers lists fast movers, slow movers, and top volume. The site talks only to the Blind
+			Bit Boys API. It never talks to Directus and never shows an RPC address.
 		</p>
 		<nav aria-label="On this page">
 			<ul>
+				<li><a class="story-link" href="#watch-setup">Watch setup</a></li>
 				<li><a class="story-link" href="#account">Your account</a></li>
-				<li><a class="story-link" href="#chains">Chains you watch</a></li>
-				<li><a class="story-link" href="#find-a-pair">Find a pair</a></li>
-				<li>
-					<a class="story-link" href="#watches" onclick={() => (watchlistOpen = true)}>Watchlist</a>
-				</li>
+				{#if watchMode === 'price'}
+					<li><a class="story-link" href="#find-a-pair">Find a pair</a></li>
+					<li>
+						<a class="story-link" href="#watches" onclick={() => (watchlistOpen = true)}>Watchlist</a>
+					</li>
+				{:else}
+					<li><a class="story-link" href="#ratio-watch">Ratio Watch</a></li>
+				{/if}
 				<li>
 					<a class="story-link" href="#top-performers">Top Performers</a>
 				</li>
 			</ul>
 		</nav>
+
+		<section id="watch-setup" aria-labelledby="watch-setup-heading">
+			<h2 id="watch-setup-heading" tabindex="-1">Watch setup</h2>
+			{#if chainsError}
+				<p id="chains-error" role="alert" tabindex="-1">{chainsError}</p>
+			{/if}
+			<div class="field">
+				<label for="watch-mode">Watch mode</label>
+				<select id="watch-mode" value={watchMode} onchange={chooseMode}>
+					<option value="price">Price Watch</option>
+					<option value="ratio">Ratio Watch</option>
+				</select>
+			</div>
+			{#if chainsLoaded && activeChains.length === 0}
+				<p>No active chains are available.</p>
+			{/if}
+			<form novalidate onsubmit={submitChains}>
+				<div class="field">
+					<label for="page-chain">Chain</label>
+					<select id="page-chain" value={watchChainId()} onchange={chooseChain}>
+						{#each activeChains as chain (chain.chain_id)}
+							<option value={chain.chain_id}>{chain.name}, chain {chain.chain_id}</option>
+						{/each}
+						{#if !activeChains.some((chain) => chain.chain_id === watchChainId())}
+							<option value={watchChainId()}>{chainLabel(watchChainId())}</option>
+						{/if}
+					</select>
+				</div>
+				<p>This page is {chainLabel(watchChainId())}.</p>
+				{#each extraSaved as id (id)}
+					<p>Chain {id} is saved and is not an active chain, so it is not in the chain list.</p>
+				{/each}
+				<p>Save chain stores this one chain.</p>
+				{#if chainsStatus}
+					<p id="chains-status" role="status" tabindex="-1">{chainsStatus}</p>
+				{/if}
+				<button type="submit" disabled={savingChains || activeChains.length === 0}>Save chain</button>
+			</form>
+		</section>
 
 		<section id="account" aria-labelledby="account-heading">
 			<h2 id="account-heading" tabindex="-1">Your account</h2>
@@ -1244,61 +1035,7 @@ watch-${id}` : returnId);
 			<button type="button" onclick={signOut}>Sign out</button>
 		</section>
 
-		<section id="chains" aria-labelledby="chains-heading">
-			<h2 id="chains-heading" tabindex="-1">Chains you watch</h2>
-			{#if chainsError}
-				<p id="chains-error" role="alert" tabindex="-1">{chainsError}</p>
-			{/if}
-			{#if currentChain}
-				<p>This page is {chainLabel(watchChainId())}.</p>
-			{/if}
-						{#if chainsLoaded && activeChains.length === 0}
-				<p>No active chains are available.</p>
-			{/if}
-			{#if activeChains.length > 0}
-				<form novalidate onsubmit={submitChains}>
-					<fieldset>
-						<legend>Select the chain for this page</legend>
-						{#each activeChains as chain (chain.chain_id)}
-							<div class="choice">
-								<input
-									type="radio"
-									name="page-chain"
-									id="chain-{chain.chain_id}"
-									checked={watchChainId() === chain.chain_id}
-									onchange={(event) => {
-										const input = event.currentTarget;
-										if (!(input instanceof HTMLInputElement) || !input.checked) return;
-										viewingChainId = chain.chain_id;
-											selectedChainIds = [chain.chain_id];
-											watches = [];
-											results = null;
-											resultTokens = null;
-											searched = false;
-											searchError = '';
-											searchStatus = '';
-											draft = null;
-											loadWatches();
-											if (fastOpen) loadFast(true);
-											if (slowOpen) loadSlow(true);
-									}}
-								/>
-								<label for="chain-{chain.chain_id}">{chain.name}, chain {chain.chain_id}</label>
-							</div>
-						{/each}
-					</fieldset>
-					{#each extraSaved as id (id)}
-						<p>Chain {id} is saved and is not an active chain, so it is not listed above.</p>
-					{/each}
-					<p>Save chain stores this one chain.</p>
-					{#if chainsStatus}
-						<p id="chains-status" tabindex="-1">{chainsStatus}</p>
-					{/if}
-					<button type="submit" disabled={savingChains}>Save chain</button>
-				</form>
-			{/if}
-		</section>
-
+		{#if watchMode === 'price'}
 		<section id="find-a-pair" aria-labelledby="search-heading">
 			<h2 id="search-heading" tabindex="-1">Find a pair</h2>
 			<form novalidate onsubmit={submitSearch}>
@@ -1328,9 +1065,7 @@ watch-${id}` : returnId);
 					<ul class="plain" aria-labelledby="tokens-heading">
 						{#each searchTokens as item (item.address.toLowerCase())}
 							<li>
-								{#if item.name}
-									<p>Name: {item.name}</p>
-								{/if}
+								<p>{tokenLabel(item)}</p>
 								<p>Symbol: {item.symbol || 'not available'}</p>
 								<p class="wrap">Contract address: {item.address}</p>
 								<button
@@ -1377,7 +1112,7 @@ watch-${id}` : returnId);
 
 		{#if draft}
 			<section id="watch-form" aria-labelledby="watch-heading">
-				<h2 id="watch-heading" tabindex="-1">{draft.name} ({draft.symbol})</h2>
+				<h2 id="watch-heading" tabindex="-1">{watchDisplay(draft.name, draft.symbol)}</h2>
 				<form novalidate onsubmit={saveWatch}>
 					<div class="field">
 						<label for="watch-chain">Chain (read only)</label>
@@ -1448,7 +1183,9 @@ watch-${id}` : returnId);
 						{#if draft.id}
 							{#if pendingRemove?.source === 'form' && pendingRemove.id === draft.id}
 								<div role="group" aria-labelledby="remove-confirm">
-									<p id="remove-confirm" tabindex="-1">Remove the watch for {draft.name}?</p>
+									<p id="remove-confirm" tabindex="-1">
+										Remove the watch for {watchDisplay(draft.name, draft.symbol)}?
+									</p>
 									{#if removeError}
 										<p id="remove-error" role="alert" tabindex="-1">{removeError}</p>
 									{/if}
@@ -1515,8 +1252,8 @@ watch-${id}` : returnId);
 					<ul class="plain">
 						{#each watches as watch (watch.id)}
 							<li>
-								<h3 id="watch-{watch.id}" tabindex="-1">{watch.name} ({watch.symbol})</h3>
-								<p>Name: {watch.name}</p>
+								<h3 id="watch-{watch.id}" tabindex="-1">{watchDisplay(watch.name, watch.symbol)}</h3>
+								<p>Name: {watchDisplay(watch.name, watch.symbol)}</p>
 								<p>Symbol: {watch.symbol}</p>
 								<p>Chain: {chainLabel(watch.chain_id)}</p>
 								<p class="wrap">Pair: {watch.pair_address}</p>
@@ -1532,11 +1269,13 @@ watch-${id}` : returnId);
 								{/if}
 								<div class="actions">
 									<button type="button" onclick={() => editWatch(watch)}>
-										Edit<span class="sr-only"> {watch.name}</span>
+										Edit<span class="sr-only"> {watchDisplay(watch.name, watch.symbol)}</span>
 									</button>
 									{#if pendingRemove?.source === 'list' && pendingRemove.id === watch.id}
 										<div role="group" aria-labelledby="remove-confirm">
-											<p id="remove-confirm" tabindex="-1">Remove the watch for {watch.name}?</p>
+											<p id="remove-confirm" tabindex="-1">
+												Remove the watch for {watchDisplay(watch.name, watch.symbol)}?
+											</p>
 											{#if removeError}
 												<p id="remove-error" role="alert" tabindex="-1">{removeError}</p>
 											{/if}
@@ -1555,7 +1294,7 @@ watch-${id}` : returnId);
 													triggerId: `remove-${watch.id}`
 												})}
 										>
-											Remove<span class="sr-only"> {watch.name}</span>
+											Remove<span class="sr-only"> {watchDisplay(watch.name, watch.symbol)}</span>
 										</button>
 									{/if}
 								</div>
@@ -1566,203 +1305,83 @@ watch-${id}` : returnId);
 			</div>
 		</section>
 
+		{:else if token}
+		{#key watchChainId()}
+			<RatioWatchPanel
+				chainId={watchChainId()}
+				token={token}
+				{chainLabel}
+				onUnauthorized={() => void dropSession()}
+				onChainRequired={() => {
+					chainsError = PICK_CHAIN_MESSAGE;
+					void focusId('chains-error');
+				}}
+			/>
+		{/key}
+		{/if}
+
 		<section id="top-performers" aria-labelledby="top-performers-heading">
 			<h2 id="top-performers-heading">Top Performers</h2>
-			
 			<p id="top-performers-intro">
-				Welcome to top performers. Fast movers are the short bursts. Slow movers are tokens that
-				were promoted from a fast board and are now measured over a longer time. Open a section,
-				choose one view, and read that view’s top 10. Then choose how often that section may send
-				Telegram notifications, and save that choice. A saved choice applies only to that section.
+				Fast movers are the short bursts. Slow movers are tokens measured over a longer time. Top
+				volume ranks pairs by traded volume. Open a section, choose one view, and read that view’s
+				top 10. Then choose how often that section may send Telegram notifications, and save that
+				choice. A saved choice applies only to that section.
 			</p>
-			<div class="horse-switch" role="group" aria-labelledby="top-performers-heading">
-				<button
-					type="button"
-					id="fast-movers-button"
-					class="horse-toggle"
-					aria-expanded={fastOpen ? 'true' : 'false'}
-					aria-controls={fastOpen ? 'fast-movers-panel' : undefined}
-					onclick={toggleFastHorses}
-				>
-					Fast movers
-				</button>
-				<button
-					type="button"
-					id="slow-movers-button"
-					class="horse-toggle"
-					aria-expanded={slowOpen ? 'true' : 'false'}
-					aria-controls={slowOpen ? 'slow-movers-panel' : undefined}
-					onclick={toggleSlowHorses}
-				>
-					Slow movers
-				</button>
-			</div>
-
-			{#if fastOpen}
-			<div
-				id="fast-movers-panel"
-				class="horse-panel"
-				role="region"
-				aria-labelledby="fast-movers-heading"
-			>
-				<div class="field">
-					<label for="fast-movers-view">View</label>
-					<select id="fast-movers-view" value={fastView} onchange={chooseFastView}>
-						{#each FAST_MOVER_VIEWS as choice (choice.value)}
-							<option value={choice.value}>{choice.label}</option>
-						{/each}
-					</select>
-				</div>
-				{#if fastError}
-					<p id="fast-movers-error" role="alert" tabindex="-1">{fastError}</p>
-				{:else if fastRows === null}
-					<p role="status">Loading this view.</p>
-				{:else if fastRows.length === 0}
-					<p>This view has no tokens yet.</p>
-				{:else}
-					<p role="status" aria-live="polite">{copyStatus}</p>
-					<ol class="horse-list">
-						{#each fastRows as row, index (`fast:${fastView}:${row.pair_address || row.id}:${index}`)}
-							<li class="wrap">
-								<h4 id={horseItemId('fast', row, index)} tabindex="-1">Rank {row.rank ?? index + 1}. {row.name || row.symbol}</h4>
-								<p>{fieldText('Symbol', row.symbol)}</p>
-								<p>{fieldText('Name', row.name)}</p>
-								<p>{percentText(row.price_change_pct)}</p>
-								<p>Price: {usdText(row.price_usd)}</p>
-								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
-								{#if row.token_address}
-									<p class="wrap">Token contract: {row.token_address}
-										<button type="button" onclick={() => copyAddress('token contract', row)}>Copy token contract<span class="sr-only"> for {pairTitle(row)}</span></button>
-									</p>
-								{:else}
-									<p>Token contract: not available yet.</p>
-								{/if}
-{#if row.pair_address}
-									<p class="wrap">Pair address: {row.pair_address}
-										<button type="button" onclick={() => copyAddress('pair address', row)}>Copy pair address<span class="sr-only"> for {pairTitle(row)}</span></button>
-									</p>
-									<button type="button" onclick={() => watchRanking(row, 'fast', index)}>
-										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
-									</button>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				{/if}
-				{#if fastUpdated && !fastError}
-					<p role="status" aria-atomic="true">Updated {fastUpdated}.</p>
-				{/if}
-				{#if user}
-					{#if user.movers_alert_last_sent}
-						<p>Last sent {sentText(user.movers_alert_last_sent)}.</p>
-					{/if}
-					<p>{nextDueText(user.movers_alert_last_sent, user.movers_alert_every, 'Fast movers')}</p>
-				{/if}
-				<form novalidate onsubmit={saveFastSchedule}>
-					<div class="field">
-						<label for="fast-movers-every">How often Fast movers may send Telegram notifications</label>
-						<select id="fast-movers-every" bind:value={fastEvery} aria-describedby="fast-movers-hint">
-							{#each MOVERS_SEND_OPTIONS as choice (choice.value)}
-								<option value={choice.value}>{choice.label}</option>
-							{/each}
-						</select>
-						<p id="fast-movers-hint">
-							Saving applies only to Fast movers. It does not send Telegram. The bot sends the list.
-						</p>
-					</div>
-					{#if fastSaveError}
-						<p id="fast-movers-save-error" role="alert" tabindex="-1">{fastSaveError}</p>
-					{/if}
-					{#if fastSaveStatus}
-						<p id="fast-movers-save-status" role="status" tabindex="-1">{fastSaveStatus}</p>
-					{/if}
-					<button type="submit" disabled={savingFast}>Save</button>
-				</form>
-			</div>
-			{/if}
-
-			{#if slowOpen}
-			<div
-				id="slow-movers-panel"
-				class="horse-panel"
-				role="region"
-				aria-labelledby="slow-movers-heading"
-			>
-				<div class="field">
-					<label for="slow-movers-view">View</label>
-					<select id="slow-movers-view" value={slowView} onchange={chooseSlowView}>
-						{#each SLOW_MOVER_VIEWS as choice (choice.value)}
-							<option value={choice.value}>{choice.label}</option>
-						{/each}
-					</select>
-				</div>
-				{#if slowError}
-					<p id="slow-movers-error" role="alert" tabindex="-1">{slowError}</p>
-				{:else if slowRows === null}
-					<p role="status">Loading this view.</p>
-				{:else if slowRows.length === 0}
-					<p>This view has no tokens yet.</p>
-				{:else}
-					<ol class="horse-list">
-						{#each slowRows as row, index (`slow:${slowView}:${row.pair_address || row.id}:${index}`)}
-							<li class="wrap">
-								<h4 id={horseItemId('slow', row, index)} tabindex="-1">Rank {row.rank ?? index + 1}. {row.name || row.symbol}</h4>
-								<p>{fieldText('Symbol', row.symbol)}</p>
-								<p>{fieldText('Name', row.name)}</p>
-								<p>{percentText(row.price_change_pct)}</p>
-								<p>Price: {usdText(row.price_usd)}</p>
-								<p>Liquidity: {usdText(row.liquidity_usd)}</p>
-								{#if row.token_address}
-									<p class="wrap">Token contract: {row.token_address}
-										<button type="button" onclick={() => copyAddress('token contract', row)}>Copy token contract<span class="sr-only"> for {pairTitle(row)}</span></button>
-									</p>
-								{:else}
-									<p>Token contract: not available yet.</p>
-								{/if}
-{#if row.pair_address}
-									<p class="wrap">Pair address: {row.pair_address}
-										<button type="button" onclick={() => copyAddress('pair address', row)}>Copy pair address<span class="sr-only"> for {pairTitle(row)}</span></button>
-									</p>
-									<button type="button" onclick={() => watchRanking(row, 'slow', index)}>
-										Watch this pair<span class="sr-only"> {pairTitle(row)}</span>
-									</button>
-								{/if}
-							</li>
-						{/each}
-					</ol>
-				{/if}
-				{#if slowUpdated && !slowError}
-					<p role="status" aria-atomic="true">Updated {slowUpdated}.</p>
-				{/if}
-				{#if user}
-					{#if user.board_alert_last_sent}
-						<p>Last sent {sentText(user.board_alert_last_sent)}.</p>
-					{/if}
-					<p>{nextDueText(user.board_alert_last_sent, user.board_alert_every, 'Slow movers')}</p>
-				{/if}
-				<form novalidate onsubmit={saveSlowSchedule}>
-					<div class="field">
-						<label for="slow-movers-every">How often Slow movers may send Telegram notifications</label>
-						<select id="slow-movers-every" bind:value={slowEvery} aria-describedby="slow-movers-hint">
-							{#each SLOW_MOVER_INTERVALS as choice (choice.value)}
-								<option value={choice.value}>{choice.label}</option>
-							{/each}
-						</select>
-						<p id="slow-movers-hint">
-							Saving applies only to Slow movers. Saving sends a confirmation. The bot sends the list on this schedule.
-						</p>
-					</div>
-					{#if slowSaveError}
-						<p id="slow-movers-save-error" role="alert" tabindex="-1">{slowSaveError}</p>
-					{/if}
-					{#if slowSaveStatus}
-						<p id="slow-movers-save-status" role="status" tabindex="-1">{slowSaveStatus}</p>
-					{/if}
-					<button type="submit" disabled={savingSlow}>Save</button>
-				</form>
-			</div>
-			{/if}
-			
+			<MoverBoard
+				boardId="fast-movers"
+				title="Fast movers"
+				windows={FAST_MOVER_VIEWS}
+				initialWindow="live"
+				chainId={watchChainId()}
+				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain)}
+				scheduleChoices={MOVERS_SEND_OPTIONS}
+				scheduleSeconds={user.movers_alert_every}
+				scheduleFallback="0"
+				lastSent={user.movers_alert_last_sent}
+				scheduleHint="Saving applies only to Fast movers. It does not send Telegram. The bot sends the list."
+				scheduleName="Fast movers"
+				variant="movers"
+				onSaveSchedule={(seconds) => saveBoardSchedule(seconds, saveMoversAlertEvery)}
+				onWatch={watchRanking}
+				onUnauthorized={() => void dropSession()}
+			/>
+			<MoverBoard
+				boardId="slow-movers"
+				title="Slow movers"
+				windows={SLOW_MOVER_VIEWS}
+				initialWindow="slow_24h"
+				chainId={watchChainId()}
+				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain)}
+				scheduleChoices={SLOW_MOVER_INTERVALS}
+				scheduleSeconds={user.board_alert_every}
+				scheduleFallback="86400"
+				lastSent={user.board_alert_last_sent}
+				scheduleHint="Saving applies only to Slow movers. Saving sends a confirmation. The bot sends the list on this schedule."
+				scheduleName="Slow movers"
+				variant="movers"
+				onSaveSchedule={(seconds) => saveBoardSchedule(seconds, saveSlowMoverInterval)}
+				onWatch={watchRanking}
+				onUnauthorized={() => void dropSession()}
+			/>
+			<MoverBoard
+				boardId="top-volume"
+				title="Top volume"
+				windows={VOLUME_VIEWS}
+				initialWindow="volume_1h"
+				chainId={watchChainId()}
+				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain)}
+				scheduleChoices={MOVERS_SEND_OPTIONS}
+				scheduleSeconds={user.volume_alert_every}
+				scheduleFallback="0"
+				lastSent={user.volume_alert_last_sent}
+				scheduleHint="Saving applies only to Top volume. It does not send Telegram. The bot sends the list."
+				scheduleName="Top volume"
+				variant="volume"
+				onSaveSchedule={(seconds) => saveBoardSchedule(seconds, saveVolumeAlertEvery)}
+				onWatch={watchRanking}
+				onUnauthorized={() => void dropSession()}
+			/>
 		</section>
 	{/if}
 
@@ -1852,24 +1471,6 @@ watch-${id}` : returnId);
 		border-radius: 0.375rem;
 	}
 
-	.pw .choice {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.65rem;
-		margin-top: 0.75rem;
-	}
-
-	.pw .choice input {
-		width: 1.15rem;
-		height: 1.15rem;
-		margin-top: 0.35rem;
-		flex: 0 0 auto;
-	}
-
-	.pw .choice label {
-		font-weight: 400;
-	}
-
 	.pw button {
 		min-height: 2.75rem;
 		margin: 1rem 0.75rem 0 0;
@@ -1925,58 +1526,5 @@ watch-${id}` : returnId);
 
 	.pw .disclosure-panel[hidden] {
 		display: none;
-	}
-
-	.pw .horse-switch {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		align-items: center;
-		margin-top: 0.75rem;
-	}
-
-	.pw .horse-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		box-sizing: border-box;
-		min-width: 44px;
-		min-height: 44px;
-		margin: 0;
-		border-color: #14120b;
-		border-style: dashed;
-		border-width: 2px;
-		font-weight: 400;
-		text-decoration: none;
-	}
-
-	.pw .horse-toggle[aria-expanded='true'] {
-		border-style: solid;
-		border-width: 4px;
-		font-weight: 700;
-		text-decoration: underline;
-		text-underline-offset: 0.18em;
-	}
-
-	.pw .horse-panel {
-		margin-top: 0.75rem;
-	}
-
-	.pw .horse-panel[hidden] {
-		display: none;
-	}
-
-	.pw ol.horse-list {
-		list-style: decimal;
-		padding-left: 2rem;
-	}
-
-	.horse-panel > h3 {
-		font-size: 1.15rem;
-		margin: 0 0 0.75rem;
-	}
-	.horse-list h4 {
-		font-size: 1rem;
-		margin: 0.75rem 0 0.25rem;
 	}
 </style>
