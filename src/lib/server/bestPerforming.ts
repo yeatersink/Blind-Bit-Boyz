@@ -2,7 +2,7 @@ import { getBestBoard, PriceWatchApiError, type RankingRow } from '$lib/priceWat
 
 export type BestPerformingResult = { rows: RankingRow[] } | { error: string; status: number };
 
-/** Live top 10 from rankings window 10, or window 1h when that list is empty. */
+/** Up to 20 unique pairs from rankings window 10, or window 1h when that list is empty. */
 export async function bestPerforming(): Promise<BestPerformingResult> {
 	try {
 		return { rows: await getBestBoard() };

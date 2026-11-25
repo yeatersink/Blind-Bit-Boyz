@@ -8,6 +8,76 @@
 	--color-gold-600: #b8922a;
 }
 
+.site-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+	width: min(100%, 90rem);
+	margin-inline: auto;
+	padding: 0.75rem 1rem;
+}
+
+.site-logo {
+	display: block;
+	height: 3rem;
+	width: auto;
+	flex: 0 0 auto;
+}
+
+.site-header-end {
+	display: flex;
+	flex: 1 1 18rem;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.75rem 1rem;
+	margin-inline-start: auto;
+	min-width: 0;
+}
+
+@media (min-width: 40rem) {
+	.site-logo {
+		height: 3.5rem;
+	}
+}
+
+@media (min-width: 64rem) {
+	.site-header {
+		padding: 1rem 1.5rem;
+	}
+
+	.site-logo {
+		height: 5rem;
+	}
+}
+
+html[data-text-size='small'] {
+	font-size: 87.5%;
+}
+
+html[data-text-size='large'] {
+	font-size: 125%;
+}
+
+html[data-text-size='xlarge'] {
+	font-size: 162.5%;
+}
+
+html.bbb-invert {
+	background: #111827;
+}
+
+html.bbb-invert body {
+	filter: invert(1) hue-rotate(180deg);
+}
+
+html.bbb-invert img,
+html.bbb-invert video {
+	filter: invert(1) hue-rotate(180deg);
+}
+
 .skip-link {
 	position: absolute;
 	left: 1rem;

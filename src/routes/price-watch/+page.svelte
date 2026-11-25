@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { L } from '$lib/i18n/preferences.svelte';
+
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { formatCryptoPrice } from '$lib/utils/formatting.svelte';
@@ -50,6 +52,14 @@
 		type ThresholdKey
 	} from '$lib/priceWatchApi';
 	import { MOVERS_SEND_OPTIONS } from '$lib/price-watch-types';
+	import {
+		DEFAULT_PRICE_SOURCE,
+		groupBySource,
+		priceSourceLabel,
+		sourceForChain,
+		sourcesForChain,
+		type PriceSourceId
+	} from '$lib/price-watch-sources';
 
 	type Health = 'checking' | 'down' | 'up';
 	type WatchDraft = {
@@ -71,6 +81,8 @@
 	let accountError = $state('');
 
 	let chainCatalog = $state<PriceWatchChain[]>([]);
+	let sourceId = $state<PriceSourceId>(DEFAULT_PRICE_SOURCE);
+	let pulseSource = $state<PriceSourceId>(DEFAULT_PRICE_SOURCE);
 	let chainsLoaded = $state(false);
 	let selectedChainIds = $state<string[]>([]);
 	let viewingChainId = $state(CURRENT_CHAIN_ID);
@@ -109,6 +121,7 @@
 	let listStatus = $state('');
 
 	let watchlistOpen = $state(false);
+	let sourceOpen = $state<Record<string, boolean>>({});
 	let draftReturnId = 'search-heading';
 
 	type SearchToken = SearchTokenResult;
@@ -418,6 +431,17 @@
 		}
 	}
 
+	async function watchLists(): Promise<SavedWatch[]> {
+		const chain = viewingChainId;
+		const requests = [
+			listWatches(token ?? '', user?.telegram_id, chain, 'pulsex'),
+			listWatches(token ?? '', user?.telegram_id, chain, 'liberty')
+		];
+		if (chain === '1') requests.push(listWatches(token ?? '', user?.telegram_id, chain, 'uniswap'));
+		const lists = await Promise.all(requests);
+		return watchesBySymbol(lists.flat());
+	}
+
 	async function loadWatches() {
 		if (!token) {
 			watches = null;
@@ -426,7 +450,7 @@
 		watchesError = '';
 		watchesLoading = true;
 		try {
-			watches = await listWatches(token, user?.telegram_id, viewingChainId);
+			watches = await watchLists();
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
 			watches = null;
@@ -444,7 +468,7 @@
 	async function fetchWatchList(): Promise<SavedWatch[] | null> {
 		if (!token) return null;
 		try {
-			return await listWatches(token, user?.telegram_id, viewingChainId);
+			return await watchLists();
 		} catch {
 			return null;
 		}
@@ -468,6 +492,7 @@
 			viewingChainId = selectedChainIds.includes(CURRENT_CHAIN_ID)
 				? CURRENT_CHAIN_ID
 				: (selectedChainIds[0] ?? CURRENT_CHAIN_ID);
+			sourceId = sourceForChain(viewingChainId, sourceId, pulseSource);
 			await loadWatches();
 		} catch (error) {
 			const message = publicErrorMessage(error, token);
@@ -549,8 +574,22 @@
 		if (!(select instanceof HTMLSelectElement)) return;
 		const next = select.value.trim();
 		if (!next || next === viewingChainId) return;
+		if (viewingChainId !== '1') pulseSource = sourceId;
 		viewingChainId = next;
+		sourceId = sourceForChain(next, next === '1' ? 'uniswap' : pulseSource, pulseSource);
 		selectedChainIds = [next];
+		clearPriceWorkspace();
+		watches = [];
+		void loadWatches();
+	}
+
+	function chooseSource(event: Event) {
+		const select = event.currentTarget;
+		if (!(select instanceof HTMLSelectElement)) return;
+		const next = select.value as PriceSourceId;
+		if (!sourcesForChain(watchChainId()).some((item) => item.id === next) || next === sourceId) return;
+		sourceId = next;
+		if (watchChainId() !== '1') pulseSource = next;
 		clearPriceWorkspace();
 		watches = [];
 		void loadWatches();
@@ -616,7 +655,7 @@
 		const seq = ++searchSeq;
 		searching = true;
 		try {
-			const found = await searchPairs(q, watchChainId());
+			const found = await searchPairs(q, watchChainId(), sourceId);
 			if (seq !== searchSeq) return;
 			results = found.pairs;
 			resultTokens = found.tokens;
@@ -844,6 +883,7 @@
 			} else {
 				const saved = await createWatch(token, {
 					chain_id: draft.chainId,
+					source: sourceId,
 					pair_address: draft.pairAddress,
 					name: draft.name,
 					symbol: draft.symbol,
@@ -938,109 +978,112 @@
 </script>
 
 <svelte:head>
-	<title>Blind Bit Boys Price Watch Bot — Blind Bit Boys</title>
+	<title>{L("Blind Bit Boys Price Watch Bot — Blind Bit Boys")}</title>
 	<meta
 		name="description"
-		content="Watch tokens you choose and send Telegram alerts when price or liquidity moves past your limits."
+		content={L("Watch tokens you choose and send Telegram alerts when price or liquidity moves past your limits.")}
 	/>
 </svelte:head>
 
 <div class="learn-shell pw">
-	<p class="pw-toast" class:is-dismissed={!toastText} role="status" aria-live="polite" aria-atomic="true">
-		{toastText}
-	</p>
-	<h1>Blind Bit Boys Price Watch Bot</h1>
+	<p class="pw-toast" class:is-dismissed={!toastText} role="status" aria-live="polite" aria-atomic="true">{L(toastText)}</p>
+	<h1>{L("Blind Bit Boys Price Watch Bot")}</h1>
 	<noscript>
-		<p>This page needs JavaScript. A login is required before the price watch home is available.</p>
+		<p>{L("This page needs JavaScript. A login is required before the price watch home is available.")}</p>
 	</noscript>
 
 	{#if health === 'checking' || restoring}
-		<p role="status">Loading your account.</p>
+		<p role="status">{L("Loading your account.")}</p>
 	{:else if health === 'down'}
-		<p id="health-error" role="alert" tabindex="-1">{API_UNREACHABLE}</p>
+		<p id="health-error" role="alert" tabindex="-1">{L(API_UNREACHABLE)}</p>
 	{:else if !user}
-		<p role="status">Returning to the login page.</p>
+		<p role="status">{L("Returning to the login page.")}</p>
 		{#if accountError}
-			<p id="account-error" role="alert" tabindex="-1">{accountError}</p>
+			<p id="account-error" role="alert" tabindex="-1">{L(accountError)}</p>
 		{/if}
 	{:else}
-		<p>
-			Choose a chain and a watch mode. Price Watch follows one pair. Ratio Watch follows two tokens.
-			Top Performers lists fast movers, slow movers, and top volume. The site talks only to the Blind
-			Bit Boys API. It never talks to Directus and never shows an RPC address.
-		</p>
-		<nav aria-label="On this page">
+		<p>{L("Choose a chain and a watch mode. Price Watch follows one pair. Ratio Watch follows two tokens. Top Performers lists fast movers, slow movers, and top volume. The site talks only to the Blind Bit Boys API. It never talks to Directus and never shows an RPC address.")}</p>
+		<nav aria-label={L("On this page")}>
 			<ul>
-				<li><a class="story-link" href="#watch-setup">Watch setup</a></li>
-				<li><a class="story-link" href="#account">Your account</a></li>
+				<li><a class="story-link" href="#watch-setup">{L("Watch setup")}</a></li>
+				<li><a class="story-link" href="#account">{L("Your account")}</a></li>
 				{#if watchMode === 'price'}
-					<li><a class="story-link" href="#find-a-pair">Find a pair</a></li>
+					<li><a class="story-link" href="#find-a-pair">{L("Find a pair")}</a></li>
 					<li>
-						<a class="story-link" href="#watches" onclick={() => (watchlistOpen = true)}>Watchlist</a>
+						<a class="story-link" href="#watches" onclick={() => (watchlistOpen = true)}>{L("Watchlist")}</a>
 					</li>
 				{:else}
-					<li><a class="story-link" href="#ratio-watch">Ratio Watch</a></li>
+					<li><a class="story-link" href="#ratio-watch">{L("Ratio Watch")}</a></li>
 				{/if}
 				<li>
-					<a class="story-link" href="#top-performers">Top Performers</a>
+					<a class="story-link" href="#top-performers">{L("Top Performers")}</a>
 				</li>
 			</ul>
 		</nav>
 
 		<section id="watch-setup" aria-labelledby="watch-setup-heading">
-			<h2 id="watch-setup-heading" tabindex="-1">Watch setup</h2>
+			<h2 id="watch-setup-heading" tabindex="-1">{L("Watch setup")}</h2>
 			{#if chainsError}
-				<p id="chains-error" role="alert" tabindex="-1">{chainsError}</p>
+				<p id="chains-error" role="alert" tabindex="-1">{L(chainsError)}</p>
 			{/if}
 			<div class="field">
-				<label for="watch-mode">Watch mode</label>
+				<label for="watch-mode">{L("Watch mode")}</label>
 				<select id="watch-mode" value={watchMode} onchange={chooseMode}>
-					<option value="price">Price Watch</option>
-					<option value="ratio">Ratio Watch</option>
+					<option value="price">{L("Price Watch")}</option>
+					<option value="ratio">{L("Ratio Watch")}</option>
 				</select>
 			</div>
 			{#if chainsLoaded && activeChains.length === 0}
-				<p>No active chains are available.</p>
+				<p>{L("No active chains are available.")}</p>
 			{/if}
 			<form novalidate onsubmit={submitChains}>
 				<div class="field">
-					<label for="page-chain">Chain</label>
+					<label for="page-chain">{L("Chain")}</label>
 					<select id="page-chain" value={watchChainId()} onchange={chooseChain}>
 						{#each activeChains as chain (chain.chain_id)}
-							<option value={chain.chain_id}>{chain.name}, chain {chain.chain_id}</option>
+							<option value={chain.chain_id}>{L("{v0}, chain {v1}", { v0: L(chain.name), v1: L(chain.chain_id) })}</option>
 						{/each}
 						{#if !activeChains.some((chain) => chain.chain_id === watchChainId())}
-							<option value={watchChainId()}>{chainLabel(watchChainId())}</option>
+							<option value={watchChainId()}>{L(chainLabel(watchChainId()))}</option>
 						{/if}
 					</select>
 				</div>
-				<p>This page is {chainLabel(watchChainId())}.</p>
+				<p>{L("This page is {v0}, {v1}.", { v0: L(chainLabel(watchChainId())), v1: L(priceSourceLabel(sourceId)) })}</p>
+				<div class="field">
+					<label for="page-source">{L("Source")}</label>
+					<select id="page-source" value={sourceId} onchange={chooseSource}>
+						{#each sourcesForChain(watchChainId()) as item (item.id)}
+							<option value={item.id}>{L(item.label)}</option>
+						{/each}
+					</select>
+				</div>
+				<p>{L("Pair search, watches, ratios, and Top Performers use {v0}.", { v0: L(priceSourceLabel(sourceId)) })}</p>
 				{#each extraSaved as id (id)}
-					<p>Chain {id} is saved and is not an active chain, so it is not in the chain list.</p>
+					<p>{L("Chain {v0} is saved and is not an active chain, so it is not in the chain list.", { v0: L(id) })}</p>
 				{/each}
-				<p>Save chain stores this one chain.</p>
+				<p>{L("Save chain stores this one chain.")}</p>
 				{#if chainsStatus}
-					<p id="chains-status" role="status" tabindex="-1">{chainsStatus}</p>
+					<p id="chains-status" role="status" tabindex="-1">{L(chainsStatus)}</p>
 				{/if}
-				<button type="submit" disabled={savingChains || activeChains.length === 0}>Save chain</button>
+				<button type="submit" disabled={savingChains || activeChains.length === 0}>{L("Save chain")}</button>
 			</form>
 		</section>
 
 		<section id="account" aria-labelledby="account-heading">
-			<h2 id="account-heading" tabindex="-1">Your account</h2>
-			<p>Signed in with Telegram id {user.telegram_id}.</p>
+			<h2 id="account-heading" tabindex="-1">{L("Your account")}</h2>
+			<p>{L("Signed in with Telegram id {v0}.", { v0: L(user.telegram_id) })}</p>
 			{#if accountError}
-				<p id="account-error" role="alert" tabindex="-1">{accountError}</p>
+				<p id="account-error" role="alert" tabindex="-1">{L(accountError)}</p>
 			{/if}
-			<button type="button" onclick={signOut}>Sign out</button>
+			<button type="button" onclick={signOut}>{L("Sign out")}</button>
 		</section>
 
 		{#if watchMode === 'price'}
 		<section id="find-a-pair" aria-labelledby="search-heading">
-			<h2 id="search-heading" tabindex="-1">Find a pair</h2>
+			<h2 id="search-heading" tabindex="-1">{L("Find a pair")}</h2>
 			<form novalidate onsubmit={submitSearch}>
 				<div class="field">
-					<label for="pair-query">Token name, symbol, or contract address</label>
+					<label for="pair-query">{L("Token name, symbol, or contract address")}</label>
 					<input
 						id="pair-query"
 						type="search"
@@ -1050,57 +1093,53 @@
 					/>
 				</div>
 				{#if searchError}
-					<p id="search-error" role="alert" tabindex="-1">{searchError}</p>
+					<p id="search-error" role="alert" tabindex="-1">{L(searchError)}</p>
 				{/if}
-				<button type="submit" disabled={searching}>Search</button>
+				<button type="submit" disabled={searching}>{L("Search")}</button>
 			</form>
 			{#if searchStatus}
-				<p id="search-status" tabindex="-1">{searchStatus}</p>
+				<p id="search-status" tabindex="-1">{L(searchStatus)}</p>
 			{/if}
 			{#if searched && results}
 				{#if results.length === 0 && searchTokens.length === 0}
-					<p id="search-empty" tabindex="-1">No tokens or pairs matched.</p>
+					<p id="search-empty" tabindex="-1">{L("No tokens or pairs matched.")}</p>
 				{:else}
-					<h3 id="tokens-heading" tabindex="-1">Tokens</h3>
+					<h3 id="tokens-heading" tabindex="-1">{L("Tokens")}</h3>
 					<ul class="plain" aria-labelledby="tokens-heading">
 						{#each searchTokens as item (item.address.toLowerCase())}
 							<li>
-								<p>{tokenLabel(item)}</p>
-								<p>Symbol: {item.symbol || 'not available'}</p>
-								<p class="wrap">Contract address: {item.address}</p>
+								<p>{L(tokenLabel(item))}</p>
+								<p>{L("Symbol: {v0}", { v0: L(item.symbol || L("not available")) })}</p>
+								<p class="wrap">{L("Contract address: {v0}", { v0: L(item.address) })}</p>
 								<button
 									type="button"
 									aria-pressed={tokenFilterPressed(item)}
 									onclick={() => showPairsFor(item)}
 								>
-									Show pairs for this token<span class="sr-only"> {tokenLabel(item)}</span>
+									{L("Show pairs for this token")}<span class="sr-only"> {L(tokenLabel(item))}</span>
 								</button>
 							</li>
 						{/each}
 					</ul>
-					<h3 id="pairs-heading" tabindex="-1">Pairs</h3>
-					<p>Highest liquidity first.</p>
+					<h3 id="pairs-heading" tabindex="-1">{L("Pairs")}</h3>
+					<p>{L("Highest liquidity first.")}</p>
 					{#if selectedTokenAddress}
-						<p>
-							Showing pairs for {selectedToken ? tokenLabel(selectedToken) : selectedTokenAddress}.
-						</p>
-						<button type="button" onclick={showAllPairs}>Show all pairs</button>
+						<p>{L("Showing pairs for {v0}.", { v0: L(selectedToken ? tokenLabel(selectedToken) : selectedTokenAddress) })}</p>
+						<button type="button" onclick={showAllPairs}>{L("Show all pairs")}</button>
 					{/if}
 					{#if visiblePairs.length === 0}
-						<p>
-							{selectedTokenAddress ? 'No pairs include this token.' : 'No pairs matched.'}
-						</p>
+						<p>{L(selectedTokenAddress ? L("No pairs include this token.") : L("No pairs matched."))}</p>
 					{:else}
 						<ul class="plain" aria-labelledby="pairs-heading">
 							{#each visiblePairs as pair, index (pair.pair_address + ':' + index)}
 								<li>
-									<p>{pairLabel(pair)}</p>
-									<p class="wrap">Pair address: {pair.pair_address}</p>
-									<p>DEX: {pair.dex || 'n/a'}</p>
+									<p>{L(pairLabel(pair))}</p>
+									<p class="wrap">{L("Pair address: {v0}", { v0: L(pair.pair_address) })}</p>
+									<p>{L("DEX: {v0}", { v0: L(pair.dex || 'n/a') })}</p>
 									<p>Price USD: {usdText(pair.price_usd)}</p>
 									<p>Liquidity USD: {usdText(pair.liquidity_usd)}</p>
 									<button type="button" onclick={() => choosePair(pair)}>
-										Watch this pair<span class="sr-only"> {pairLabel(pair)}</span>
+										{L("Watch this pair")}<span class="sr-only"> {L(pairLabel(pair))}</span>
 									</button>
 								</li>
 							{/each}
@@ -1112,36 +1151,36 @@
 
 		{#if draft}
 			<section id="watch-form" aria-labelledby="watch-heading">
-				<h2 id="watch-heading" tabindex="-1">{watchDisplay(draft.name, draft.symbol)}</h2>
+				<h2 id="watch-heading" tabindex="-1">{L(watchDisplay(draft.name, draft.symbol))}</h2>
 				<form novalidate onsubmit={saveWatch}>
 					<div class="field">
-						<label for="watch-chain">Chain (read only)</label>
+						<label for="watch-chain">{L("Chain (read only)")}</label>
 						<input id="watch-chain" type="text" readonly value={chainLabel(draft.chainId)} />
 					</div>
 					<div class="field">
-						<label for="watch-pair">Pair address (read only)</label>
+						<label for="watch-pair">{L("Pair address (read only)")}</label>
 						<input id="watch-pair" type="text" readonly value={draft.pairAddress} />
 					</div>
 					{#if draft.tokenAddress}
 						<div class="field">
-							<label for="watch-token">Token address (read only)</label>
+							<label for="watch-token">{L("Token address (read only)")}</label>
 							<input id="watch-token" type="text" readonly value={draft.tokenAddress} />
 						</div>
 					{/if}
 					<div class="field">
-						<label for="watch-name">Name (read only)</label>
+						<label for="watch-name">{L("Name (read only)")}</label>
 						<input id="watch-name" type="text" readonly value={draft.name} />
 					</div>
 					<div class="field">
-						<label for="watch-symbol">Symbol (read only)</label>
+						<label for="watch-symbol">{L("Symbol (read only)")}</label>
 						<input id="watch-symbol" type="text" readonly value={draft.symbol} />
 					</div>
 					<fieldset>
-						<legend>Alert limits</legend>
-						<p id="alert-limit-hint">Leave a limit blank to turn that alert off.</p>
+						<legend>{L("Alert limits")}</legend>
+						<p id="alert-limit-hint">{L("Leave a limit blank to turn that alert off.")}</p>
 						{#each THRESHOLD_FIELDS as field (field.key)}
 							<div class="field">
-								<label for="limit-{field.key}">{field.label}</label>
+								<label for="limit-{field.key}">{L(field.label)}</label>
 								<input
 									id="limit-{field.key}"
 									type="number"
@@ -1160,37 +1199,35 @@
 									}}
 								/>
 								{#if isDownThreshold(field.key)}
-									<p id="limit-{field.key}-hint">{DOWN_THRESHOLD_HINT}</p>
+									<p id="limit-{field.key}-hint">{L(DOWN_THRESHOLD_HINT)}</p>
 								{/if}
 								{#if thresholdErrors[field.key]}
-									<p id="limit-{field.key}-error" role="alert">{thresholdErrors[field.key]}</p>
+									<p id="limit-{field.key}-error" role="alert">{L(thresholdErrors[field.key])}</p>
 								{/if}
 							</div>
 						{/each}
 					</fieldset>
 					{#if watchError}
-						<p id="watch-error" role="alert" tabindex="-1">{watchError}</p>
+						<p id="watch-error" role="alert" tabindex="-1">{L(watchError)}</p>
 					{/if}
 					{#if watchStatus}
-						<p id="watch-status" tabindex="-1">{watchStatus}</p>
+						<p id="watch-status" tabindex="-1">{L(watchStatus)}</p>
 					{/if}
 					<div class="actions">
 						{#if draft.id}
-							<button type="submit" disabled={savingWatch || removing}>Update watch</button>
+							<button type="submit" disabled={savingWatch || removing}>{L("Update watch")}</button>
 						{:else}
-							<button type="submit" disabled={savingWatch || removing}>Save watch</button>
+							<button type="submit" disabled={savingWatch || removing}>{L("Save watch")}</button>
 						{/if}
 						{#if draft.id}
 							{#if pendingRemove?.source === 'form' && pendingRemove.id === draft.id}
 								<div role="group" aria-labelledby="remove-confirm">
-									<p id="remove-confirm" tabindex="-1">
-										Remove the watch for {watchDisplay(draft.name, draft.symbol)}?
-									</p>
+									<p id="remove-confirm" tabindex="-1">{L("Remove the watch for {v0}?", { v0: L(watchDisplay(draft.name, draft.symbol)) })}</p>
 									{#if removeError}
-										<p id="remove-error" role="alert" tabindex="-1">{removeError}</p>
+										<p id="remove-error" role="alert" tabindex="-1">{L(removeError)}</p>
 									{/if}
-									<button type="button" disabled={removing} onclick={confirmRemove}>Remove watch</button>
-									<button type="button" disabled={removing} onclick={cancelRemove}>Cancel</button>
+									<button type="button" disabled={removing} onclick={confirmRemove}>{L("Remove watch")}</button>
+									<button type="button" disabled={removing} onclick={cancelRemove}>{L("Cancel")}</button>
 								</div>
 							{:else}
 								<button
@@ -1205,11 +1242,11 @@
 											triggerId: 'remove-watch-form'
 										})}
 								>
-									Remove watch
+									{L("Remove watch")}
 								</button>
 							{/if}
 						{/if}
-						<button type="button" onclick={closeDraft}>Close watch form</button>
+						<button type="button" onclick={closeDraft}>{L("Close watch form")}</button>
 					</div>
 				</form>
 			</section>
@@ -1225,7 +1262,7 @@
 					aria-controls="watchlist-panel"
 					onclick={toggleWatchlist}
 				>
-					Watchlist
+					{L("Watchlist")}
 				</button>
 			</h2>
 			<div
@@ -1235,52 +1272,72 @@
 				aria-labelledby="watchlist-button"
 				hidden={!watchlistOpen}
 			>
-				<p>Alphabetical by symbol.</p>
+				<p>{L("Alphabetical by symbol, grouped by source. The source selector above is used when you create a watch.")}</p>
 				{#if listStatus}
-					<p id="list-status" tabindex="-1">{listStatus}</p>
+					<p id="list-status" tabindex="-1">{L(listStatus)}</p>
 				{/if}
 				{#if watchesError}
-					<p id="watches-error" role="alert" tabindex="-1">{watchesError}</p>
+					<p id="watches-error" role="alert" tabindex="-1">{L(watchesError)}</p>
 				{/if}
 				{#if !user}
-					<p>Sign in to load your watches.</p>
+					<p>{L("Sign in to load your watches.")}</p>
 				{:else if watchesLoading && !watches}
-					<p role="status">Loading your watches.</p>
+					<p role="status">{L("Loading your watches.")}</p>
 				{:else if watches && watches.length === 0}
-					<p id="watches-empty">You have no saved watches yet. Search for a token to add one.</p>
+					<p id="watches-empty">{L("You have no saved watches yet. Search for a token to add one.")}</p>
 				{:else if watches}
+					{#each groupBySource(watches) as group (group.id)}
+						<section aria-labelledby="source-{group.id}-button">
+							<h3>
+								<button
+									type="button"
+									id="source-{group.id}-button"
+									class="disclosure"
+									aria-expanded={sourceOpen[group.id] ? 'true' : 'false'}
+									aria-controls="source-{group.id}-panel"
+									onclick={() => (sourceOpen = { ...sourceOpen, [group.id]: !sourceOpen[group.id] })}
+								>
+									{L(group.label)}
+								</button>
+							</h3>
+							<div
+								id="source-{group.id}-panel"
+								class="disclosure-panel"
+								role="region"
+								aria-labelledby="source-{group.id}-button"
+								hidden={!sourceOpen[group.id]}
+							>
 					<ul class="plain">
-						{#each watches as watch (watch.id)}
+						{#each group.items as watch (watch.id)}
 							<li>
-								<h3 id="watch-{watch.id}" tabindex="-1">{watchDisplay(watch.name, watch.symbol)}</h3>
-								<p>Name: {watchDisplay(watch.name, watch.symbol)}</p>
-								<p>Symbol: {watch.symbol}</p>
-								<p>Chain: {chainLabel(watch.chain_id)}</p>
-								<p class="wrap">Pair: {watch.pair_address}</p>
-								{#if !watch.active}<p>This watch is off.</p>{/if}
+								<h4 id="watch-{watch.id}" tabindex="-1">{L(watchDisplay(watch.name, watch.symbol))}</h4>
+								<p>{L("Name: {v0}", { v0: L(watchDisplay(watch.name, watch.symbol)) })}</p>
+								<p>{L("Symbol: {v0}", { v0: L(watch.symbol) })}</p>
+								<p>{L("Chain: {v0}", { v0: L(chainLabel(watch.chain_id)) })}</p>
+								<p>{L("Source: {v0}", { v0: L(priceSourceLabel(watch.source)) })}</p>
+								<p class="wrap">{L("Pair: {v0}", { v0: L(watch.pair_address) })}</p>
+								{#if !watch.active}<p>{L("This watch is off.")}</p>{/if}
 								{#if setLimits(watch).length === 0}
-									<p>No limits are set.</p>
+									<p>{L("No limits are set.")}</p>
 								{:else}
 									<ul>
 										{#each setLimits(watch) as limit (limit.label)}
-											<li>{limit.label}: {limit.value}</li>
+											<li>{L(limit.label)}: {limit.value}</li>
 										{/each}
 									</ul>
 								{/if}
 								<div class="actions">
 									<button type="button" onclick={() => editWatch(watch)}>
-										Edit<span class="sr-only"> {watchDisplay(watch.name, watch.symbol)}</span>
+										{L("Edit")}<span class="sr-only"> {L(watchDisplay(watch.name, watch.symbol))}</span>
 									</button>
 									{#if pendingRemove?.source === 'list' && pendingRemove.id === watch.id}
 										<div role="group" aria-labelledby="remove-confirm">
-											<p id="remove-confirm" tabindex="-1">
-												Remove the watch for {watchDisplay(watch.name, watch.symbol)}?
-											</p>
+											<p id="remove-confirm" tabindex="-1">{L("Remove the watch for {v0}?", { v0: L(watchDisplay(watch.name, watch.symbol)) })}</p>
 											{#if removeError}
-												<p id="remove-error" role="alert" tabindex="-1">{removeError}</p>
+												<p id="remove-error" role="alert" tabindex="-1">{L(removeError)}</p>
 											{/if}
-											<button type="button" disabled={removing} onclick={confirmRemove}>Remove</button>
-											<button type="button" disabled={removing} onclick={cancelRemove}>Cancel</button>
+											<button type="button" disabled={removing} onclick={confirmRemove}>{L("Remove")}</button>
+											<button type="button" disabled={removing} onclick={cancelRemove}>{L("Cancel")}</button>
 										</div>
 									{:else}
 										<button
@@ -1294,21 +1351,25 @@
 													triggerId: `remove-${watch.id}`
 												})}
 										>
-											Remove<span class="sr-only"> {watchDisplay(watch.name, watch.symbol)}</span>
+											{L("Remove")}<span class="sr-only"> {L(watchDisplay(watch.name, watch.symbol))}</span>
 										</button>
 									{/if}
 								</div>
 							</li>
 						{/each}
 					</ul>
+							</div>
+						</section>
+					{/each}
 				{/if}
 			</div>
 		</section>
 
 		{:else if token}
-		{#key watchChainId()}
+		{#key `${watchChainId()}:${sourceId}`}
 			<RatioWatchPanel
 				chainId={watchChainId()}
+				source={sourceId}
 				token={token}
 				{chainLabel}
 				onUnauthorized={() => void dropSession()}
@@ -1321,20 +1382,16 @@
 		{/if}
 
 		<section id="top-performers" aria-labelledby="top-performers-heading">
-			<h2 id="top-performers-heading">Top Performers</h2>
-			<p id="top-performers-intro">
-				Fast movers are the short bursts. Slow movers are tokens measured over a longer time. Top
-				volume ranks pairs by traded volume. Open a section, choose one view, and read that view’s
-				top 10. Then choose how often that section may send Telegram notifications, and save that
-				choice. A saved choice applies only to that section.
-			</p>
+			<h2 id="top-performers-heading">{L("Top Performers")}</h2>
+			<p id="top-performers-intro">{L("Fast movers are the short bursts. Slow movers are tokens measured over a longer time. Top volume ranks pairs by traded volume. Open a section, choose one view, and read that view’s top 20. Then choose how often that section may send Telegram notifications, and save that choice. A saved choice applies only to that section.")}</p>
 			<MoverBoard
 				boardId="fast-movers"
-				title="Fast movers"
+				title={`Fast movers, ${priceSourceLabel(sourceId)}`}
 				windows={FAST_MOVER_VIEWS}
 				initialWindow="live"
 				chainId={watchChainId()}
-				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain)}
+				source={sourceId}
+				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain, sourceId)}
 				scheduleChoices={MOVERS_SEND_OPTIONS}
 				scheduleSeconds={user.movers_alert_every}
 				scheduleFallback="0"
@@ -1348,11 +1405,12 @@
 			/>
 			<MoverBoard
 				boardId="slow-movers"
-				title="Slow movers"
+				title={`Slow movers, ${priceSourceLabel(sourceId)}`}
 				windows={SLOW_MOVER_VIEWS}
 				initialWindow="slow_24h"
 				chainId={watchChainId()}
-				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain)}
+				source={sourceId}
+				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain, sourceId)}
 				scheduleChoices={SLOW_MOVER_INTERVALS}
 				scheduleSeconds={user.board_alert_every}
 				scheduleFallback="86400"
@@ -1366,11 +1424,12 @@
 			/>
 			<MoverBoard
 				boardId="top-volume"
-				title="Top volume"
+				title={`Top volume, ${priceSourceLabel(sourceId)}`}
 				windows={VOLUME_VIEWS}
 				initialWindow="volume_1h"
 				chainId={watchChainId()}
-				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain)}
+				source={sourceId}
+				loadRows={(window, chain) => getMoverBoard(window as RankingWindow, chain, sourceId)}
 				scheduleChoices={MOVERS_SEND_OPTIONS}
 				scheduleSeconds={user.volume_alert_every}
 				scheduleFallback="0"
@@ -1385,12 +1444,12 @@
 		</section>
 	{/if}
 
-	<nav aria-label="Related pages">
+	<nav aria-label={L("Related pages")}>
 		<ul>
-			<li><a class="story-link" href="/tools">Accessible tools</a></li>
-			<li><a class="story-link" href="/search">Token search</a></li>
-			<li><a class="story-link" href="/instructions">Instructions</a></li>
-			<li><a class="story-link" href="/official-links">Official Links</a></li>
+			<li><a class="story-link" href="/tools">{L("Accessible tools")}</a></li>
+			<li><a class="story-link" href="/search">{L("Token search")}</a></li>
+			<li><a class="story-link" href="/instructions">{L("Instructions")}</a></li>
+			<li><a class="story-link" href="/official-links">{L("Official Links")}</a></li>
 		</ul>
 	</nav>
 </div>
@@ -1513,7 +1572,8 @@
 		overflow-wrap: anywhere;
 	}
 
-	.pw h2 .disclosure {
+	.pw h2 .disclosure,
+	.pw h3 .disclosure {
 		display: block;
 		width: min(100%, 40rem);
 		margin: 0;

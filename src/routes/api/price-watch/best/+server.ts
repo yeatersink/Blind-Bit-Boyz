@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { getBestBoard, omitRpc, PriceWatchApiError } from '$lib/priceWatchApi';
 
-/** Live top 10 from rankings window 10, or window 1h when that list is empty. */
+/** Up to 20 unique pairs from rankings window 10, or window 1h when that list is empty. */
 export const GET = async () => {
 	try {
 		return json(omitRpc({ data: await getBestBoard() }));

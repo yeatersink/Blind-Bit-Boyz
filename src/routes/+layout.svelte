@@ -3,26 +3,30 @@
 	import '@awesome.me/webawesome/dist/components/button/button.js';
 	import '@awesome.me/webawesome/dist/components/icon/icon.js';
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import DesktopNav from '$lib/components/DesktopNav.svelte';
+	import SiteToolbar from '$lib/components/SiteToolbar.svelte';
+	import { initPreferences, t } from '$lib/i18n/preferences.svelte';
 	import { page } from '$app/stores';
 
 	let { children } = $props();
 	let isStory = $derived($page.url.pathname === '/');
+
+	onMount(() => {
+		void initPreferences();
+	});
 </script>
 
 <a class="skip-link" href={isStory ? '#story' : '#main'}>
-	{isStory ? 'Skip to story' : 'Skip to main content'}
+	{isStory ? t('skip.story') : t('skip.main')}
 </a>
 <header class="border-gold-500 sticky top-0 z-50 border-b bg-black text-gray-100 shadow-lg">
-	<div
-		class="container mx-auto flex flex-nowrap items-center justify-between gap-3 px-4 py-3 md:gap-6 md:px-6 md:py-4"
-	>
-		<img
-			src="/bbb-logo.png"
-			class="block h-12 w-auto shrink-0 sm:h-14 md:h-16 lg:h-20"
-			alt="The Bitcoin symbol is white and placed in the center of a circular background that transitions from gold in the middle to a gray border. The symbol is depicted as a person with a black blindfold, extending an arm to touch a black silhouette of a guide dog on the left. The other arm is holding a white cane with a red tip on the right."
-		/>
-		<DesktopNav />
+	<div class="site-header">
+		<img src="/bbb-logo.png" class="site-logo" alt={t('logo.alt')} />
+		<div class="site-header-end">
+			<DesktopNav />
+			<SiteToolbar />
+		</div>
 	</div>
 </header>
 
@@ -39,7 +43,7 @@
 <footer class="border-gold-500 relative z-0 border-t bg-black py-10 text-gray-100">
 	<div class="mx-auto max-w-5xl px-6">
 		<div>
-			<h2 class="text-xl font-semibold text-gray-100">Social Media Links to Follow</h2>
+			<h2 class="text-xl font-semibold text-gray-100">{t('footer.social')}</h2>
 			<ul class="mt-4 list-none space-y-3 pl-0">
 				<li>
 					<a
@@ -49,8 +53,8 @@
 						rel="noopener noreferrer"
 					>
 						<i class="fa-brands fa-x-twitter mr-2" aria-hidden="true"></i>
-						X (Blind Bit Boys)
-						<span class="sr-only">(opens in a new tab)</span>
+						{t('footer.xBbb')}
+						<span class="sr-only">{t('footer.newTab')}</span>
 					</a>
 				</li>
 				<li>
@@ -61,8 +65,8 @@
 						rel="noopener noreferrer"
 					>
 						<i class="fa-brands fa-x-twitter mr-2" aria-hidden="true"></i>
-						X (Liberty Swap)
-						<span class="sr-only">(opens in a new tab)</span>
+						{t('footer.xLiberty')}
+						<span class="sr-only">{t('footer.newTab')}</span>
 					</a>
 				</li>
 				<li>
@@ -73,8 +77,8 @@
 						rel="noopener noreferrer"
 					>
 						<i class="fa-brands fa-x-twitter mr-2" aria-hidden="true"></i>
-						X (ZKX Wallet)
-						<span class="sr-only">(opens in a new tab)</span>
+						{t('footer.xZkx')}
+						<span class="sr-only">{t('footer.newTab')}</span>
 					</a>
 				</li>
 				<li>
@@ -85,15 +89,15 @@
 						rel="noopener noreferrer"
 					>
 						<i class="fa-brands fa-github mr-2" aria-hidden="true"></i>
-						GitHub
-						<span class="sr-only">(opens in a new tab)</span>
+						{t('footer.github')}
+						<span class="sr-only">{t('footer.newTab')}</span>
 					</a>
 				</li>
 			</ul>
-			<p class="mt-6 text-gray-200">Educational site. Not financial advice.</p>
+			<p class="mt-6 text-gray-200">{t('footer.disclaimer')}</p>
 		</div>
 	</div>
 </footer>
 {#if !isStory}
-	<a class="skip-link" href="#main">Back to main content</a>
+	<a class="skip-link" href="#main">{t('skip.back')}</a>
 {/if}

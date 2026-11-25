@@ -1,5 +1,6 @@
 // The price watch page and its helpers use the Blind Bit Boys API at https://api.blindbitboys.com and nothing else. Do not replace that API, do not add a fallback price source, and do not change this until Matt updates this instruction.
 import { isMoversSendSeconds, MOVERS_SEND_OPTIONS } from './price-watch-types';
+import { DEFAULT_PRICE_SOURCE } from './price-watch-sources';
 
 export const PRICE_WATCH_API = 'https://api.blindbitboys.com';
 
@@ -10,6 +11,11 @@ export const API_UNREACHABLE = 'The price watch API is not reachable.';
 export const PICK_CHAIN_MESSAGE = 'pick this chain before saving a watch';
 
 export const CURRENT_CHAIN_ID = '369';
+
+function withSource(params: URLSearchParams, source?: string | null): void {
+	const id = (source ?? '').trim() || DEFAULT_PRICE_SOURCE;
+	params.set('source', id);
+}
 
 /** Full token name with its symbol, for example Hex (HEX). */
 export function tokenTitle(name: string | null | undefined, symbol: string | null | undefined): string {
@@ -142,6 +148,7 @@ export type SavedWatch = {
 	name: string;
 	symbol: string;
 	active: boolean;
+	source: string;
 } & ThresholdValues;
 
 export type BoardWindow = '15m' | '30m' | '1h' | '6h' | '12h' | '24h';
@@ -195,6 +202,7 @@ export type RankingRow = {
 	pair_address: string;
 	token_address: string | null;
 	meets_liquidity_floor: boolean | null;
+	source: string;
 };
 
 /** Off is 0. The page saves off, 24 hours, 3 days, or 7 days. */
@@ -238,6 +246,7 @@ export type WatchCreateBody = {
 	name: string;
 	symbol: string;
 	token_address?: string;
+	source?: string;
 } & ThresholdValues;
 
 export class PriceWatchApiError extends Error {
@@ -685,15 +694,16 @@ function tokensFromList(value: unknown[]): SearchTokenResult[] {
 
 export async function searchPairs(
 	query: string,
-	chainId: string = CURRENT_CHAIN_ID
+	chainId: string = CURRENT_CHAIN_ID,
+	source?: string | null
 ): Promise<PriceWatchSearchResult> {
 	const q = query.trim();
 	const chain = chainId.trim() || CURRENT_CHAIN_ID;
-	const json = await request(
-		`/search?q=${encodeURIComponent(q)}&chain_id=${encodeURIComponent(chain)}`,
-		'GET',
-		null
-	);
+	const params = new URLSearchParams();
+	params.set('q', q);
+	params.set('chain_id', chain);
+	withSource(params, source);
+	const json = await request(`/search?${params.toString()}`, 'GET', null);
 	if (!isRecord(json)) {
 		throw new PriceWatchApiError('The price watch API returned an unexpected response.', 200);
 	}
@@ -733,6 +743,7 @@ function asWatch(value: unknown): SavedWatch | null {
 		name: value.name,
 		symbol: value.symbol,
 		active: value.active !== false,
+		source: asText(value.source).trim() || DEFAULT_PRICE_SOURCE,
 		...thresholds
 	};
 }
@@ -747,7 +758,8 @@ export function watchesBySymbol(items: SavedWatch[]): SavedWatch[] {
 export async function listWatches(
 	token: string,
 	telegramId?: string | null,
-	chainId?: string | null
+	chainId?: string | null,
+	source?: string | null
 ): Promise<SavedWatch[]> {
 	const params = new URLSearchParams();
 	params.set('sort', 'symbol');
@@ -755,6 +767,7 @@ export async function listWatches(
 	if (id) params.set('filter[telegram_id][_eq]', id);
 	const chain = chainId?.trim() ?? '';
 	if (chain) params.set('chain_id', chain);
+	withSource(params, source);
 	const json = await request(`/me/watches?${params.toString()}`, 'GET', token);
 	return watchesBySymbol(
 		dataList(json)
@@ -768,7 +781,8 @@ export async function createWatch(token: string, body: WatchCreateBody): Promise
 		chain_id: body.chain_id,
 		pair_address: body.pair_address,
 		name: body.name,
-		symbol: body.symbol
+		symbol: body.symbol,
+		source: body.source?.trim() || DEFAULT_PRICE_SOURCE
 	};
 	if (body.token_address) payload.token_address = body.token_address;
 	const magnitudes = thresholdPayload(body);
@@ -821,6 +835,7 @@ export type BestPair = {
 	quote_name: string;
 	ratio: string | null;
 	priced_in: string;
+	source: string;
 	base_pair_address: string | null;
 	quote_pair_address: string | null;
 };
@@ -835,6 +850,7 @@ export type SavedRatioWatch = {
 	active: boolean;
 	ratio: string | null;
 	priced_in: string;
+	source: string;
 	pair_address: string | null;
 	base_pair_address: string | null;
 	quote_pair_address: string | null;
@@ -846,6 +862,7 @@ export type RatioWatchCreateBody = {
 	quote_token_address: string;
 	name: string;
 	symbol: string;
+	source?: string;
 } & RatioThresholdValues;
 
 function asBestPair(value: unknown, chainId: string): BestPair | null {
@@ -870,6 +887,7 @@ function asBestPair(value: unknown, chainId: string): BestPair | null {
 		quote_name: asText(value.quote_name) || asText(value.token1_name),
 		ratio: ratio || null,
 		priced_in: asText(value.priced_in).trim(),
+		source: asText(value.source).trim() || DEFAULT_PRICE_SOURCE,
 		base_pair_address: asText(value.base_pair_address).trim() || null,
 		quote_pair_address: asText(value.quote_pair_address).trim() || null
 	};
@@ -877,12 +895,14 @@ function asBestPair(value: unknown, chainId: string): BestPair | null {
 
 export async function getBestPair(
 	chainId: string,
-	query: { token: string } | { base: string; quote: string }
+	query: { token: string } | { base: string; quote: string },
+	source?: string | null
 ): Promise<BestPair> {
 	const chain = chainId.trim();
 	if (!chain) throw new PriceWatchApiError('Choose a chain before you search.', 0);
 	const params = new URLSearchParams();
 	params.set('chain_id', chain);
+	withSource(params, source);
 	if ('token' in query) {
 		const tokenAddress = query.token.trim();
 		if (!tokenAddress) throw new PriceWatchApiError('Enter a token contract address.', 0);
@@ -915,13 +935,18 @@ export async function getBestPair(
 	return pair;
 }
 
-export async function getPairByAddress(chainId: string, pairAddress: string): Promise<BestPair> {
+export async function getPairByAddress(
+	chainId: string,
+	pairAddress: string,
+	source?: string | null
+): Promise<BestPair> {
 	const chain = chainId.trim();
 	const pairAddressText = pairAddress.trim();
 	if (!chain) throw new PriceWatchApiError('Choose a chain before you search.', 0);
 	if (!pairAddressText) throw new PriceWatchApiError('Enter a pair contract address.', 0);
 	const params = new URLSearchParams();
 	params.set('chain_id', chain);
+	withSource(params, source);
 	const json = await request(
 		`/pairs/${encodeURIComponent(pairAddressText)}?${params.toString()}`,
 		'GET',
@@ -975,6 +1000,7 @@ function asRatioWatch(value: unknown): SavedRatioWatch | null {
 		active: value.active !== false,
 		ratio: ratio || null,
 		priced_in: asText(value.priced_in).trim(),
+		source: asText(value.source).trim() || DEFAULT_PRICE_SOURCE,
 		pair_address: asText(value.pair_address).trim() || null,
 		base_pair_address: asText(value.base_pair_address).trim() || null,
 		quote_pair_address: asText(value.quote_pair_address).trim() || null,
@@ -990,12 +1016,14 @@ export function ratioWatchesBySymbol(items: SavedRatioWatch[]): SavedRatioWatch[
 
 export async function listRatioWatches(
 	token: string,
-	chainId?: string | null
+	chainId?: string | null,
+	source?: string | null
 ): Promise<SavedRatioWatch[]> {
 	const params = new URLSearchParams();
 	params.set('sort', 'symbol');
 	const chain = chainId?.trim() ?? '';
 	if (chain) params.set('chain_id', chain);
+	withSource(params, source);
 	const json = await request(`/me/ratio-watches?${params.toString()}`, 'GET', token);
 	return ratioWatchesBySymbol(
 		dataList(json)
@@ -1013,7 +1041,8 @@ export async function createRatioWatch(
 		base_token_address: body.base_token_address,
 		quote_token_address: body.quote_token_address,
 		name: body.name,
-		symbol: body.symbol
+		symbol: body.symbol,
+		source: body.source?.trim() || DEFAULT_PRICE_SOURCE
 	};
 	const magnitudes = ratioThresholdPayload(body);
 	for (const field of RATIO_THRESHOLD_FIELDS) payload[field.key] = magnitudes[field.key];
@@ -1080,65 +1109,98 @@ function asRanking(value: unknown, index: number): RankingRow | null {
 		volume_usd: asText(value.volume_usd),
 		pair_address: pairAddress,
 		token_address: tokenAddressFrom(value),
-		meets_liquidity_floor: floor === true ? true : floor === false ? false : null
+		meets_liquidity_floor: floor === true ? true : floor === false ? false : null,
+		source: asText(value.source).trim() || DEFAULT_PRICE_SOURCE
 	};
 }
 
 export async function getRankings(
 	window: RankingWindow,
-	chainId: string = CURRENT_CHAIN_ID
+	chainId: string = CURRENT_CHAIN_ID,
+	source?: string | null
 ): Promise<RankingRow[]> {
 	const chain = chainId.trim() || CURRENT_CHAIN_ID;
-	const json = await request(
-		`/rankings?window=${encodeURIComponent(window)}&chain_id=${encodeURIComponent(chain)}`,
-		'GET',
-		null
-	);
+	const params = new URLSearchParams();
+	params.set('window', window);
+	params.set('chain_id', chain);
+	withSource(params, source);
+	const json = await request(`/rankings?${params.toString()}`, 'GET', null);
 	return dataList(json)
 		.map((item, index) => asRanking(item, index))
 		.filter((item): item is RankingRow => item !== null);
 }
 
-/** Live top 10. Window 1h stores the same rows when window 10 is empty. */
+const TOP_POOLS = 20;
+
+function compareRank(left: RankingRow, right: RankingRow): number {
+	if (left.rank === null && right.rank === null) return 0;
+	if (left.rank === null) return 1;
+	if (right.rank === null) return -1;
+	return left.rank - right.rank;
+}
+
+/**
+ * One row per pair_address. Lowest numeric rank wins.
+ * Equal ranks keep the earlier row. A blank pair address stays as its own row.
+ */
+function dedupeByPairAddress(rows: RankingRow[]): RankingRow[] {
+	const best = new Map<string, { row: RankingRow; index: number }>();
+	const ordered: { row: RankingRow; index: number }[] = [];
+	rows.forEach((row, index) => {
+		const key = row.pair_address.trim();
+		if (!key) {
+			ordered.push({ row, index });
+			return;
+		}
+		const current = best.get(key);
+		if (!current) {
+			const entry = { row, index };
+			best.set(key, entry);
+			ordered.push(entry);
+			return;
+		}
+		const byRank = compareRank(row, current.row);
+		if (byRank < 0 || (byRank === 0 && index < current.index)) {
+			current.row = row;
+			current.index = index;
+		}
+	});
+	return ordered.sort((left, right) => left.index - right.index).map((entry) => entry.row);
+}
+
+function sortByRank(rows: RankingRow[]): RankingRow[] {
+	return rows
+		.map((row, index) => ({ row, index }))
+		.sort((left, right) => {
+			const difference = compareRank(left.row, right.row);
+			return difference !== 0 ? difference : left.index - right.index;
+		})
+		.map((item) => item.row);
+}
+
+/** Live rankings. Window 1h stores the same rows when window 10 is empty. */
 export async function getBestBoard(chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
 	const live = await getRankings('10', chainId);
 	const rows = live.length > 0 ? live : await getRankings('1h', chainId);
-	return rows
-		.slice()
-		.sort((left, right) => {
-			if (left.rank === null && right.rank === null) return 0;
-			if (left.rank === null) return 1;
-			if (right.rank === null) return -1;
-			return left.rank - right.rank;
-		})
-		.slice(0, 10);
+	return topPools(rows);
 }
 
-const TOP_POOLS = 10;
-
-function topTen(rows: RankingRow[]): RankingRow[] {
-	return rows
-		.slice()
-		.sort((left, right) => {
-			if (left.rank === null && right.rank === null) return 0;
-			if (left.rank === null) return 1;
-			if (right.rank === null) return -1;
-			return left.rank - right.rank;
-		})
-		.slice(0, TOP_POOLS);
+function topPools(rows: RankingRow[]): RankingRow[] {
+	return sortByRank(dedupeByPairAddress(rows)).slice(0, TOP_POOLS);
 }
 
-/** One rankings window, top 10. No fallback to another window. */
+/** One rankings window, up to 20 unique pairs. No fallback to another window. */
 export async function getMoverBoard(
 	window: RankingWindow,
-	chainId: string = CURRENT_CHAIN_ID
+	chainId: string = CURRENT_CHAIN_ID,
+	source?: string | null
 ): Promise<RankingRow[]> {
-	return topTen(await getRankings(window, chainId));
+	return topPools(await getRankings(window, chainId, source));
 }
 
 /** GET /rankings?window=movers. An API error is returned to that list. */
 export async function getFastHorses(chainId: string = CURRENT_CHAIN_ID): Promise<RankingRow[]> {
-	return topTen(await getRankings('movers', chainId));
+	return topPools(await getRankings('movers', chainId));
 }
 
 /** GET /rankings?window= for 15m, 30m, 1h, 6h, 12h, or 24h. */
@@ -1146,7 +1208,7 @@ export async function getSlowHorses(
 	window: BoardWindow,
 	chainId: string = CURRENT_CHAIN_ID
 ): Promise<RankingRow[]> {
-	return topTen(await getRankings(window, chainId));
+	return topPools(await getRankings(window, chainId));
 }
 
 export type ScheduleSave = {
